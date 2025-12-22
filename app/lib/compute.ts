@@ -349,8 +349,392 @@ function computeIDF(targetId: string, context: ReturnType<typeof computeIDFConte
 }
 
 /**
- * 特定アイドルの詳細情報を計算
+ * クラスタ検出用の重み付きエッジ
  */
+export interface WeightedEdge {
+  source: string;
+  target: string;
+  /** 双方向性（1=片方向、2=相互選択） */
+  directionality: number;
+  /** IDF補正済み重み */
+  weight: number;
+}
+
+/**
+ * クラスタメンバーの役割
+ */
+export interface ClusterMember {
+  id: string;
+  name: string;
+  brand: Brand[];
+  /** コア度（0-1、高いほど中心的） */
+  coreness: number;
+  /** クラスタ内の次数（エッジ数） */
+  degree: number;
+  /** クラスタ内の重み合計 */
+  weightSum: number;
+  /** 役割: core=密に結合、peripheral=コアに接続 */
+  role: "core" | "peripheral";
+}
+
+/**
+ * 検出されたクラスタ
+ */
+export interface Cluster {
+  /** クラスタID */
+  id: number;
+  /** メンバーのアイドルID */
+  members: string[];
+  /** メンバー情報（後方互換用） */
+  memberDetails: Array<{ id: string; name: string; brand: Brand[] }>;
+  /** メンバー情報（役割付き） */
+  memberRoles: ClusterMember[];
+  /** コアメンバーのID */
+  coreMembers: string[];
+  /** 周辺メンバーのID */
+  peripheralMembers: string[];
+  /** クラスタ内の総重み */
+  totalWeight: number;
+  /** クラスタ内の密度（実際のエッジ数 / 可能なエッジ数） */
+  density: number;
+  /** コア部分の密度 */
+  coreDensity: number;
+  /** 主要ブランド */
+  dominantBrands: Brand[];
+  /** クラスタ内エッジ */
+  edges: WeightedEdge[];
+}
+
+/**
+ * IDF考慮の重み付きグラフを構築
+ * 珍しい選択（高IDF）を重視する
+ */
+export function buildWeightedGraph(data: NormalizedData): {
+  edges: WeightedEdge[];
+  idfMap: Map<string, number>;
+} {
+  const idfContext = computeIDFContext(data);
+  const idfMap = new Map<string, number>();
+
+  // 全アイドルのIDFを計算
+  for (const id of Object.keys(data.idols)) {
+    idfMap.set(id, computeIDF(id, idfContext));
+  }
+
+  // 有向エッジを収集
+  const directedEdges = new Map<string, { source: string; target: string }>();
+  for (const [sourceId, targetIds] of Object.entries(data.cooccurrences)) {
+    for (const targetId of targetIds) {
+      const key = `${sourceId}|${targetId}`;
+      directedEdges.set(key, { source: sourceId, target: targetId });
+    }
+  }
+
+  // 無向エッジに変換し、重みを計算
+  const edgeMap = new Map<string, WeightedEdge>();
+
+  for (const [sourceId, targetIds] of Object.entries(data.cooccurrences)) {
+    for (const targetId of targetIds) {
+      // 正規化されたキー（小さいID|大きいID）
+      const key = sourceId < targetId ? `${sourceId}|${targetId}` : `${targetId}|${sourceId}`;
+
+      if (!edgeMap.has(key)) {
+        // 双方向性チェック
+        const reverseKey = `${targetId}|${sourceId}`;
+        const isBidirectional = directedEdges.has(reverseKey);
+        const directionality = isBidirectional ? 2 : 1;
+
+        // IDF補正: 珍しい選択ほど高い重み
+        // source→targetのエッジでは、targetのIDFを使用
+        // 双方向の場合は両方のIDFの平均
+        const idfSource = idfMap.get(sourceId) ?? 0;
+        const idfTarget = idfMap.get(targetId) ?? 0;
+        const idfWeight = isBidirectional ? (idfSource + idfTarget) / 2 : idfTarget;
+
+        // 最終重み = 方向性スコア × IDF補正
+        // IDFが0の場合（被選択数が総投票者数と同じ）でも最低限の重みを確保
+        const weight = directionality * Math.max(idfWeight, 0.1);
+
+        // 片方向の場合は実際の方向を保持（sourceが選択者、targetが被選択者）
+        // 双方向の場合はIDでソートして正規化
+        edgeMap.set(key, {
+          source: isBidirectional ? (sourceId < targetId ? sourceId : targetId) : sourceId,
+          target: isBidirectional ? (sourceId < targetId ? targetId : sourceId) : targetId,
+          directionality,
+          weight,
+        });
+      }
+    }
+  }
+
+  return {
+    edges: Array.from(edgeMap.values()),
+    idfMap,
+  };
+}
+
+/**
+ * Louvain法によるコミュニティ検出
+ * 重み付きモジュラリティを最大化
+ */
+export function detectClusters(
+  data: NormalizedData,
+  options: {
+    /** 最小クラスタサイズ（デフォルト: 3） */
+    minSize?: number;
+    /** 最小密度（デフォルト: 0.3） */
+    minDensity?: number;
+    /** 解像度パラメータ（大きいほど小さいクラスタ、デフォルト: 1.0） */
+    resolution?: number;
+  } = {}
+): Cluster[] {
+  const { minSize = 3, minDensity = 0.3, resolution = 1.0 } = options;
+
+  const { edges, idfMap: _idfMap } = buildWeightedGraph(data);
+
+  // ノードリスト
+  const nodeSet = new Set<string>();
+  for (const edge of edges) {
+    nodeSet.add(edge.source);
+    nodeSet.add(edge.target);
+  }
+  const nodes = Array.from(nodeSet);
+
+  // 隣接リスト（重み付き）
+  const adjacency = new Map<string, Map<string, number>>();
+  for (const node of nodes) {
+    adjacency.set(node, new Map());
+  }
+  for (const edge of edges) {
+    adjacency.get(edge.source)!.set(edge.target, edge.weight);
+    adjacency.get(edge.target)!.set(edge.source, edge.weight);
+  }
+
+  // 総重み
+  const totalWeight = edges.reduce((sum, e) => sum + e.weight, 0);
+  if (totalWeight === 0) return [];
+
+  // 各ノードの重み合計
+  const nodeWeights = new Map<string, number>();
+  for (const node of nodes) {
+    let sum = 0;
+    for (const w of adjacency.get(node)!.values()) {
+      sum += w;
+    }
+    nodeWeights.set(node, sum);
+  }
+
+  // 初期コミュニティ割り当て（各ノードが独自のコミュニティ）
+  const community = new Map<string, number>();
+  for (let i = 0; i < nodes.length; i++) {
+    community.set(nodes[i]!, i);
+  }
+
+  // Louvainアルゴリズムのメインループ
+  let improved = true;
+  let iteration = 0;
+  const maxIterations = 100;
+
+  while (improved && iteration < maxIterations) {
+    improved = false;
+    iteration++;
+
+    for (const node of nodes) {
+      const currentCommunity = community.get(node)!;
+      const nodeWeight = nodeWeights.get(node)!;
+
+      // 隣接コミュニティとその内部重みを計算
+      const neighborCommunities = new Map<number, number>();
+      for (const [neighbor, weight] of adjacency.get(node)!) {
+        const neighborComm = community.get(neighbor)!;
+        neighborCommunities.set(
+          neighborComm,
+          (neighborCommunities.get(neighborComm) ?? 0) + weight
+        );
+      }
+
+      // 現在のコミュニティから削除した場合のモジュラリティ変化
+      const currentCommWeight = neighborCommunities.get(currentCommunity) ?? 0;
+
+      // コミュニティ内の総重み
+      const commWeights = new Map<number, number>();
+      for (const [n, c] of community) {
+        commWeights.set(c, (commWeights.get(c) ?? 0) + nodeWeights.get(n)!);
+      }
+
+      let bestCommunity = currentCommunity;
+      let bestDelta = 0;
+
+      for (const [targetComm, edgeWeight] of neighborCommunities) {
+        if (targetComm === currentCommunity) continue;
+
+        const targetCommWeight = commWeights.get(targetComm) ?? 0;
+        const currentCommTotalWeight = commWeights.get(currentCommunity) ?? 0;
+
+        // モジュラリティ変化の計算
+        const delta =
+          resolution *
+          (edgeWeight -
+            currentCommWeight -
+            (nodeWeight * (targetCommWeight - currentCommTotalWeight + nodeWeight)) /
+              (2 * totalWeight));
+
+        if (delta > bestDelta) {
+          bestDelta = delta;
+          bestCommunity = targetComm;
+        }
+      }
+
+      if (bestCommunity !== currentCommunity) {
+        community.set(node, bestCommunity);
+        improved = true;
+      }
+    }
+  }
+
+  // コミュニティをクラスタに変換
+  const clusterMembers = new Map<number, string[]>();
+  for (const [node, comm] of community) {
+    if (!clusterMembers.has(comm)) {
+      clusterMembers.set(comm, []);
+    }
+    clusterMembers.get(comm)!.push(node);
+  }
+
+  // クラスタ情報を構築
+  const clusters: Cluster[] = [];
+  let clusterId = 0;
+
+  for (const [, members] of clusterMembers) {
+    if (members.length < minSize) continue;
+
+    // クラスタ内エッジ
+    const memberSet = new Set(members);
+    const clusterEdges = edges.filter((e) => memberSet.has(e.source) && memberSet.has(e.target));
+
+    // 密度計算
+    const possibleEdges = (members.length * (members.length - 1)) / 2;
+    const density = possibleEdges > 0 ? clusterEdges.length / possibleEdges : 0;
+
+    if (density < minDensity) continue;
+
+    // 総重み
+    const totalClusterWeight = clusterEdges.reduce((sum, e) => sum + e.weight, 0);
+
+    // メンバーごとの次数と重み合計を計算
+    const memberDegree = new Map<string, number>();
+    const memberWeightSum = new Map<string, number>();
+    for (const memberId of members) {
+      memberDegree.set(memberId, 0);
+      memberWeightSum.set(memberId, 0);
+    }
+    for (const edge of clusterEdges) {
+      memberDegree.set(edge.source, (memberDegree.get(edge.source) ?? 0) + 1);
+      memberDegree.set(edge.target, (memberDegree.get(edge.target) ?? 0) + 1);
+      memberWeightSum.set(edge.source, (memberWeightSum.get(edge.source) ?? 0) + edge.weight);
+      memberWeightSum.set(edge.target, (memberWeightSum.get(edge.target) ?? 0) + edge.weight);
+    }
+
+    // コア度を計算: 次数と重みを正規化して組み合わせ
+    const maxDegree = Math.max(...Array.from(memberDegree.values()), 1);
+    const maxWeight = Math.max(...Array.from(memberWeightSum.values()), 1);
+
+    const memberCoreness = new Map<string, number>();
+    for (const memberId of members) {
+      const degree = memberDegree.get(memberId) ?? 0;
+      const weightSum = memberWeightSum.get(memberId) ?? 0;
+      // コア度 = (正規化次数 + 正規化重み) / 2
+      const coreness = (degree / maxDegree + weightSum / maxWeight) / 2;
+      memberCoreness.set(memberId, coreness);
+    }
+
+    // コア/周辺を判定: コア度が中央値以上ならコア
+    const corenessValues = Array.from(memberCoreness.values()).sort((a, b) => b - a);
+    const medianIndex = Math.floor(corenessValues.length / 2);
+    const coreThreshold = corenessValues[medianIndex] ?? 0.5;
+
+    const coreMembers: string[] = [];
+    const peripheralMembers: string[] = [];
+    const memberRoles: ClusterMember[] = [];
+
+    for (const memberId of members) {
+      const idol = data.idols[memberId];
+      if (!idol) continue;
+
+      const coreness = memberCoreness.get(memberId) ?? 0;
+      const degree = memberDegree.get(memberId) ?? 0;
+      const weightSum = memberWeightSum.get(memberId) ?? 0;
+      const role = coreness >= coreThreshold ? "core" : "peripheral";
+
+      if (role === "core") {
+        coreMembers.push(memberId);
+      } else {
+        peripheralMembers.push(memberId);
+      }
+
+      memberRoles.push({
+        id: memberId,
+        name: idol.name,
+        brand: idol.brand,
+        coreness,
+        degree,
+        weightSum,
+        role,
+      });
+    }
+
+    // コア度の降順でソート
+    memberRoles.sort((a, b) => b.coreness - a.coreness);
+
+    // コア部分の密度を計算
+    const coreEdges = clusterEdges.filter(
+      (e) => coreMembers.includes(e.source) && coreMembers.includes(e.target)
+    );
+    const possibleCoreEdges = (coreMembers.length * (coreMembers.length - 1)) / 2;
+    const coreDensity = possibleCoreEdges > 0 ? coreEdges.length / possibleCoreEdges : 0;
+
+    // 主要ブランド
+    const brandCounts = new Map<Brand, number>();
+    for (const memberId of members) {
+      const idol = data.idols[memberId];
+      if (idol) {
+        for (const brand of idol.brand) {
+          brandCounts.set(brand, (brandCounts.get(brand) ?? 0) + 1);
+        }
+      }
+    }
+    const dominantBrands = Array.from(brandCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2)
+      .map(([brand]) => brand);
+
+    // メンバー詳細（後方互換用）
+    const memberDetails = members
+      .map((id) => {
+        const idol = data.idols[id];
+        return idol ? { id, name: idol.name, brand: idol.brand } : null;
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+
+    clusters.push({
+      id: clusterId++,
+      members,
+      memberDetails,
+      memberRoles,
+      coreMembers,
+      peripheralMembers,
+      totalWeight: totalClusterWeight,
+      density,
+      coreDensity,
+      dominantBrands,
+      edges: clusterEdges,
+    });
+  }
+
+  // 総重みの降順でソート
+  return clusters.sort((a, b) => b.totalWeight - a.totalWeight);
+}
+
 export function computeIdolDetail(
   data: NormalizedData,
   idolId: string,

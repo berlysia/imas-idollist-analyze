@@ -1,11 +1,11 @@
 import { createRoute } from "honox/factory";
 import { readFile } from "fs/promises";
 import { join } from "path";
-import type { CrossBrandBridge } from "../lib/compute";
-import BridgesTable from "../islands/BridgesTable";
+import type { Cluster } from "../lib/compute";
+import ClusterList from "../islands/ClusterList";
 
-interface BridgesData {
-  data: CrossBrandBridge[];
+interface ClustersData {
+  data: Cluster[];
 }
 
 interface MetadataData {
@@ -14,21 +14,20 @@ interface MetadataData {
   idolCount: number;
 }
 
-async function loadData(): Promise<{ bridges: BridgesData; metadata: MetadataData }> {
+async function loadData(): Promise<{ clusters: ClustersData; metadata: MetadataData }> {
   const dataDir = join(process.cwd(), "data/precomputed");
-  const [bridgesRaw, metadataRaw] = await Promise.all([
-    readFile(join(dataDir, "cross-brand.json"), "utf-8"),
+  const [clustersRaw, metadataRaw] = await Promise.all([
+    readFile(join(dataDir, "clusters.json"), "utf-8"),
     readFile(join(dataDir, "metadata.json"), "utf-8"),
   ]);
   return {
-    bridges: JSON.parse(bridgesRaw),
+    clusters: JSON.parse(clustersRaw),
     metadata: JSON.parse(metadataRaw),
   };
 }
 
 export default createRoute(async (c) => {
-  const { bridges, metadata } = await loadData();
-  const bridgeList = bridges.data;
+  const { clusters, metadata } = await loadData();
 
   return c.render(
     <>
@@ -67,6 +66,18 @@ export default createRoute(async (c) => {
         </a>
         <a
           href="/bridges"
+          style={{
+            padding: "8px 16px",
+            background: "#e0e0e0",
+            borderRadius: "4px 4px 0 0",
+            textDecoration: "none",
+            color: "inherit",
+          }}
+        >
+          ブランド横断ペア
+        </a>
+        <a
+          href="/clusters"
           className="active"
           style={{
             padding: "8px 16px",
@@ -74,18 +85,6 @@ export default createRoute(async (c) => {
             color: "#fff",
             borderRadius: "4px 4px 0 0",
             textDecoration: "none",
-          }}
-        >
-          ブランド横断ペア
-        </a>
-        <a
-          href="/clusters"
-          style={{
-            padding: "8px 16px",
-            background: "#e0e0e0",
-            borderRadius: "4px 4px 0 0",
-            textDecoration: "none",
-            color: "inherit",
           }}
         >
           クラスタ
@@ -105,7 +104,7 @@ export default createRoute(async (c) => {
       </nav>
 
       <main>
-        <BridgesTable bridges={bridgeList} />
+        <ClusterList clusters={clusters.data} />
       </main>
 
       <footer>
@@ -121,6 +120,6 @@ export default createRoute(async (c) => {
         </p>
       </footer>
     </>,
-    { title: "ブランド横断ペア - アイドルマスター 共起関係可視化" }
+    { title: "クラスタ - アイドルマスター 共起関係可視化" }
   );
 });

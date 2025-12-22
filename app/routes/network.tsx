@@ -78,6 +78,18 @@ export default createRoute(async (c) => {
           ブランド横断ペア
         </a>
         <a
+          href="/clusters"
+          style={{
+            padding: "8px 16px",
+            background: "#e0e0e0",
+            borderRadius: "4px 4px 0 0",
+            textDecoration: "none",
+            color: "inherit",
+          }}
+        >
+          クラスタ
+        </a>
+        <a
           href="/network"
           className="active"
           style={{
