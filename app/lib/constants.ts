@@ -14,7 +14,7 @@ export const BRAND_NAMES: Record<Brand, string> = {
   deremas: "シンデレラ",
   milimas: "ミリオン",
   sidem: "SideM",
-  shiny: "シャイニー",
+  shiny: "シャニマス",
   gakuen: "学マス",
 };
 

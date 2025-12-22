@@ -1,4 +1,5 @@
 import type { Brand } from "@/types";
+import { BRAND_NAMES } from "./constants";
 
 export interface IdolData {
   name: string;
@@ -19,15 +20,6 @@ export interface CooccurrenceStats {
   count: number;
   byBrand: Record<Brand, number>;
 }
-
-export const BRAND_NAMES: Record<Brand, string> = {
-  imas: "765PRO",
-  deremas: "シンデレラ",
-  milimas: "ミリオン",
-  sidem: "SideM",
-  shiny: "シャイニー",
-  gakuen: "学マス",
-};
 
 export function getBrandName(brand: Brand): string {
   return BRAND_NAMES[brand];
