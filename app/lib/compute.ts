@@ -273,6 +273,18 @@ export function computeIncomingStats(data: NormalizedData): CooccurrenceStats[] 
 }
 
 /**
+ * 選択に関するスコア群
+ */
+export interface SelectionScore {
+  /** IDF: log2(totalVoters / incomingCount) - 高いほど珍しい選択 */
+  idf: number;
+  /** IDF偏差: 選んでくれたアイドルの選択リスト内での珍しさ（自分のIDF - 選択リストの平均IDF） */
+  idfDeviation?: number;
+  /** 選択リスト内での順位（1が最も珍しい、6が最も人気） */
+  rank?: number;
+}
+
+/**
  * アイドル詳細情報
  */
 export interface IdolDetail {
@@ -280,10 +292,10 @@ export interface IdolDetail {
   name: string;
   brand: Brand[];
   link: string;
-  /** 自分が選んだ共起アイドル */
-  selectedIdols: Array<{ id: string; name: string; brand: Brand[] }>;
-  /** 自分を選んだアイドル */
-  selectedBy: Array<{ id: string; name: string; brand: Brand[] }>;
+  /** 自分が選んだ共起アイドル（スコア付き） */
+  selectedIdols: Array<{ id: string; name: string; brand: Brand[]; score: SelectionScore }>;
+  /** 自分を選んだアイドル（スコア付き） */
+  selectedBy: Array<{ id: string; name: string; brand: Brand[]; score: SelectionScore }>;
   /** 相思相愛ペア（互いに選び合っている） */
   mutualPairs: Array<{ id: string; name: string; brand: Brand[]; pmi: number }>;
   /** ブランド横断ペア（異なるブランドのアイドルと同時に選ばれている） */
@@ -300,6 +312,43 @@ export interface IdolDetail {
 }
 
 /**
+ * IDF計算用コンテキスト
+ * IDF = log2(totalVoters / incomingCount(target))
+ * 人気で選ばれたのではなく、特別に選んだことを示す指標
+ */
+function computeIDFContext(data: NormalizedData): {
+  incomingCount: Map<string, number>;
+  totalVoters: number;
+} {
+  const incomingCount = new Map<string, number>();
+  let totalVoters = 0;
+
+  for (const [, targetIds] of Object.entries(data.cooccurrences)) {
+    totalVoters++;
+    for (const targetId of targetIds) {
+      incomingCount.set(targetId, (incomingCount.get(targetId) ?? 0) + 1);
+    }
+  }
+
+  return {
+    incomingCount,
+    totalVoters,
+  };
+}
+
+/**
+ * IDF計算: targetがどれだけ珍しい選択か
+ * 高IDF = あまり選ばれない相手を選んでいる（珍しい選択）
+ * 低IDF = 多くの人が選ぶ人気アイドルを選んでいる
+ */
+function computeIDF(targetId: string, context: ReturnType<typeof computeIDFContext>): number {
+  const { incomingCount, totalVoters } = context;
+  const count = incomingCount.get(targetId) ?? 0;
+  if (count === 0) return 0;
+  return Math.log2(totalVoters / count);
+}
+
+/**
  * 特定アイドルの詳細情報を計算
  */
 export function computeIdolDetail(
@@ -311,22 +360,41 @@ export function computeIdolDetail(
   const idol = data.idols[idolId];
   if (!idol) return null;
 
-  // 自分が選んだ共起アイドル
+  // IDF計算用コンテキスト
+  const idfContext = computeIDFContext(data);
+
+  // 自分が選んだ共起アイドル（スコア付き、元の順序を維持）
   const selectedIds = data.cooccurrences[idolId] ?? [];
   const selectedIdols = selectedIds
     .map((id) => {
       const i = data.idols[id];
-      return i ? { id, name: i.name, brand: i.brand } : null;
+      if (!i) return null;
+      const idf = computeIDF(id, idfContext);
+      return { id, name: i.name, brand: i.brand, score: { idf } };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
-  // 自分を選んだアイドル
-  const selectedBy: Array<{ id: string; name: string; brand: Brand[] }> = [];
+  // 自分を選んだアイドル（相対IDF = 選択リスト内での自分の珍しさ、ランク付き）
+  const selectedBy: Array<{ id: string; name: string; brand: Brand[]; score: SelectionScore }> = [];
+  const myIdf = computeIDF(idolId, idfContext);
   for (const [sourceId, targetIds] of Object.entries(data.cooccurrences)) {
     if (targetIds.includes(idolId)) {
       const source = data.idols[sourceId];
       if (source) {
-        selectedBy.push({ id: sourceId, name: source.name, brand: source.brand });
+        // 選んでくれたアイドルの選択リスト全体のIDFを計算
+        const selectionIdfs = targetIds.map((tid) => computeIDF(tid, idfContext));
+        const avgIdf = selectionIdfs.reduce((a, b) => a + b, 0) / selectionIdfs.length;
+        // IDF偏差 = 自分のIDF - 選択リストの平均IDF
+        const idfDeviation = myIdf - avgIdf;
+        // 選択リスト内での順位（IDFが高い順 = 珍しい順）
+        const sortedIdfs = [...selectionIdfs].sort((a, b) => b - a);
+        const rank = sortedIdfs.indexOf(myIdf) + 1;
+        selectedBy.push({
+          id: sourceId,
+          name: source.name,
+          brand: source.brand,
+          score: { idf: myIdf, idfDeviation, rank },
+        });
       }
     }
   }

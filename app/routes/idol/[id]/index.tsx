@@ -45,6 +45,52 @@ function BrandDot({
   );
 }
 
+type MetricType = "pmi" | "idf" | "idf-deviation" | "rank";
+
+const METRIC_DESCRIPTIONS: Record<MetricType, { label: string; description: string }> = {
+  pmi: {
+    label: "PMI",
+    description:
+      "Pointwise Mutual Information: 二者が一緒に現れる頻度が、独立な場合と比べてどれだけ高いかを示す指標。値が高いほど強い関連性を持つ。",
+  },
+  idf: {
+    label: "IDF",
+    description:
+      "Inverse Document Frequency: そのアイドルを選ぶことの珍しさを示す指標。多くの人に選ばれているアイドルほど値が低く、珍しい選択ほど値が高い。",
+  },
+  "idf-deviation": {
+    label: "IDF偏差",
+    description:
+      "選択リスト内での珍しさの偏差。選んだ6人の中でこのアイドルの珍しさが平均からどれだけ離れているかを示す。正の値は平均より珍しい選択。",
+  },
+  rank: {
+    label: "順位",
+    description:
+      "選択リスト内での珍しさ順位。選んだ6人の中でIDF値が高い順に並べた時の順位。1位が最も珍しい選択。",
+  },
+};
+
+function ScoreBadge({
+  metric,
+  value,
+  suffix,
+}: {
+  metric: MetricType;
+  value: string | number;
+  suffix?: string;
+}) {
+  const { label, description } = METRIC_DESCRIPTIONS[metric];
+  return (
+    <span className="score-badge-wrapper">
+      <span className="score-badge">
+        {label}: {value}
+        {suffix ?? ""}
+      </span>
+      <span className="score-badge-tooltip">{description}</span>
+    </span>
+  );
+}
+
 export default createRoute(
   ssgParams(async () => {
     const ids = await loadIdolIds();
@@ -119,6 +165,25 @@ export default createRoute(
               </div>
             </div>
 
+            {detail.mutualPairs.length > 0 && (
+              <div className="detail-section">
+                <h3>互いに選出されているアイドル</h3>
+                <ul className="idol-list">
+                  {detail.mutualPairs.map((idol) => (
+                    <li key={idol.id}>
+                      <a href={`/idol/${idol.id}`} className="idol-link">
+                        {idol.brand.map((b) => (
+                          <BrandDot key={b} brand={b} size="small" />
+                        ))}
+                        {idol.name}
+                      </a>
+                      <ScoreBadge metric="pmi" value={idol.pmi.toFixed(2)} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="detail-section">
               <h3>選んだ共起アイドル</h3>
               <p className="section-description">このアイドルが共起として選んだアイドル</p>
@@ -132,6 +197,7 @@ export default createRoute(
                         ))}
                         {idol.name}
                       </a>
+                      <ScoreBadge metric="idf" value={idol.score.idf.toFixed(2)} />
                     </li>
                   ))}
                 </ul>
@@ -143,6 +209,13 @@ export default createRoute(
             <div className="detail-section">
               <h3>選んでくれたアイドル</h3>
               <p className="section-description">このアイドルを共起として選んだアイドル</p>
+              <p className="section-description">
+                このアイドルを選ぶことの珍しさ{" "}
+                <ScoreBadge
+                  metric="idf"
+                  value={detail.selectedBy[0]?.score.idf.toFixed(2) ?? "-"}
+                />
+              </p>
               {detail.selectedBy.length > 0 ? (
                 <ul className="idol-list compact">
                   {detail.selectedBy.map((idol) => (
@@ -153,6 +226,15 @@ export default createRoute(
                         ))}
                         {idol.name}
                       </a>
+                      {idol.score.rank !== undefined && (
+                        <ScoreBadge metric="rank" value={idol.score.rank} suffix="/6位" />
+                      )}
+                      {idol.score.idfDeviation !== undefined && (
+                        <ScoreBadge
+                          metric="idf-deviation"
+                          value={idol.score.idfDeviation.toFixed(2)}
+                        />
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -160,26 +242,6 @@ export default createRoute(
                 <p className="empty-message">選んでくれたアイドルなし</p>
               )}
             </div>
-
-            {detail.mutualPairs.length > 0 && (
-              <div className="detail-section">
-                <h3>相思相愛ペア</h3>
-                <p className="section-description">互いに共起として選び合っているアイドル</p>
-                <ul className="idol-list">
-                  {detail.mutualPairs.map((idol) => (
-                    <li key={idol.id}>
-                      <a href={`/idol/${idol.id}`} className="idol-link">
-                        {idol.brand.map((b) => (
-                          <BrandDot key={b} brand={b} size="small" />
-                        ))}
-                        {idol.name}
-                      </a>
-                      <span className="pmi-badge">PMI: {idol.pmi.toFixed(2)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
 
             {detail.crossBrandBridges.length > 0 && (
               <div className="detail-section">
@@ -198,14 +260,17 @@ export default createRoute(
                           {bridge.partner.name}
                         </a>
                         <span className="voter-badge">{bridge.voterCount}人が同時選択</span>
-                        <span className="pmi-badge">PMI: {bridge.pmi.toFixed(2)}</span>
+                        <ScoreBadge metric="pmi" value={bridge.pmi.toFixed(2)} />
                       </div>
                       <p className="bridge-voters">
                         選んだ人:{" "}
                         {bridge.voters.slice(0, 5).map((voter, i) => (
                           <span key={voter.id}>
                             {i > 0 && ", "}
-                            <a href={`/idol/${voter.id}`} className="voter-link">
+                            <a href={`/idol/${voter.id}`} className="idol-link">
+                              {voter.brand.map((b) => (
+                                <BrandDot key={b} brand={b} size="small" />
+                              ))}
                               {voter.name}
                             </a>
                           </span>
