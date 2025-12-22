@@ -1,19 +1,28 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import honox from "honox/vite";
+import ssg from "@hono/vite-ssg";
 import path from "node:path";
 
-export default defineConfig({
-  plugins: [react()],
-  root: "src/visualizer",
-  publicDir: "../../data",
+export default defineConfig(({ mode }) => ({
+  plugins: [
+    honox({
+      client: {
+        input: ["./app/client.ts"],
+      },
+    }),
+    mode === "ssg" && ssg({ entry: "./app/server.ts" }),
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@/types": path.resolve(__dirname, "./src/types"),
     },
   },
+  ssr: {
+    external: ["react", "react-dom", "recharts", "lodash"],
+  },
   build: {
-    outDir: "../../dist",
+    outDir: "dist",
     emptyOutDir: true,
   },
-});
+}));

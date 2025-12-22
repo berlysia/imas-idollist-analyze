@@ -9,6 +9,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
+    "jsxImportSource": "react",
 
     "strict": true,
     "noUnusedLocals": true,
@@ -27,5 +28,5 @@
       "@/visualizer/*": ["./src/visualizer/*"]
     }
   },
-  "include": ["src", "scripts", "vite.config.ts", "vitest.config.ts"]
+  "include": ["src", "scripts", "app", "vite.config.ts", "vitest.config.ts"]
 }

@@ -1,12 +1,20 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { NormalizedData } from "../hooks/useCooccurrenceData";
 import type { Brand } from "@/types";
-import { BRAND_COLORS } from "../constants";
+import { BRAND_COLORS, BRAND_NAMES, ALL_BRANDS } from "../lib/constants";
+
+interface IdolInfo {
+  name: string;
+  brand: Brand[];
+}
+
+interface NetworkData {
+  idols: Record<string, IdolInfo>;
+  cooccurrences: Record<string, string[]>;
+}
 
 interface Props {
-  data: NormalizedData;
-  selectedBrands: Brand[];
-  minConnections: number;
+  data: NetworkData;
+  initialMinConnections?: number;
 }
 
 interface Node {
@@ -25,13 +33,34 @@ interface Edge {
   target: string;
 }
 
-export function NetworkGraph({ data, selectedBrands, minConnections }: Props) {
+export default function NetworkGraph({ data, initialMinConnections = 5 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [hoveredNode, setHoveredNode] = useState<Node | null>(null);
+  const [selectedBrands, setSelectedBrands] = useState<Brand[]>(ALL_BRANDS);
+  const [minConnections, setMinConnections] = useState(initialMinConnections);
   const animationRef = useRef<number>(0);
+  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
 
+  // Resize canvas to container
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width } = entry.contentRect;
+        setCanvasSize({ width: Math.max(400, width - 32), height: 600 });
+      }
+    });
+
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  // Build graph data
   useEffect(() => {
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
@@ -59,8 +88,8 @@ export function NetworkGraph({ data, selectedBrands, minConnections }: Props) {
         id,
         name: idol.name,
         brand: idol.brand,
-        x: Math.random() * 800,
-        y: Math.random() * 600,
+        x: Math.random() * canvasSize.width,
+        y: Math.random() * canvasSize.height,
         vx: 0,
         vy: 0,
         connections: incomingCounts.get(id) ?? 0,
@@ -78,8 +107,9 @@ export function NetworkGraph({ data, selectedBrands, minConnections }: Props) {
 
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [data, selectedBrands, minConnections]);
+  }, [data, selectedBrands, minConnections, canvasSize.width, canvasSize.height]);
 
+  // Animation loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || nodes.length === 0) return;
@@ -88,8 +118,8 @@ export function NetworkGraph({ data, selectedBrands, minConnections }: Props) {
     if (!ctx) return;
 
     const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-    const width = canvas.width;
-    const height = canvas.height;
+    const width = canvasSize.width;
+    const height = canvasSize.height;
 
     function simulate() {
       if (!ctx) return;
@@ -197,7 +227,7 @@ export function NetworkGraph({ data, selectedBrands, minConnections }: Props) {
     return () => {
       cancelAnimationFrame(animationRef.current);
     };
-  }, [nodes, edges, hoveredNode]);
+  }, [nodes, edges, hoveredNode, canvasSize.width, canvasSize.height]);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -222,18 +252,54 @@ export function NetworkGraph({ data, selectedBrands, minConnections }: Props) {
     [nodes]
   );
 
+  const handleBrandChange = (brand: Brand, checked: boolean) => {
+    setSelectedBrands((prev) => (checked ? [...prev, brand] : prev.filter((b) => b !== brand)));
+  };
+
   return (
-    <div className="chart-container">
-      <h3>ネットワークグラフ</h3>
+    <div ref={containerRef} style={{ width: "100%" }}>
+      <section className="filters">
+        <div className="brand-filters">
+          <span>ブランド:</span>
+          {ALL_BRANDS.map((brand) => (
+            <label key={brand} className={`brand-checkbox brand-${brand}`}>
+              <input
+                type="checkbox"
+                checked={selectedBrands.includes(brand)}
+                onChange={(e) => handleBrandChange(brand, e.target.checked)}
+              />
+              {BRAND_NAMES[brand]}
+            </label>
+          ))}
+        </div>
+        <div className="connection-filter">
+          <label>
+            最小被共起数:
+            <input
+              type="range"
+              min={1}
+              max={50}
+              value={minConnections}
+              onChange={(e) => setMinConnections(Number(e.target.value))}
+            />
+            {minConnections}
+          </label>
+        </div>
+      </section>
+
       <p className="graph-info">
         ノード数: {nodes.length} / エッジ数: {edges.length}
       </p>
       <canvas
         ref={canvasRef}
-        width={800}
-        height={600}
+        width={canvasSize.width}
+        height={canvasSize.height}
         onMouseMove={handleMouseMove}
-        style={{ border: "1px solid #ddd", cursor: hoveredNode ? "pointer" : "default" }}
+        style={{
+          border: "1px solid #ddd",
+          cursor: hoveredNode ? "pointer" : "default",
+          maxWidth: "100%",
+        }}
       />
     </div>
   );

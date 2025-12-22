@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import type { Brand } from "@/types";
 
 export interface IdolData {
@@ -21,7 +20,7 @@ export interface CooccurrenceStats {
   byBrand: Record<Brand, number>;
 }
 
-const BRAND_NAMES: Record<Brand, string> = {
+export const BRAND_NAMES: Record<Brand, string> = {
   imas: "765PRO",
   deremas: "シンデレラ",
   milimas: "ミリオン",
@@ -30,31 +29,8 @@ const BRAND_NAMES: Record<Brand, string> = {
   gakuen: "学マス",
 };
 
-export function useBrandName(brand: Brand): string {
-  return BRAND_NAMES[brand];
-}
-
 export function getBrandName(brand: Brand): string {
   return BRAND_NAMES[brand];
-}
-
-export function useCooccurrenceData() {
-  const [data, setData] = useState<NormalizedData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    fetch("/normalized-2025-12-22.json")
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<NormalizedData>;
-      })
-      .then(setData)
-      .catch(setError)
-      .finally(() => setLoading(false));
-  }, []);
-
-  return { data, loading, error };
 }
 
 /**
@@ -246,8 +222,8 @@ export function computeCrossBrandBridges(
     });
   }
 
-  // デフォルトはvoterCount順、PMI順でもソートできるようにする
-  return results.sort((a, b) => b.voterCount - a.voterCount);
+  // デフォルトはPMI順
+  return results.sort((a, b) => b.pmi - a.pmi);
 }
 
 export function computeIncomingStats(data: NormalizedData): CooccurrenceStats[] {
