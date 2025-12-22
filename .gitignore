@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Temporary files
+.tmp/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Playwright
+test-results/
+playwright-report/
+
+# Coverage
+coverage/
+
+# Environment
+.env
+.env.local
+
+.playwright-mcp
+data
+
+*.tsbuildinfo

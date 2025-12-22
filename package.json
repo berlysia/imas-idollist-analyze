@@ -1,0 +1,57 @@
+{
+  "name": "imas-idollist-cooccurence",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "scrape": "bun scripts/scrape.ts",
+    "scrape:list": "bun src/scraper/index.ts list",
+    "scrape:details": "bun src/scraper/index.ts details",
+    "transform:normalize": "bun src/transformer/index.ts",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "oxlint src tests",
+    "lint:fix": "oxlint --fix src tests",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "clean": "knip",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^2.15.0"
+  },
+  "devDependencies": {
+    "@types/jsdom": "27.0.0",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^2.1.8",
+    "jsdom": "^25.0.1",
+    "knip": "^5.41.1",
+    "oxlint": "^0.15.4",
+    "playwright": "^1.49.1",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vitest": "^2.1.8"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "playwright"
+    ],
+    "packageManager": {
+      "minimalReleaseAge": "10080"
+    }
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "packageManager": "pnpm@9.15.1"
+}
