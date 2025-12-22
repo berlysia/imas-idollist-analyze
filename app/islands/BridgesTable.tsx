@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type { Brand } from "@/types";
 import { BRAND_COLORS, BRAND_NAMES } from "../lib/constants";
 
@@ -31,12 +30,6 @@ function BrandDot({ brand }: { brand: Brand }) {
 }
 
 export default function BridgesTable({ bridges }: Props) {
-  const [page, setPage] = useState(0);
-  const itemsPerPage = 50;
-
-  const totalPages = Math.ceil(bridges.length / itemsPerPage);
-  const currentBridges = bridges.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
-
   return (
     <div className="cross-brand-bridges">
       <div className="bridges-explanation">
@@ -64,9 +57,9 @@ export default function BridgesTable({ bridges }: Props) {
           </tr>
         </thead>
         <tbody>
-          {currentBridges.map((bridge, index) => (
+          {bridges.map((bridge, index) => (
             <tr key={`${bridge.idolA.id}-${bridge.idolB.id}`} className="bridge-row">
-              <td className="rank">{page * itemsPerPage + index + 1}</td>
+              <td className="rank">{index + 1}</td>
               <td>
                 <a
                   href={`/idol/${bridge.idolA.id}`}
@@ -110,45 +103,6 @@ export default function BridgesTable({ bridges }: Props) {
           ))}
         </tbody>
       </table>
-
-      {totalPages > 1 && (
-        <div
-          className="pagination"
-          style={{
-            marginTop: "16px",
-            display: "flex",
-            gap: "8px",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            style={{
-              padding: "8px 16px",
-              cursor: page === 0 ? "not-allowed" : "pointer",
-              opacity: page === 0 ? 0.5 : 1,
-            }}
-          >
-            前へ
-          </button>
-          <span>
-            {page + 1} / {totalPages} ページ
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page === totalPages - 1}
-            style={{
-              padding: "8px 16px",
-              cursor: page === totalPages - 1 ? "not-allowed" : "pointer",
-              opacity: page === totalPages - 1 ? 0.5 : 1,
-            }}
-          >
-            次へ
-          </button>
-        </div>
-      )}
     </div>
   );
 }

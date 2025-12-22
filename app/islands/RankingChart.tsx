@@ -34,24 +34,25 @@ function BrandDot({ brand }: { brand: Brand }) {
   );
 }
 
+const CHART_LIMIT_OPTIONS = [20, 50, 100, 0] as const;
+
 export default function RankingChart({ stats }: Props) {
   const [selectedBrands, setSelectedBrands] = useState<Brand[]>(ALL_BRANDS);
-  const [page, setPage] = useState(0);
-  const itemsPerPage = 50;
+  const [chartLimit, setChartLimit] = useState<number>(50);
 
   const filteredStats = useMemo(() => {
     return stats.filter((stat) => stat.brand.some((b) => selectedBrands.includes(b)));
   }, [stats, selectedBrands]);
 
-  const totalPages = Math.ceil(filteredStats.length / itemsPerPage);
-  const currentStats = filteredStats.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
-
-  const chartData = currentStats.map((stat) => ({
-    id: stat.id,
-    name: stat.name,
-    count: stat.count,
-    brand: stat.brand,
-  }));
+  const chartData = useMemo(() => {
+    const limited = chartLimit === 0 ? filteredStats : filteredStats.slice(0, chartLimit);
+    return limited.map((stat) => ({
+      id: stat.id,
+      name: stat.name,
+      count: stat.count,
+      brand: stat.brand,
+    }));
+  }, [filteredStats, chartLimit]);
 
   // 1人あたり28pxの高さを確保（最小400px）
   const chartHeight = Math.max(400, chartData.length * 28);
@@ -61,7 +62,6 @@ export default function RankingChart({ stats }: Props) {
       const newBrands = checked ? [...prev, brand] : prev.filter((b) => b !== brand);
       return newBrands.length > 0 ? newBrands : prev;
     });
-    setPage(0);
   };
 
   const handleBarClick = (data: { id: string }) => {
@@ -87,11 +87,21 @@ export default function RankingChart({ stats }: Props) {
             </label>
           ))}
         </div>
+        <div className="chart-limit-filter" style={{ marginTop: "8px" }}>
+          <span>グラフ表示件数:</span>
+          {CHART_LIMIT_OPTIONS.map((limit) => (
+            <label key={limit} style={{ marginLeft: "8px" }}>
+              <input
+                type="radio"
+                name="chartLimit"
+                checked={chartLimit === limit}
+                onChange={() => setChartLimit(limit)}
+              />
+              {limit === 0 ? "全件" : `${limit}件`}
+            </label>
+          ))}
+        </div>
       </section>
-
-      <p className="chart-count" style={{ marginBottom: "8px" }}>
-        {filteredStats.length}人のアイドル
-      </p>
 
       <div style={{ width: "100%", height: chartHeight, marginBottom: "24px" }}>
         <ResponsiveContainer>
@@ -130,9 +140,9 @@ export default function RankingChart({ stats }: Props) {
           </tr>
         </thead>
         <tbody>
-          {currentStats.map((stat, index) => (
+          {filteredStats.map((stat, index) => (
             <tr key={stat.id}>
-              <td className="rank">{page * itemsPerPage + index + 1}</td>
+              <td className="rank">{index + 1}</td>
               <td>
                 <a
                   href={`/idol/${stat.id}`}
@@ -175,45 +185,6 @@ export default function RankingChart({ stats }: Props) {
           ))}
         </tbody>
       </table>
-
-      {totalPages > 1 && (
-        <div
-          className="pagination"
-          style={{
-            marginTop: "16px",
-            display: "flex",
-            gap: "8px",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            style={{
-              padding: "8px 16px",
-              cursor: page === 0 ? "not-allowed" : "pointer",
-              opacity: page === 0 ? 0.5 : 1,
-            }}
-          >
-            前へ
-          </button>
-          <span>
-            {page + 1} / {totalPages} ページ
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page === totalPages - 1}
-            style={{
-              padding: "8px 16px",
-              cursor: page === totalPages - 1 ? "not-allowed" : "pointer",
-              opacity: page === totalPages - 1 ? 0.5 : 1,
-            }}
-          >
-            次へ
-          </button>
-        </div>
-      )}
     </div>
   );
 }
