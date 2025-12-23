@@ -26,10 +26,10 @@ export function PageHeader({ metadata }: { metadata: MetadataData }) {
 }
 
 const TAB_ITEMS = [
-  { href: "/incoming-ranking", label: "被掲載推薦ランキング" },
-  { href: "/mutual-pairs", label: "相互掲載推薦ペア" },
+  { href: "/incoming-ranking", label: "被随伴ランキング" },
+  { href: "/mutual-pairs", label: "相互随伴ペア" },
   { href: "/cross-brand-pairs", label: "ブランド横断ペア" },
-  { href: "/recommendation-clusters", label: "掲載推薦クラスタ" },
+  { href: "/recommendation-clusters", label: "随伴クラスタ" },
   { href: "/cross-brand-clusters", label: "ブランド横断クラスタ" },
   { href: "/network", label: "ネットワーク" },
 ] as const;

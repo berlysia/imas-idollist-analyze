@@ -24,10 +24,10 @@ export interface Idol {
 }
 
 /**
- * 詳細ページから取得する掲載推薦アイドル情報
+ * 詳細ページから取得する随伴アイドル情報
  */
 export interface IdolDetail extends Idol {
-  /** 掲載推薦アイドル一覧（このアイドルのページに掲載されているアイドル） */
+  /** 随伴アイドル一覧（このアイドルのページに掲載されているアイドル） */
   recommended: Idol[];
 }
 
@@ -44,7 +44,7 @@ export interface ScrapeResult<T> {
 }
 
 /**
- * 掲載推薦データの統計情報
+ * 随伴データの統計情報
  */
 export interface RecommendationStats {
   /** アイドルID（linkから抽出） */
@@ -53,9 +53,9 @@ export interface RecommendationStats {
   name: string;
   /** ブランド */
   brand: Brand[];
-  /** 掲載推薦アイドル数 */
+  /** 随伴アイドル数 */
   recommendationCount: number;
-  /** ブランド別掲載推薦数 */
+  /** ブランド別随伴数 */
   recommendationByBrand: Record<Brand, number>;
 }
 
@@ -70,7 +70,7 @@ export interface ChartNode {
 }
 
 /**
- * 可視化用のエッジ（掲載推薦関係）
+ * 可視化用のエッジ（随伴関係）
  */
 export interface ChartEdge {
   source: string;

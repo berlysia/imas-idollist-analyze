@@ -5,7 +5,7 @@ const MAX_RETRIES = 3;
 const FETCH_TIMEOUT = 30000;
 
 /**
- * HTMLから掲載推薦アイドル情報を抽出
+ * HTMLから随伴アイドル情報を抽出
  */
 function extractRecommendedIdols(document: Document): Idol[] {
   const container = document.querySelector("ul.another-chara");
@@ -85,7 +85,7 @@ async function fetchSingleIdolDetail(
       const document = dom.window.document;
 
       const recommended = extractRecommendedIdols(document);
-      console.log(`${logPrefix} 取得完了: 掲載推薦${recommended.length}件`);
+      console.log(`${logPrefix} 取得完了: 随伴${recommended.length}件`);
 
       return {
         ...idol,

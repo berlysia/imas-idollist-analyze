@@ -274,7 +274,7 @@ export default function NetworkGraph({ data, initialMinConnections = 5 }: Props)
         </div>
         <div className="connection-filter">
           <label>
-            最小被掲載推薦数:
+            最小被随伴数:
             <input
               type="range"
               min={1}

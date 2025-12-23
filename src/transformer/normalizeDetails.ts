@@ -10,12 +10,12 @@ export interface NormalizedIdol {
 }
 
 /**
- * 正規化された掲載推薦データ
+ * 正規化された随伴データ
  */
 export interface NormalizedData {
   scrapedAt: string;
   idols: Record<string, NormalizedIdol>;
-  /** 掲載推薦関係: キーのアイドルのページに掲載されているアイドルIDの配列 */
+  /** 随伴関係: キーのアイドルのページに掲載されているアイドルIDの配列 */
   recommendations: Record<string, string[]>;
 }
 
@@ -51,7 +51,7 @@ export function normalizeDetails(data: ScrapeResult<IdolDetail>): NormalizedData
       extractIdFromLink(recommended.link)
     );
 
-    // 掲載推薦アイドルの情報もidolsに追加（まだ存在しない場合）
+    // 随伴アイドルの情報もidolsに追加（まだ存在しない場合）
     for (const recommended of idol.recommended) {
       const recommendedId = extractIdFromLink(recommended.link);
       if (!idols[recommendedId]) {

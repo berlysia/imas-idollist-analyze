@@ -10,7 +10,7 @@ export interface IdolData {
 export interface NormalizedData {
   scrapedAt: string;
   idols: Record<string, IdolData>;
-  /** 掲載推薦関係: キーのアイドルのページに掲載されているアイドルIDの配列 */
+  /** 随伴関係: キーのアイドルのページに掲載されているアイドルIDの配列 */
   recommendations: Record<string, string[]>;
 }
 
@@ -43,8 +43,8 @@ export interface PairCooccurrence {
 }
 
 /**
- * PMIベースの「意外性のある相互掲載推薦」を計算
- * @param minCount 最低掲載推薦数（統計的安定性のため）
+ * PMIベースの「意外性のある相互随伴」を計算
+ * @param minCount 最低随伴数（統計的安定性のため）
  */
 export function computePMIRanking(data: NormalizedData, minCount: number = 2): PairCooccurrence[] {
   const idolIds = Object.keys(data.idols);
@@ -77,7 +77,7 @@ export function computePMIRanking(data: NormalizedData, minCount: number = 2): P
     }
   }
 
-  // 総掲載推薦数（PMI計算の分母用）
+  // 総随伴数（PMI計算の分母用）
   const totalCooccurrences = Array.from(pairCount.values()).reduce((a, b) => a + b, 0);
 
   const results: PairCooccurrence[] = [];
@@ -99,7 +99,7 @@ export function computePMIRanking(data: NormalizedData, minCount: number = 2): P
 
     // P(A,B) = このペアの共起回数 / 総共起回数
     const pAB = count / totalCooccurrences;
-    // P(A) = Aの出現回数 / (アイドル数 * 平均掲載推薦数)
+    // P(A) = Aの出現回数 / (アイドル数 * 平均随伴数)
     const pA = countA / (totalIdols * (totalCooccurrences / totalIdols));
     const pB = countB / (totalIdols * (totalCooccurrences / totalIdols));
 
@@ -146,7 +146,7 @@ export function computeCrossBrandBridges(
   data: NormalizedData,
   minCooccurrenceSources: number = 2
 ): CrossBrandBridge[] {
-  // 各アイドルが掲載推薦リストに現れる回数（被掲載推薦数）
+  // 各アイドルが随伴リストに現れる回数（被随伴数）
   const appearanceCount = new Map<string, number>();
   for (const targetIds of Object.values(data.recommendations)) {
     for (const targetId of targetIds) {
@@ -154,10 +154,10 @@ export function computeCrossBrandBridges(
     }
   }
 
-  // 総共起元数（掲載推薦リストを持つアイドルの数）
+  // 総共起元数（随伴リストを持つアイドルの数）
   const totalCooccurrenceSources = Object.keys(data.recommendations).length;
 
-  // 各アイドルの掲載推薦リストに同時に現れるペアを記録
+  // 各アイドルの随伴リストに同時に現れるペアを記録
   const pairCooccurrenceSources = new Map<string, string[]>();
 
   for (const [sourceId, targetIds] of Object.entries(data.recommendations) as [
@@ -310,9 +310,9 @@ export interface IdolDetail {
     pmi: number;
     cooccurrenceSources: Array<{ id: string; name: string; brand: Brand[] }>;
   }>;
-  /** 被掲載推薦数 */
+  /** 被随伴数 */
   incomingCount: number;
-  /** ブランド別被掲載推薦数 */
+  /** ブランド別被随伴数 */
   incomingByBrand: Record<Brand, number>;
 }
 
@@ -820,7 +820,7 @@ export function computeIdolDetail(
     })
     .sort((a, b) => b.pmi - a.pmi);
 
-  // 被掲載推薦数計算
+  // 被随伴数計算
   const incomingByBrand: Record<Brand, number> = {
     imas: 0,
     deremas: 0,

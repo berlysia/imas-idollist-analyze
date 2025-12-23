@@ -150,9 +150,9 @@ export default createRoute(
             </div>
 
             <div className="detail-section">
-              <h3>被掲載推薦数</h3>
+              <h3>被随伴数</h3>
               <p className="section-description">
-                このアイドルを掲載推薦として表示しているアイドルの数
+                このアイドルを随伴として表示しているアイドルの数
               </p>
               <p className="stat-number">{detail.incomingCount}人</p>
               <div className="brand-breakdown">
@@ -169,7 +169,7 @@ export default createRoute(
 
             {detail.mutualPairs.length > 0 && (
               <div className="detail-section">
-                <h3>相互掲載推薦アイドル</h3>
+                <h3>相互随伴アイドル</h3>
                 <ul className="idol-list">
                   {detail.mutualPairs.map((idol) => (
                     <li key={idol.id}>
@@ -187,9 +187,9 @@ export default createRoute(
             )}
 
             <div className="detail-section">
-              <h3>掲載推薦アイドル</h3>
+              <h3>随伴アイドル</h3>
               <p className="section-description">
-                このアイドルのページに掲載推薦として表示されているアイドル
+                このアイドルのページに随伴として表示されているアイドル
               </p>
               {detail.selectedIdols.length > 0 ? (
                 (() => {
@@ -253,14 +253,14 @@ export default createRoute(
                   );
                 })()
               ) : (
-                <p className="empty-message">掲載推薦データなし</p>
+                <p className="empty-message">随伴データなし</p>
               )}
             </div>
 
             <div className="detail-section">
-              <h3>掲載推薦元アイドル</h3>
+              <h3>随伴元アイドル</h3>
               <p className="section-description">
-                このアイドルを掲載推薦として表示しているアイドル
+                このアイドルを随伴として表示しているアイドル
               </p>
               <p className="section-description">
                 このアイドルを選ぶことの珍しさ{" "}
@@ -292,7 +292,7 @@ export default createRoute(
                   ))}
                 </ul>
               ) : (
-                <p className="empty-message">掲載推薦元アイドルなし</p>
+                <p className="empty-message">随伴元アイドルなし</p>
               )}
             </div>
 
@@ -300,7 +300,7 @@ export default createRoute(
               <div className="detail-section">
                 <h3>ブランド横断ペア</h3>
                 <p className="section-description">
-                  異なるブランドのアイドルと一緒に掲載推薦として表示されているペア
+                  異なるブランドのアイドルと一緒に随伴として表示されているペア
                 </p>
                 <ul className="bridge-list">
                   {detail.crossBrandBridges.slice(0, 10).map((bridge) => (

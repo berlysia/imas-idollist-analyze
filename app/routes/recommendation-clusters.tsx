@@ -37,11 +37,11 @@ export default createRoute(async (c) => {
       <NavigationTabs activeTab="/recommendation-clusters" />
       <main>
         <div className="chart-container">
-          <h3>掲載推薦クラスタ</h3>
+          <h3>随伴クラスタ</h3>
           <ExplanationBox>
             <p>
-              <strong>掲載推薦クラスタ</strong>
-              とは、互いのページに掲載推薦として密接に結びついているアイドルのグループです。
+              <strong>随伴クラスタ</strong>
+              とは、互いのページに随伴として密接に結びついているアイドルのグループです。
             </p>
             <p>
               Louvain法によるコミュニティ検出を使用し、IDF（珍しさ）を考慮した重み付けで
@@ -53,6 +53,6 @@ export default createRoute(async (c) => {
       </main>
       <PageFooter />
     </>,
-    { title: `掲載推薦クラスタ - ${SITE_TITLE}` }
+    { title: `随伴クラスタ - ${SITE_TITLE}` }
   );
 });

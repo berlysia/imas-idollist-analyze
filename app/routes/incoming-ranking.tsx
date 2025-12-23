@@ -38,11 +38,11 @@ export default createRoute(async (c) => {
       <NavigationTabs activeTab="/incoming-ranking" />
       <main>
         <div className="chart-container">
-          <h3>被掲載推薦ランキング</h3>
+          <h3>被随伴ランキング</h3>
           <ExplanationBox>
             <p>
-              <strong>被掲載推薦ランキング</strong>
-              とは、各アイドルがどれだけ多くのアイドルのページに掲載推薦として表示されているかを示すランキングです。
+              <strong>被随伴ランキング</strong>
+              とは、各アイドルがどれだけ多くのアイドルのページに随伴として表示されているかを示すランキングです。
             </p>
           </ExplanationBox>
           <RankingChart stats={stats} />
@@ -50,6 +50,6 @@ export default createRoute(async (c) => {
       </main>
       <PageFooter />
     </>,
-    { title: `被掲載推薦ランキング - ${SITE_TITLE}` }
+    { title: `被随伴ランキング - ${SITE_TITLE}` }
   );
 });

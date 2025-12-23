@@ -110,7 +110,7 @@ export default function RankingChart({ stats }: Props) {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis type="number" />
             <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={90} />
-            <Tooltip formatter={(value: number) => [`${value}人`, "被掲載推薦数"]} />
+            <Tooltip formatter={(value: number) => [`${value}人`, "被随伴数"]} />
             <Bar
               dataKey="count"
               cursor="pointer"
@@ -132,7 +132,7 @@ export default function RankingChart({ stats }: Props) {
           <tr>
             <th className="rank">順位</th>
             <th>アイドル</th>
-            <th className="count">被掲載推薦数</th>
+            <th className="count">被随伴数</th>
             <th>ブランド別</th>
           </tr>
         </thead>
