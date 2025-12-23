@@ -233,8 +233,7 @@ export default function SimilarIdolsFilter({ groups, selectedIdols }: Props) {
                     marginLeft: "auto",
                   }}
                 >
-                  ({group.commonAccompanimentCount}人 × レアスコア {group.avgIdf.toFixed(2)} ={" "}
-                  {(group.commonAccompanimentCount * group.avgIdf).toFixed(2)})
+                  ({group.commonAccompanimentCount}人, レアスコア: {group.avgIdf.toFixed(2)})
                 </span>
               </div>
               <div

@@ -1331,15 +1331,9 @@ export function computeSimilarIdolGroups(
     idols: group.idols,
   }));
 
-  // スコア = 共通数 × IDF平均 でソート
-  // これにより「3人のちょいレア」が「6人の有名どころ」より上に来る
-  return groups
-    .sort((a, b) => {
-      const scoreA = a.commonAccompanimentCount * a.avgIdf;
-      const scoreB = b.commonAccompanimentCount * b.avgIdf;
-      return scoreB - scoreA;
-    })
-    .slice(0, topN);
+  // レアスコア（累乗平均）のみでソート
+  // 人数を掛けると結局人数が支配的になるため、純粋にレアさで並べる
+  return groups.sort((a, b) => b.avgIdf - a.avgIdf).slice(0, topN);
 }
 
 /**
