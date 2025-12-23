@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import type { Brand } from "@/types";
 import { BRAND_COLORS, BRAND_NAMES } from "../lib/constants";
 
@@ -67,60 +68,136 @@ function ClusterLink({ clusterInfo }: { clusterInfo: ClusterInfo | undefined }) 
   );
 }
 
-function CooccurrenceSourceList({ sources }: { sources: IdolInfo[] }) {
-  if (sources.length === 0) return null;
-
+function ExpandedSourcesRow({ sources, colSpan }: { sources: IdolInfo[]; colSpan: number }) {
   return (
-    <details className="cooccurrence-sources-details">
-      <summary
+    <tr className="expanded-sources-row">
+      <td
+        colSpan={colSpan}
         style={{
-          cursor: "pointer",
-          color: "#8e44ad",
-          fontWeight: 500,
-          fontSize: "0.9em",
-        }}
-      >
-        {sources.length}人が同時選出
-      </summary>
-      <ul
-        style={{
-          margin: "8px 0 0 0",
-          padding: "8px 0 8px 16px",
-          listStyle: "none",
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "4px 12px",
-          fontSize: "0.85em",
+          padding: "12px 16px",
           backgroundColor: "#f8f4fc",
-          borderRadius: "4px",
+          borderTop: "none",
         }}
       >
-        {sources.map((source) => (
-          <li key={source.id} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            {source.brand.map((b) => (
-              <BrandDot key={b} brand={b} />
-            ))}
+        <div style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}>
+          共起元（このペアを同時に掲載しているアイドル）:
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "8px",
+          }}
+        >
+          {sources.map((source) => (
             <a
+              key={source.id}
               href={`/idol/${source.id}`}
-              style={{ color: "#333", textDecoration: "none" }}
-              onMouseOver={(e) => (e.currentTarget.style.textDecoration = "underline")}
-              onMouseOut={(e) => (e.currentTarget.style.textDecoration = "none")}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "6px 10px",
+                backgroundColor: "#fff",
+                border: "1px solid #ddd",
+                borderRadius: "4px",
+                textDecoration: "none",
+                color: "#333",
+                fontSize: "13px",
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = "#f0e6f6";
+                e.currentTarget.style.borderColor = "#8e44ad";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = "#fff";
+                e.currentTarget.style.borderColor = "#ddd";
+              }}
             >
+              {source.brand.map((b) => (
+                <BrandDot key={b} brand={b} />
+              ))}
               {source.name}
             </a>
-          </li>
-        ))}
-      </ul>
-    </details>
+          ))}
+        </div>
+      </td>
+    </tr>
   );
 }
 
 export default function BridgesTable({ bridges, pairToCluster }: Props) {
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const hasClusterData = pairToCluster && Object.keys(pairToCluster).length > 0;
+  const colSpan = hasClusterData ? 7 : 6;
+
+  const toggleExpand = (key: string) => {
+    setExpandedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const expandAll = () => {
+    const allKeys = bridges.map((b) => `${b.idolA.id}-${b.idolB.id}`);
+    setExpandedKeys(new Set(allKeys));
+  };
+
+  const collapseAll = () => {
+    setExpandedKeys(new Set());
+  };
 
   return (
     <>
-      <p className="bridges-count">{bridges.length} ペア</p>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "8px",
+        }}
+      >
+        <p className="bridges-count" style={{ margin: 0 }}>
+          {bridges.length} ペア
+        </p>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button
+            type="button"
+            onClick={expandAll}
+            style={{
+              padding: "4px 12px",
+              fontSize: "12px",
+              cursor: "pointer",
+              backgroundColor: "#f0e6f6",
+              border: "1px solid #8e44ad",
+              borderRadius: "4px",
+              color: "#8e44ad",
+            }}
+          >
+            全て開く
+          </button>
+          <button
+            type="button"
+            onClick={collapseAll}
+            style={{
+              padding: "4px 12px",
+              fontSize: "12px",
+              cursor: "pointer",
+              backgroundColor: "#fff",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              color: "#666",
+            }}
+          >
+            全て閉じる
+          </button>
+        </div>
+      </div>
 
       <table className="bridges-table">
         <thead>
@@ -138,61 +215,99 @@ export default function BridgesTable({ bridges, pairToCluster }: Props) {
           {bridges.map((bridge, index) => {
             const pairKey = makePairKey(bridge.idolA.id, bridge.idolB.id);
             const clusterInfo = pairToCluster?.[pairKey];
+            const rowKey = `${bridge.idolA.id}-${bridge.idolB.id}`;
+            const isExpanded = expandedKeys.has(rowKey);
 
             return (
-              <tr
-                key={`${bridge.idolA.id}-${bridge.idolB.id}`}
-                className="bridge-row"
-                style={clusterInfo ? { backgroundColor: "#faf5fc" } : undefined}
-              >
-                <td className="rank">{index + 1}</td>
-                <td>
-                  <a
-                    href={`/idol/${bridge.idolA.id}`}
-                    className="idol-name clickable"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      textDecoration: "none",
-                      color: "inherit",
-                    }}
-                  >
-                    {bridge.idolA.brand.map((b) => (
-                      <BrandDot key={b} brand={b} />
-                    ))}
-                    {bridge.idolA.name}
-                  </a>
-                </td>
-                <td className="arrow">↔</td>
-                <td>
-                  <a
-                    href={`/idol/${bridge.idolB.id}`}
-                    className="idol-name clickable"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      textDecoration: "none",
-                      color: "inherit",
-                    }}
-                  >
-                    {bridge.idolB.brand.map((b) => (
-                      <BrandDot key={b} brand={b} />
-                    ))}
-                    {bridge.idolB.name}
-                  </a>
-                </td>
-                <td className="voter-count">
-                  <CooccurrenceSourceList sources={bridge.cooccurrenceSources} />
-                </td>
-                <td className="pmi-value">{bridge.pmi.toFixed(2)}</td>
-                {hasClusterData && (
-                  <td className="cluster-link">
-                    <ClusterLink clusterInfo={clusterInfo} />
+              <React.Fragment key={rowKey}>
+                <tr
+                  className={`bridge-row ${isExpanded ? "expanded" : ""}`}
+                  style={{
+                    backgroundColor: isExpanded ? "#f0e6f6" : clusterInfo ? "#faf5fc" : undefined,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => toggleExpand(rowKey)}
+                >
+                  <td className="rank">{index + 1}</td>
+                  <td>
+                    <a
+                      href={`/idol/${bridge.idolA.id}`}
+                      className="idol-name clickable"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        textDecoration: "none",
+                        color: "inherit",
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {bridge.idolA.brand.map((b) => (
+                        <BrandDot key={b} brand={b} />
+                      ))}
+                      {bridge.idolA.name}
+                    </a>
                   </td>
+                  <td className="arrow">↔</td>
+                  <td>
+                    <a
+                      href={`/idol/${bridge.idolB.id}`}
+                      className="idol-name clickable"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        textDecoration: "none",
+                        color: "inherit",
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {bridge.idolB.brand.map((b) => (
+                        <BrandDot key={b} brand={b} />
+                      ))}
+                      {bridge.idolB.name}
+                    </a>
+                  </td>
+                  <td className="voter-count">
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        color: "#8e44ad",
+                        fontWeight: 500,
+                        fontSize: "0.9em",
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: "inline-block",
+                          width: "16px",
+                          textAlign: "center",
+                          transition: "transform 0.2s",
+                          transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+                        }}
+                      >
+                        ▶
+                      </span>
+                      {bridge.cooccurrenceSources.length}人
+                    </span>
+                  </td>
+                  <td className="pmi-value">{bridge.pmi.toFixed(2)}</td>
+                  {hasClusterData && (
+                    <td className="cluster-link" onClick={(e) => e.stopPropagation()}>
+                      <ClusterLink clusterInfo={clusterInfo} />
+                    </td>
+                  )}
+                </tr>
+                {isExpanded && (
+                  <ExpandedSourcesRow
+                    key={`${rowKey}-expanded`}
+                    sources={bridge.cooccurrenceSources}
+                    colSpan={colSpan}
+                  />
                 )}
-              </tr>
+              </React.Fragment>
             );
           })}
         </tbody>
