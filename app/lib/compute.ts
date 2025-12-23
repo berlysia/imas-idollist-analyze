@@ -828,12 +828,39 @@ export function computeIdolDetail(
 }
 
 /**
+ * クロスブランドクラスタメンバーの役割
+ */
+export interface CrossBrandClusterMember {
+  id: string;
+  name: string;
+  brand: Brand[];
+  /** コア度（0-1、高いほど中心的） */
+  coreness: number;
+  /** クラスタ内の次数（エッジ数） */
+  degree: number;
+  /** PMI加重次数（各エッジのPMIの合計） */
+  pmiWeightedDegree: number;
+  /** 投票数加重次数（各エッジの投票数の合計） */
+  voterWeightedDegree: number;
+  /** 役割: core=密に結合、peripheral=コアに接続 */
+  role: "core" | "peripheral";
+}
+
+/**
  * ブランド横断クラスタ: cross-brand bridgesのみからグラフを構築
  */
 export interface CrossBrandCluster {
   id: number;
   members: string[];
   memberDetails: Array<{ id: string; name: string; brand: Brand[] }>;
+  /** メンバー情報（役割付き） */
+  memberRoles: CrossBrandClusterMember[];
+  /** コアメンバーのID */
+  coreMembers: string[];
+  /** 周辺メンバーのID */
+  peripheralMembers: string[];
+  /** コア部分の密度 */
+  coreDensity: number;
   /** クラスタ内のブランド横断エッジ */
   edges: Array<{
     idolA: { id: string; name: string; brand: Brand[] };
@@ -1047,10 +1074,112 @@ export function detectCrossBrandClusters(
     }
     const brands = Array.from(brandSet);
 
+    // メンバーごとの次数、PMI加重次数、投票数加重次数を計算
+    const memberDegree = new Map<string, number>();
+    const memberPmiWeighted = new Map<string, number>();
+    const memberVoterWeighted = new Map<string, number>();
+
+    for (const memberId of members) {
+      memberDegree.set(memberId, 0);
+      memberPmiWeighted.set(memberId, 0);
+      memberVoterWeighted.set(memberId, 0);
+    }
+
+    for (const edge of clusterEdges) {
+      // 次数を加算
+      memberDegree.set(edge.idolA.id, (memberDegree.get(edge.idolA.id) ?? 0) + 1);
+      memberDegree.set(edge.idolB.id, (memberDegree.get(edge.idolB.id) ?? 0) + 1);
+
+      // PMI加重次数を加算
+      memberPmiWeighted.set(edge.idolA.id, (memberPmiWeighted.get(edge.idolA.id) ?? 0) + edge.pmi);
+      memberPmiWeighted.set(edge.idolB.id, (memberPmiWeighted.get(edge.idolB.id) ?? 0) + edge.pmi);
+
+      // 投票数加重次数を加算
+      memberVoterWeighted.set(
+        edge.idolA.id,
+        (memberVoterWeighted.get(edge.idolA.id) ?? 0) + edge.voterCount
+      );
+      memberVoterWeighted.set(
+        edge.idolB.id,
+        (memberVoterWeighted.get(edge.idolB.id) ?? 0) + edge.voterCount
+      );
+    }
+
+    // コア度を計算: 次数、PMI加重次数、投票数加重次数を正規化して組み合わせ
+    const maxDegree = Math.max(...Array.from(memberDegree.values()), 1);
+    const maxPmiWeighted = Math.max(...Array.from(memberPmiWeighted.values()), 1);
+    const maxVoterWeighted = Math.max(...Array.from(memberVoterWeighted.values()), 1);
+
+    const memberCoreness = new Map<string, number>();
+    for (const memberId of members) {
+      const degree = memberDegree.get(memberId) ?? 0;
+      const pmiWeighted = memberPmiWeighted.get(memberId) ?? 0;
+      const voterWeighted = memberVoterWeighted.get(memberId) ?? 0;
+
+      // コア度 = (正規化次数 * 0.4 + 正規化PMI加重 * 0.3 + 正規化投票数加重 * 0.3)
+      // 次数を重視: クラスター内で多くのメンバーと繋がっていることが中心性の主要指標
+      const coreness =
+        (degree / maxDegree) * 0.4 +
+        (pmiWeighted / maxPmiWeighted) * 0.3 +
+        (voterWeighted / maxVoterWeighted) * 0.3;
+      memberCoreness.set(memberId, coreness);
+    }
+
+    // コア/周辺を判定: コア度が中央値以上ならコア
+    const corenessValues = Array.from(memberCoreness.values()).sort((a, b) => b - a);
+    const medianIndex = Math.floor(corenessValues.length / 2);
+    const coreThreshold = corenessValues[medianIndex] ?? 0.5;
+
+    const coreMembers: string[] = [];
+    const peripheralMembers: string[] = [];
+    const memberRoles: CrossBrandClusterMember[] = [];
+
+    for (const memberId of members) {
+      const idol = data.idols[memberId];
+      if (!idol) continue;
+
+      const coreness = memberCoreness.get(memberId) ?? 0;
+      const degree = memberDegree.get(memberId) ?? 0;
+      const pmiWeightedDegree = memberPmiWeighted.get(memberId) ?? 0;
+      const voterWeightedDegree = memberVoterWeighted.get(memberId) ?? 0;
+      const role = coreness >= coreThreshold ? "core" : "peripheral";
+
+      if (role === "core") {
+        coreMembers.push(memberId);
+      } else {
+        peripheralMembers.push(memberId);
+      }
+
+      memberRoles.push({
+        id: memberId,
+        name: idol.name,
+        brand: idol.brand,
+        coreness,
+        degree,
+        pmiWeightedDegree,
+        voterWeightedDegree,
+        role,
+      });
+    }
+
+    // コア度の降順でソート
+    memberRoles.sort((a, b) => b.coreness - a.coreness);
+
+    // コア部分の密度を計算
+    const coreEdges = clusterEdges.filter(
+      (e) => coreMembers.includes(e.idolA.id) && coreMembers.includes(e.idolB.id)
+    );
+    const possibleCoreEdges = (coreMembers.length * (coreMembers.length - 1)) / 2;
+    const coreDensity = possibleCoreEdges > 0 ? coreEdges.length / possibleCoreEdges : 0;
+
     clusters.push({
       id: clusterId++,
       members,
       memberDetails,
+      memberRoles,
+      coreMembers,
+      peripheralMembers,
+      coreDensity,
       edges: clusterEdges.map((e) => ({
         idolA: e.idolA,
         idolB: e.idolB,

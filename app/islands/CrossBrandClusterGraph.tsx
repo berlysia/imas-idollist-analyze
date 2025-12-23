@@ -10,6 +10,14 @@ interface IdolInfo {
   brand: Brand[];
 }
 
+interface CrossBrandClusterMember {
+  id: string;
+  name: string;
+  brand: Brand[];
+  coreness: number;
+  role: "core" | "peripheral";
+}
+
 interface CrossBrandEdge {
   idolA: IdolInfo;
   idolB: IdolInfo;
@@ -19,6 +27,7 @@ interface CrossBrandEdge {
 
 interface CrossBrandCluster {
   memberDetails: IdolInfo[];
+  memberRoles: CrossBrandClusterMember[];
   edges: CrossBrandEdge[];
 }
 
@@ -33,6 +42,8 @@ interface GraphNode extends d3.SimulationNodeDatum {
   id: string;
   name: string;
   brand: Brand[];
+  coreness: number;
+  role: "core" | "peripheral";
 }
 
 interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
@@ -54,12 +65,15 @@ export default function CrossBrandClusterGraph({
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const visibleMembers = cluster.memberDetails.filter((m) => !hiddenIds.has(m.id));
+    // memberRolesからメンバー情報を取得（コア度とロール情報を含む）
+    const visibleMembers = cluster.memberRoles.filter((m) => !hiddenIds.has(m.id));
 
     const nodes: GraphNode[] = visibleMembers.map((m) => ({
       id: m.id,
       name: m.name,
       brand: m.brand,
+      coreness: m.coreness,
+      role: m.role,
     }));
 
     const nodeMap = new Map(nodes.map((n) => [n.id, n]));
@@ -155,19 +169,31 @@ export default function CrossBrandClusterGraph({
       .join("g")
       .call(dragBehavior);
 
+    // コアメンバーは大きく、オレンジの縁取りで表示
     node
       .append("circle")
-      .attr("r", 14)
+      .attr("r", (d) => (d.role === "core" ? 18 : 12))
       .attr("fill", (d) => BRAND_COLORS[d.brand[0] ?? "imas"])
-      .attr("stroke", "#fff")
-      .attr("stroke-width", 2);
+      .attr("stroke", (d) => (d.role === "core" ? "#ff9800" : "#fff"))
+      .attr("stroke-width", (d) => (d.role === "core" ? 4 : 2));
+
+    // コアメンバーには★マークを追加
+    node
+      .filter((d) => d.role === "core")
+      .append("text")
+      .text("★")
+      .attr("font-size", "10px")
+      .attr("text-anchor", "middle")
+      .attr("dy", -24)
+      .attr("fill", "#ff9800");
 
     node
       .append("text")
       .text((d) => d.name.split(" ").pop() ?? d.name)
-      .attr("font-size", "10px")
+      .attr("font-size", (d) => (d.role === "core" ? "11px" : "10px"))
+      .attr("font-weight", (d) => (d.role === "core" ? "bold" : "normal"))
       .attr("text-anchor", "middle")
-      .attr("dy", 26)
+      .attr("dy", (d) => (d.role === "core" ? 32 : 24))
       .attr("fill", "#333");
 
     const zoom = d3
@@ -206,6 +232,19 @@ export default function CrossBrandClusterGraph({
       <GraphLegend>
         <LegendLine color="#d4a017" width={4} label="PMI≥3.0（強い関連性）" bold icon="★" />
         <LegendLine color="#8e44ad" width={3} label="ブランド横断ペア（太いほど多くの投票者）" />
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
+          <span
+            style={{
+              display: "inline-block",
+              width: "20px",
+              height: "20px",
+              borderRadius: "50%",
+              border: "3px solid #ff9800",
+              background: "#f5f5f5",
+            }}
+          />
+          <span>コアメンバー（多くのメンバーと強く接続）</span>
+        </div>
       </GraphLegend>
     </GraphSvgContainer>
   );

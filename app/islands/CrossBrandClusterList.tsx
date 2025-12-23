@@ -23,6 +23,17 @@ interface IdolInfo {
   brand: Brand[];
 }
 
+interface CrossBrandClusterMember {
+  id: string;
+  name: string;
+  brand: Brand[];
+  coreness: number;
+  degree: number;
+  pmiWeightedDegree: number;
+  voterWeightedDegree: number;
+  role: "core" | "peripheral";
+}
+
 interface CrossBrandEdge {
   idolA: IdolInfo;
   idolB: IdolInfo;
@@ -35,6 +46,10 @@ interface CrossBrandCluster {
   id: number;
   members: string[];
   memberDetails: IdolInfo[];
+  memberRoles: CrossBrandClusterMember[];
+  coreMembers: string[];
+  peripheralMembers: string[];
+  coreDensity: number;
   edges: CrossBrandEdge[];
   totalVoterCount: number;
   avgPmi: number;
@@ -51,10 +66,12 @@ function MemberTag({
   isHidden,
   onToggleHide,
 }: {
-  member: IdolInfo;
+  member: CrossBrandClusterMember;
   isHidden: boolean;
   onToggleHide: (id: string) => void;
 }) {
+  const isCore = member.role === "core";
+
   return (
     <span
       style={{
@@ -77,15 +94,22 @@ function MemberTag({
           alignItems: "center",
           gap: "4px",
           padding: "4px 8px",
-          background: isHidden ? "#eee" : "#f5f5f5",
-          border: "1px solid #ddd",
+          background: isHidden ? "#eee" : isCore ? "#fff3e0" : "#f5f5f5",
+          border: isCore ? "2px solid #ff9800" : "1px solid #ddd",
           borderRadius: "4px",
           textDecoration: "none",
           color: "inherit",
           fontSize: "14px",
           opacity: isHidden ? 0.5 : 1,
+          fontWeight: isCore ? "bold" : "normal",
         }}
+        title={`コア度: ${(member.coreness * 100).toFixed(0)}% / 次数: ${member.degree} / 投票数合計: ${member.voterWeightedDegree}`}
       >
+        {isCore && (
+          <span style={{ color: "#ff9800", fontSize: "12px" }} title="コアメンバー">
+            ★
+          </span>
+        )}
         {member.brand.map((b) => (
           <BrandDot key={b} brand={b} />
         ))}
@@ -265,6 +289,16 @@ function ClusterCard({ cluster, rank }: { cluster: CrossBrandCluster; rank: numb
     return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
   }, [cluster.memberDetails]);
 
+  // コアメンバーとペリフェラルメンバーを分離（memberRolesを使用）
+  const coreMembers = useMemo(
+    () => cluster.memberRoles.filter((m) => m.role === "core"),
+    [cluster.memberRoles]
+  );
+  const peripheralMembers = useMemo(
+    () => cluster.memberRoles.filter((m) => m.role === "peripheral"),
+    [cluster.memberRoles]
+  );
+
   return (
     <ClusterCardContainer>
       <ClusterCardHeader>
@@ -276,6 +310,12 @@ function ClusterCard({ cluster, rank }: { cluster: CrossBrandCluster; rank: numb
           <StatLabel label="投票者" value={`${cluster.totalVoterCount}人`} />
           <StatLabel label="平均PMI" value={cluster.avgPmi.toFixed(2)} color="#8e44ad" />
           <StatLabel label="エッジ" value={`${cluster.edges.length}本`} />
+          <StatLabel label="コア" value={`${coreMembers.length}人`} color="#ff9800" />
+          <StatLabel
+            label="コア密度"
+            value={`${(cluster.coreDensity * 100).toFixed(0)}%`}
+            color="#ff9800"
+          />
         </div>
       </ClusterCardHeader>
 
@@ -292,16 +332,63 @@ function ClusterCard({ cluster, rank }: { cluster: CrossBrandCluster; rank: numb
 
       <BrandBreakdown brandCounts={brandCounts} />
 
-      <MemberTagList>
-        {cluster.memberDetails.map((member) => (
-          <MemberTag
-            key={member.id}
-            member={member}
-            isHidden={hiddenIds.has(member.id)}
-            onToggleHide={toggleHide}
-          />
-        ))}
-      </MemberTagList>
+      {/* コアメンバー */}
+      {coreMembers.length > 0 && (
+        <div style={{ marginBottom: "8px" }}>
+          <div
+            style={{
+              fontSize: "13px",
+              fontWeight: "bold",
+              color: "#ff9800",
+              marginBottom: "6px",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            <span>★</span>
+            コアメンバー（{coreMembers.length}人）
+            <span style={{ fontWeight: "normal", color: "#666", fontSize: "12px" }}>
+              - クラスター内で多くのメンバーと強く接続
+            </span>
+          </div>
+          <MemberTagList>
+            {coreMembers.map((member) => (
+              <MemberTag
+                key={member.id}
+                member={member}
+                isHidden={hiddenIds.has(member.id)}
+                onToggleHide={toggleHide}
+              />
+            ))}
+          </MemberTagList>
+        </div>
+      )}
+
+      {/* ペリフェラルメンバー */}
+      {peripheralMembers.length > 0 && (
+        <div>
+          <div
+            style={{
+              fontSize: "13px",
+              color: "#666",
+              marginBottom: "6px",
+            }}
+          >
+            周辺メンバー（{peripheralMembers.length}人）
+          </div>
+          <MemberTagList>
+            {peripheralMembers.map((member) => (
+              <MemberTag
+                key={member.id}
+                member={member}
+                isHidden={hiddenIds.has(member.id)}
+                onToggleHide={toggleHide}
+              />
+            ))}
+          </MemberTagList>
+        </div>
+      )}
 
       <EdgeVotersList edges={cluster.edges} />
     </ClusterCardContainer>
