@@ -4,6 +4,7 @@ import { join } from "path";
 import type { PairCooccurrence } from "../lib/compute";
 import PMIFilter from "../islands/PMIFilter";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
+import { SITE_TITLE } from "app/lib/constants";
 
 interface PMIData {
   data: PairCooccurrence[];
@@ -53,6 +54,6 @@ export default createRoute(async (c) => {
       </main>
       <PageFooter />
     </>,
-    { title: "相互掲載推薦ペア - アイドルマスター アイドル名鑑 共起関係可視化" }
+    { title: `相互掲載推薦ペア - ${SITE_TITLE}` }
   );
 });
