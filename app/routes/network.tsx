@@ -4,7 +4,7 @@ import { join } from "path";
 import NetworkGraph from "../islands/NetworkGraph";
 import type { Brand } from "@/types";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
-import { SITE_TITLE } from "app/lib/constants";
+import { SITE_TITLE } from "../lib/constants";
 
 interface MetadataData {
   scrapedAt: string;

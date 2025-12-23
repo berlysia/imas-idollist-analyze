@@ -4,7 +4,7 @@ import { join } from "path";
 import type { CooccurrenceStats } from "../lib/compute";
 import RankingChart from "../islands/RankingChart";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
-import { SITE_TITLE } from "app/lib/constants";
+import { SITE_TITLE } from "../lib/constants";
 
 interface RankingData {
   data: CooccurrenceStats[];

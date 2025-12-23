@@ -4,7 +4,7 @@ import { join } from "path";
 import type { PairCooccurrence } from "../lib/compute";
 import PMIFilter from "../islands/PMIFilter";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
-import { SITE_TITLE } from "app/lib/constants";
+import { SITE_TITLE } from "../lib/constants";
 
 interface PMIData {
   data: PairCooccurrence[];

@@ -4,7 +4,7 @@ import { join } from "path";
 import type { CrossBrandCluster } from "../lib/compute";
 import CrossBrandClusterList from "../islands/CrossBrandClusterList";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
-import { SITE_TITLE } from "app/lib/constants";
+import { SITE_TITLE } from "../lib/constants";
 
 interface ClustersData {
   data: CrossBrandCluster[];

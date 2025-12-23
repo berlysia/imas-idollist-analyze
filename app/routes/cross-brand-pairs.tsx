@@ -4,7 +4,7 @@ import { join } from "path";
 import type { CrossBrandBridge } from "../lib/compute";
 import BridgesTable from "../islands/BridgesTable";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
-import { SITE_TITLE } from "app/lib/constants";
+import { SITE_TITLE } from "../lib/constants";
 
 interface BridgesData {
   data: CrossBrandBridge[];

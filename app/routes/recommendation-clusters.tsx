@@ -4,7 +4,7 @@ import { join } from "path";
 import type { Cluster } from "../lib/compute";
 import ClusterList from "../islands/ClusterList";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
-import { SITE_TITLE } from "app/lib/constants";
+import { SITE_TITLE } from "../lib/constants";
 
 interface ClustersData {
   data: Cluster[];
