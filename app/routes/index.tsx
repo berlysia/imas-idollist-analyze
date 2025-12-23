@@ -32,7 +32,7 @@ export default createRoute(async (c) => {
             <p>
               このページは、アイドルマスターシリーズのアイドルが掲載されている
               <a href="https://idollist.idolmaster-official.jp/">アイドル名鑑</a>
-              に掲載されている「このアイドルの担当プロデューサーはこちらのアイドルもお気に入りに設定しています」を分析し、各アイドルの関係性を探る試みです。
+              に掲載されている「このアイドルの担当プロデューサーはこちらのアイドルもお気に入りに設定しています」を分析し、アイドル間の意外な関係をプロデューサーのみなさんの行動から探る試みです。
             </p>
           </ExplanationBox>
           <h3>用語について</h3>
@@ -49,7 +49,7 @@ export default createRoute(async (c) => {
                 <strong>共起（B‖C｜A）</strong>：アイドルAのページにBとCが同時に掲載されている関係
               </li>
               <li>
-                <strong>共起元</strong>：共起関係の文脈となるアイドル（上記のA）
+                <strong>共起元</strong>：アイドルAのページにBとCが同時に掲載されているとき、BCのペアから見たA
               </li>
             </ul>
           </ExplanationBox>
