@@ -1305,7 +1305,10 @@ export function computeSimilarIdolGroups(
       });
     } else {
       // 新しいグループを作成
-      const avgIdf = totalIdf / commonAccompaniments.length;
+      // 累乗平均（p=3）: 高い値を重視する指標
+      const p = 3;
+      const powerSum = commonAccompaniments.reduce((sum, a) => sum + Math.pow(a.idf, p), 0);
+      const avgIdf = Math.pow(powerSum / commonAccompaniments.length, 1 / p);
       groupMap.set(groupKey, {
         commonAccompaniments: commonAccompaniments.sort((a, b) => b.idf - a.idf),
         avgIdf,

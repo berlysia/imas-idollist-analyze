@@ -60,12 +60,16 @@ export default function SimilarIdolsFilter({ groups, selectedIdols }: Props) {
     });
   }, [groups, selectedFilters]);
 
-  // 選択中のフィルターの平均IDF
+  // 選択中のフィルターの累乗平均IDF（p=3）
   const selectedAvgIdf = useMemo(() => {
     if (selectedFilters.size === 0) return null;
     const selectedIdolsFiltered = selectedIdols.filter((idol) => selectedFilters.has(idol.id));
-    const totalIdf = selectedIdolsFiltered.reduce((sum, idol) => sum + idol.score.idf, 0);
-    return totalIdf / selectedIdolsFiltered.length;
+    const p = 3;
+    const powerSum = selectedIdolsFiltered.reduce(
+      (sum, idol) => sum + Math.pow(idol.score.idf, p),
+      0
+    );
+    return Math.pow(powerSum / selectedIdolsFiltered.length, 1 / p);
   }, [selectedFilters, selectedIdols]);
 
   if (groups.length === 0) {
@@ -76,7 +80,7 @@ export default function SimilarIdolsFilter({ groups, selectedIdols }: Props) {
     <div className="detail-section">
       <h3>類似アイドル</h3>
       <p className="section-description">
-        同じ随伴アイドルを選んでいる他のアイドル（共通する随伴の構成でグループ化）
+        同じ随伴アイドルを複数選んでいる他のアイドル（共通する随伴の構成でグループ化）
       </p>
 
       <div
