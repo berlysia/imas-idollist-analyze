@@ -20,6 +20,9 @@ interface SelectedIdol {
   id: string;
   name: string;
   brand: Brand[];
+  score: {
+    idf: number;
+  };
 }
 
 interface Props {
@@ -56,6 +59,14 @@ export default function SimilarIdolsFilter({ groups, selectedIdols }: Props) {
       return Array.from(selectedFilters).every((filterId) => groupAccompIds.has(filterId));
     });
   }, [groups, selectedFilters]);
+
+  // 選択中のフィルターの平均IDF
+  const selectedAvgIdf = useMemo(() => {
+    if (selectedFilters.size === 0) return null;
+    const selectedIdolsFiltered = selectedIdols.filter((idol) => selectedFilters.has(idol.id));
+    const totalIdf = selectedIdolsFiltered.reduce((sum, idol) => sum + idol.score.idf, 0);
+    return totalIdf / selectedIdolsFiltered.length;
+  }, [selectedFilters, selectedIdols]);
 
   if (groups.length === 0) {
     return null;
@@ -125,10 +136,30 @@ export default function SimilarIdolsFilter({ groups, selectedIdols }: Props) {
                   <BrandDot key={b} brand={b} size="small" />
                 ))}
                 {idol.name}
+                <span
+                  style={{
+                    fontSize: "10px",
+                    opacity: 0.7,
+                    marginLeft: "2px",
+                  }}
+                >
+                  ({idol.score.idf.toFixed(2)})
+                </span>
               </button>
             );
           })}
         </div>
+        {selectedAvgIdf !== null && (
+          <div
+            style={{
+              marginTop: "8px",
+              fontSize: "12px",
+              color: "#666",
+            }}
+          >
+            選択中の平均IDF: <strong>{selectedAvgIdf.toFixed(2)}</strong>
+          </div>
+        )}
       </div>
 
       {filteredGroups.length === 0 ? (
