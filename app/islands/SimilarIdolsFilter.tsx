@@ -233,7 +233,8 @@ export default function SimilarIdolsFilter({ groups, selectedIdols }: Props) {
                     marginLeft: "auto",
                   }}
                 >
-                  ({group.commonAccompanimentCount}人, レアスコア: {group.rareScore.toFixed(2)})
+                  ({group.commonAccompanimentCount}人, レアスコア:{" "}
+                  {group.rareScore?.toFixed(2) ?? "-"})
                 </span>
               </div>
               <div
