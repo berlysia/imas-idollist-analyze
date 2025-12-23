@@ -3,8 +3,9 @@ import { ssgParams } from "hono/ssg";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import type { IdolDetail } from "../../../lib/compute";
-import { BRAND_COLORS, BRAND_NAMES, SITE_TITLE } from "../../../lib/constants";
+import { BRAND_NAMES, SITE_TITLE } from "../../../lib/constants";
 import type { Brand } from "@/types";
+import { BrandDot, NavigationTabs, PageFooter, PageHeader } from "../../../components/shared";
 
 async function loadIdolIds(): Promise<string[]> {
   const dataDir = join(process.cwd(), "data/precomputed");
@@ -22,27 +23,10 @@ async function loadIdolDetail(id: string): Promise<IdolDetail | null> {
   }
 }
 
-async function loadMetadata(): Promise<{ scrapedAt: string; idolCount: number }> {
+async function loadMetadata(): Promise<{ scrapedAt: string; generatedAt: string; idolCount: number }> {
   const dataDir = join(process.cwd(), "data/precomputed");
   const raw = await readFile(join(dataDir, "metadata.json"), "utf-8");
   return JSON.parse(raw);
-}
-
-function BrandDot({
-  brand,
-  size = "normal",
-}: {
-  brand: Brand;
-  size?: "normal" | "large" | "small";
-}) {
-  const sizes = { small: "8px", normal: "12px", large: "20px" };
-  return (
-    <span
-      className={`brand-dot ${size}`}
-      style={{ backgroundColor: BRAND_COLORS[brand], width: sizes[size], height: sizes[size] }}
-      title={BRAND_NAMES[brand]}
-    />
-  );
 }
 
 type MetricType = "pmi" | "idf" | "idf-deviation" | "rank";
@@ -117,28 +101,17 @@ export default createRoute(
 
     return c.render(
       <>
-        <header>
-          <h1>{SITE_TITLE}</h1>
-          <p className="metadata">
-            データ取得日: {new Date(metadata.scrapedAt).toLocaleDateString("ja-JP")} /{" "}
-            {metadata.idolCount}人のアイドル
-          </p>
-        </header>
+        <PageHeader metadata={metadata} />
+        <NavigationTabs activeTab="/idol-list" />
 
         <main>
           <div className="idol-detail">
-            <a href="/" className="back-button">
-              ← 一覧に戻る
-            </a>
-
             <div className="idol-header">
-              <h2>
-                {detail.brand.map((b) => (
-                  <BrandDot key={b} brand={b} size="large" />
-                ))}
-                {detail.name}
-              </h2>
-              <p className="brand-info">{detail.brand.map((b) => BRAND_NAMES[b]).join(", ")}</p>
+              {detail.brand.map((b) => (
+                <BrandDot key={b} brand={b} size="large" />
+              ))}
+              <h2>{detail.name}</h2>
+              <div>{detail.kana}</div>
               <a
                 href={detail.link}
                 target="_blank"
@@ -148,43 +121,6 @@ export default createRoute(
                 公式IDOL LISTで見る →
               </a>
             </div>
-
-            <div className="detail-section">
-              <h3>被随伴数</h3>
-              <p className="section-description">
-                このアイドルを随伴として表示しているアイドルの数
-              </p>
-              <p className="stat-number">{detail.incomingCount}人</p>
-              <div className="brand-breakdown">
-                {(Object.entries(detail.incomingByBrand) as [Brand, number][])
-                  .filter(([, count]) => count > 0)
-                  .sort((a, b) => b[1] - a[1])
-                  .map(([brand, count]) => (
-                    <span key={brand} className={`brand-tag brand-${brand}`}>
-                      {BRAND_NAMES[brand]}: {count}
-                    </span>
-                  ))}
-              </div>
-            </div>
-
-            {detail.mutualPairs.length > 0 && (
-              <div className="detail-section">
-                <h3>相互随伴アイドル</h3>
-                <ul className="idol-list">
-                  {detail.mutualPairs.map((idol) => (
-                    <li key={idol.id}>
-                      <a href={`/idol/${idol.id}`} className="idol-link">
-                        {idol.brand.map((b) => (
-                          <BrandDot key={b} brand={b} size="small" />
-                        ))}
-                        {idol.name}
-                      </a>
-                      <ScoreBadge metric="pmi" value={idol.pmi.toFixed(2)} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
 
             <div className="detail-section">
               <h3>随伴アイドル</h3>
@@ -257,10 +193,29 @@ export default createRoute(
               )}
             </div>
 
+            {detail.mutualPairs.length > 0 && (
+              <div className="detail-section">
+                <h3>相互随伴アイドル</h3>
+                <ul className="idol-list">
+                  {detail.mutualPairs.map((idol) => (
+                    <li key={idol.id}>
+                      <a href={`/idol/${idol.id}`} className="idol-link">
+                        {idol.brand.map((b) => (
+                          <BrandDot key={b} brand={b} size="small" />
+                        ))}
+                        {idol.name}
+                      </a>
+                      <ScoreBadge metric="pmi" value={idol.pmi.toFixed(2)} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="detail-section">
               <h3>随伴元アイドル</h3>
               <p className="section-description">
-                このアイドルを随伴として表示しているアイドル
+                このアイドルを随伴として表示しているアイドルの数： <span className="stat-number">{detail.incomingCount}人</span>
               </p>
               <p className="section-description">
                 このアイドルを選ぶことの珍しさ{" "}
@@ -269,7 +224,21 @@ export default createRoute(
                   value={detail.selectedBy[0]?.score.idf.toFixed(2) ?? "-"}
                 />
               </p>
-              {detail.selectedBy.length > 0 ? (
+
+              {Object.values(detail.incomingByBrand).some((count) => count > 0) && (
+                <div className="brand-breakdown">
+                  {(Object.entries(detail.incomingByBrand) as [Brand, number][])
+                    .filter(([, count]) => count > 0)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([brand, count]) => (
+                      <span key={brand} className={`brand-tag brand-${brand}`}>
+                        {BRAND_NAMES[brand]}: {count}
+                      </span>
+                    ))}
+                </div>
+              )}
+
+              {detail.selectedBy.length > 0 && (
                 <ul className="idol-list compact">
                   {detail.selectedBy.map((idol) => (
                     <li key={idol.id}>
@@ -291,8 +260,6 @@ export default createRoute(
                     </li>
                   ))}
                 </ul>
-              ) : (
-                <p className="empty-message">随伴元アイドルなし</p>
               )}
             </div>
 
@@ -313,7 +280,7 @@ export default createRoute(
                           {bridge.partner.name}
                         </a>
                         <span className="voter-badge">
-                          {bridge.cooccurrenceSourceCount}人が同時掲載
+                          {bridge.cooccurrenceSourceCount}人が同時選出
                         </span>
                         <ScoreBadge metric="pmi" value={bridge.pmi.toFixed(2)} />
                       </div>
@@ -340,19 +307,7 @@ export default createRoute(
             )}
           </div>
         </main>
-
-        <footer>
-          <p>
-            データ出典:{" "}
-            <a
-              href="https://idollist.idolmaster-official.jp/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              アイドルマスター公式 IDOL LIST
-            </a>
-          </p>
-        </footer>
+        <PageFooter />
       </>,
       { title: `${detail.name} - ${SITE_TITLE}` }
     );
