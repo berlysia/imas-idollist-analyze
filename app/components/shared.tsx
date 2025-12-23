@@ -95,11 +95,15 @@ export function PageFooter() {
 /**
  * ブランドを示す小さなドットアイコン
  */
-export function BrandDot({ brand }: { brand: Brand }) {
+export function BrandDot({ brand, size = "small" }: { brand: Brand; size?: "small" | "large" }) {
+  const SIZE = {
+    small: 12,
+    large: 20,
+  }
   return (
     <span
       className="brand-dot"
-      style={{ backgroundColor: BRAND_COLORS[brand] }}
+      style={{ display: "inline-block", backgroundColor: BRAND_COLORS[brand], width: SIZE[size], height: SIZE[size] }}
       title={BRAND_NAMES[brand]}
     />
   );

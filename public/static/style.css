@@ -633,30 +633,25 @@ footer a:hover {
 }
 
 .idol-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 24px;
   padding-bottom: 16px;
   border-bottom: 2px solid #eee;
 }
 
 .idol-header h2 {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   font-size: 1.6rem;
   margin-bottom: 8px;
 }
 
-.idol-header .brand-dot.large {
-  width: 20px;
-  height: 20px;
-}
-
 .idol-header .brand-info {
   color: #666;
-  margin-bottom: 8px;
 }
 
 .idol-header .official-link {
+  margin-inline-start: auto;
   color: #2681c8;
   text-decoration: none;
   font-size: 0.9rem;
@@ -666,30 +661,37 @@ footer a:hover {
   text-decoration: underline;
 }
 
+.brand-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .detail-section {
   margin-bottom: 28px;
   padding: 16px;
   background: #f8f9fa;
   border-radius: 8px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .detail-section h3 {
   font-size: 1.1rem;
-  margin-bottom: 8px;
   color: #333;
 }
 
 .detail-section .section-description {
   font-size: 0.85rem;
   color: #666;
-  margin-bottom: 12px;
 }
 
 .detail-section .stat-number {
   font-size: 1.4rem;
   font-weight: bold;
   color: #2681c8;
-  margin-bottom: 12px;
 }
 
 .detail-section .brand-breakdown {
@@ -700,7 +702,6 @@ footer a:hover {
 
 .detail-section .brand-tag {
   padding: 4px 10px;
-  border-radius: 12px;
   font-size: 0.8rem;
 }
 
