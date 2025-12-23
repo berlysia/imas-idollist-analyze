@@ -3,7 +3,7 @@ import { ssgParams } from "hono/ssg";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import type { IdolDetail } from "../../../lib/compute";
-import { BRAND_COLORS, BRAND_NAMES } from "../../../lib/constants";
+import { BRAND_COLORS, BRAND_NAMES, SITE_TITLE } from "../../../lib/constants";
 import type { Brand } from "@/types";
 
 async function loadIdolIds(): Promise<string[]> {
@@ -118,7 +118,7 @@ export default createRoute(
     return c.render(
       <>
         <header>
-          <h1>アイドルマスター アイドル名鑑 共起関係可視化</h1>
+          <h1>{SITE_TITLE}</h1>
           <p className="metadata">
             データ取得日: {new Date(metadata.scrapedAt).toLocaleDateString("ja-JP")} /{" "}
             {metadata.idolCount}人のアイドル
@@ -354,7 +354,7 @@ export default createRoute(
           </p>
         </footer>
       </>,
-      { title: `${detail.name} - アイドルマスター アイドル名鑑 共起関係可視化` }
+      { title: `${detail.name} - ${SITE_TITLE}` }
     );
   }
 );

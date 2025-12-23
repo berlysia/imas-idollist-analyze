@@ -1,6 +1,6 @@
 import type { Brand } from "@/types";
 
-export const SITE_TITLE = "アイドルマスター アイドル名鑑 共起関係可視化";
+export const SITE_TITLE = "アイドルマスター アイドル名鑑 関係可視化";
 
 export const BRAND_COLORS: Record<Brand, string> = {
   imas: "#f34f6d",
