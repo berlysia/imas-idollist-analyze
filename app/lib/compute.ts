@@ -140,11 +140,11 @@ export interface CrossBrandBridge {
 
 /**
  * ブランド横断で複数人から同時に選ばれているペアを計算（PMI付き）
- * @param minVoters 最低投票者数
+ * @param minCooccurrenceSources 最低共起元数
  */
 export function computeCrossBrandBridges(
   data: NormalizedData,
-  minVoters: number = 2
+  minCooccurrenceSources: number = 2
 ): CrossBrandBridge[] {
   // 各アイドルが掲載推薦リストに現れる回数（被掲載推薦数）
   const appearanceCount = new Map<string, number>();
@@ -154,11 +154,11 @@ export function computeCrossBrandBridges(
     }
   }
 
-  // 総投票者数（共起リストを持つアイドルの数）
-  const totalVoters = Object.keys(data.recommendations).length;
+  // 総共起元数（掲載推薦リストを持つアイドルの数）
+  const totalCooccurrenceSources = Object.keys(data.recommendations).length;
 
-  // 各アイドルの共起リストに同時に現れるペアを記録
-  const pairVoters = new Map<string, string[]>();
+  // 各アイドルの掲載推薦リストに同時に現れるペアを記録
+  const pairCooccurrenceSources = new Map<string, string[]>();
 
   for (const [sourceId, targetIds] of Object.entries(data.recommendations) as [
     string,
@@ -171,18 +171,18 @@ export function computeCrossBrandBridges(
         if (!idA || !idB) continue;
         const key = idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
 
-        if (!pairVoters.has(key)) {
-          pairVoters.set(key, []);
+        if (!pairCooccurrenceSources.has(key)) {
+          pairCooccurrenceSources.set(key, []);
         }
-        pairVoters.get(key)!.push(sourceId);
+        pairCooccurrenceSources.get(key)!.push(sourceId);
       }
     }
   }
 
   const results: CrossBrandBridge[] = [];
 
-  for (const [key, voters] of pairVoters.entries()) {
-    if (voters.length < minVoters) continue;
+  for (const [key, sources] of pairCooccurrenceSources.entries()) {
+    if (sources.length < minCooccurrenceSources) continue;
 
     const parts = key.split("|");
     const idA = parts[0];
@@ -201,13 +201,13 @@ export function computeCrossBrandBridges(
     if (!isCrossBrand) continue;
 
     // PMI計算
-    // P(A,B) = このペアを同時に選んだ投票者数 / 総投票者数
-    const pAB = voters.length / totalVoters;
-    // P(A) = Aが選ばれた回数 / 総投票者数
+    // P(A,B) = このペアを同時に掲載している共起元数 / 総共起元数
+    const pAB = sources.length / totalCooccurrenceSources;
+    // P(A) = Aが掲載されている回数 / 総共起元数
     const countA = appearanceCount.get(idA) ?? 0;
     const countB = appearanceCount.get(idB) ?? 0;
-    const pA = countA / totalVoters;
-    const pB = countB / totalVoters;
+    const pA = countA / totalCooccurrenceSources;
+    const pB = countB / totalCooccurrenceSources;
 
     // PMI = log2(P(A,B) / (P(A) * P(B)))
     const pmi = pA > 0 && pB > 0 ? Math.log2(pAB / (pA * pB)) : 0;
@@ -215,8 +215,8 @@ export function computeCrossBrandBridges(
     results.push({
       idolA: { id: idA, name: idolA.name, brand: idolA.brand },
       idolB: { id: idB, name: idolB.name, brand: idolB.brand },
-      cooccurrenceSourceCount: voters.length,
-      cooccurrenceSources: voters.map((v) => {
+      cooccurrenceSourceCount: sources.length,
+      cooccurrenceSources: sources.map((v) => {
         const idol = data.idols[v];
         return { id: v, name: idol?.name ?? v, brand: idol?.brand ?? [] };
       }),
@@ -933,18 +933,21 @@ export function detectCrossBrandClusters(
   if (filteredBridges.length === 0) return [];
 
   // 正規化用の最大値を計算
-  const maxVoterCount = Math.max(...filteredBridges.map((b) => b.cooccurrenceSourceCount), 1);
+  const maxCooccurrenceSourceCount = Math.max(
+    ...filteredBridges.map((b) => b.cooccurrenceSourceCount),
+    1
+  );
   const maxPmi = Math.max(...filteredBridges.map((b) => b.pmi), 1);
 
-  // 正規化した投票数とPMIを組み合わせた重みを計算
+  // 正規化した共起元数とPMIを組み合わせた重みを計算
   const getWeight = (cooccurrenceSourceCount: number, pmi: number) => {
-    const normVoter = cooccurrenceSourceCount / maxVoterCount;
+    const normCooccurrence = cooccurrenceSourceCount / maxCooccurrenceSourceCount;
     const normPmi = pmi / maxPmi;
-    return normVoter * 0.6 + normPmi * 0.4;
+    return normCooccurrence * 0.6 + normPmi * 0.4;
   };
 
   // ブランド横断ペアからグラフを構築
-  // 重み = 投票数(60%) + PMI(40%) の組み合わせ
+  // 重み = 共起元数(60%) + PMI(40%) の組み合わせ
   const adjacency = new Map<string, Map<string, number>>();
   const nodeSet = new Set<string>();
 
@@ -1099,15 +1102,15 @@ export function detectCrossBrandClusters(
     }
     const brands = Array.from(brandSet);
 
-    // メンバーごとの次数、PMI加重次数、投票数加重次数を計算
+    // メンバーごとの次数、PMI加重次数、共起元数加重次数を計算
     const memberDegree = new Map<string, number>();
     const memberPmiWeighted = new Map<string, number>();
-    const memberVoterWeighted = new Map<string, number>();
+    const memberCooccurrenceWeighted = new Map<string, number>();
 
     for (const memberId of members) {
       memberDegree.set(memberId, 0);
       memberPmiWeighted.set(memberId, 0);
-      memberVoterWeighted.set(memberId, 0);
+      memberCooccurrenceWeighted.set(memberId, 0);
     }
 
     for (const edge of clusterEdges) {
@@ -1119,34 +1122,34 @@ export function detectCrossBrandClusters(
       memberPmiWeighted.set(edge.idolA.id, (memberPmiWeighted.get(edge.idolA.id) ?? 0) + edge.pmi);
       memberPmiWeighted.set(edge.idolB.id, (memberPmiWeighted.get(edge.idolB.id) ?? 0) + edge.pmi);
 
-      // 投票数加重次数を加算
-      memberVoterWeighted.set(
+      // 共起元数加重次数を加算
+      memberCooccurrenceWeighted.set(
         edge.idolA.id,
-        (memberVoterWeighted.get(edge.idolA.id) ?? 0) + edge.cooccurrenceSourceCount
+        (memberCooccurrenceWeighted.get(edge.idolA.id) ?? 0) + edge.cooccurrenceSourceCount
       );
-      memberVoterWeighted.set(
+      memberCooccurrenceWeighted.set(
         edge.idolB.id,
-        (memberVoterWeighted.get(edge.idolB.id) ?? 0) + edge.cooccurrenceSourceCount
+        (memberCooccurrenceWeighted.get(edge.idolB.id) ?? 0) + edge.cooccurrenceSourceCount
       );
     }
 
-    // コア度を計算: 次数、PMI加重次数、投票数加重次数を正規化して組み合わせ
+    // コア度を計算: 次数、PMI加重次数、共起元数加重次数を正規化して組み合わせ
     const maxDegree = Math.max(...Array.from(memberDegree.values()), 1);
     const maxPmiWeighted = Math.max(...Array.from(memberPmiWeighted.values()), 1);
-    const maxVoterWeighted = Math.max(...Array.from(memberVoterWeighted.values()), 1);
+    const maxCooccurrenceWeighted = Math.max(...Array.from(memberCooccurrenceWeighted.values()), 1);
 
     const memberCoreness = new Map<string, number>();
     for (const memberId of members) {
       const degree = memberDegree.get(memberId) ?? 0;
       const pmiWeighted = memberPmiWeighted.get(memberId) ?? 0;
-      const voterWeighted = memberVoterWeighted.get(memberId) ?? 0;
+      const cooccurrenceWeighted = memberCooccurrenceWeighted.get(memberId) ?? 0;
 
-      // コア度 = (正規化次数 * 0.4 + 正規化PMI加重 * 0.3 + 正規化投票数加重 * 0.3)
+      // コア度 = (正規化次数 * 0.4 + 正規化PMI加重 * 0.3 + 正規化共起元数加重 * 0.3)
       // 次数を重視: クラスター内で多くのメンバーと繋がっていることが中心性の主要指標
       const coreness =
         (degree / maxDegree) * 0.4 +
         (pmiWeighted / maxPmiWeighted) * 0.3 +
-        (voterWeighted / maxVoterWeighted) * 0.3;
+        (cooccurrenceWeighted / maxCooccurrenceWeighted) * 0.3;
       memberCoreness.set(memberId, coreness);
     }
 
@@ -1166,7 +1169,7 @@ export function detectCrossBrandClusters(
       const coreness = memberCoreness.get(memberId) ?? 0;
       const degree = memberDegree.get(memberId) ?? 0;
       const pmiWeightedDegree = memberPmiWeighted.get(memberId) ?? 0;
-      const cooccurrenceSourceWeightedDegree = memberVoterWeighted.get(memberId) ?? 0;
+      const cooccurrenceSourceWeightedDegree = memberCooccurrenceWeighted.get(memberId) ?? 0;
       const role = coreness >= coreThreshold ? "core" : "peripheral";
 
       if (role === "core") {
