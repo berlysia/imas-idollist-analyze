@@ -4,7 +4,7 @@ import type { IdolDetail } from "../src/types/index.ts";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-const DATA_DIR = path.resolve(import.meta.dirname, "../data");
+const DATA_DIR = path.resolve(import.meta.dirname, "../data/raw");
 
 async function saveJson(filepath: string, data: unknown): Promise<void> {
   await fs.writeFile(filepath, JSON.stringify(data, null, 2), "utf-8");
@@ -57,15 +57,15 @@ async function mergeDetailFiles(detailsDir: string): Promise<IdolDetail[]> {
 }
 
 async function main(): Promise<void> {
-  const dateString = new Date().toISOString().slice(0, 10);
-  const detailsDir = path.join(DATA_DIR, `details-${dateString}`);
+  const detailsDir = path.join(DATA_DIR, "details");
+  await ensureDir(detailsDir);
 
   // Step 1: Fetch idol list
   console.log("[scrape] Step 1: アイドル一覧を取得中...");
   const listResult = await fetchIdolList();
   console.log(`[scrape] アイドル一覧取得完了: ${listResult.data.length}件`);
 
-  const listFilename = path.join(DATA_DIR, `idols-${dateString}.json`);
+  const listFilename = path.join(DATA_DIR, `idols.json`);
   await saveJson(listFilename, listResult);
   console.log(`[scrape] 一覧を保存: ${listFilename}`);
 
@@ -92,7 +92,7 @@ async function main(): Promise<void> {
   // Step 3: Merge all detail files
   console.log("[scrape] Step 3: 詳細ファイルを統合中...");
   const allDetails = await mergeDetailFiles(detailsDir);
-  const mergedFilename = path.join(DATA_DIR, `details-${dateString}.json`);
+  const mergedFilename = path.join(DATA_DIR, `details.json`);
   await saveJson(mergedFilename, {
     scrapedAt: new Date().toISOString(),
     count: allDetails.length,

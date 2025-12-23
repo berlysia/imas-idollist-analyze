@@ -5,9 +5,10 @@ import * as fsp from "node:fs/promises";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-const DATA_DIR = path.resolve(import.meta.dirname, "../../data");
+const DATA_DIR = path.resolve(import.meta.dirname, "../../data/raw");
 
 const IDOLS_FILE = "idols.json";
+const DETAILS_DIR = "details";
 const DETAILS_FILE = "details.json";
 
 async function saveJson(filename: string, data: unknown): Promise<void> {
@@ -33,16 +34,22 @@ async function runDetailsScrape(): Promise<void> {
 
   const idolsData = JSON.parse(await fsp.readFile(idolsPath, "utf-8"));
 
-  // レジューム: 既存のdetails.jsonから取得済みIDを読み込む
-  const detailsPath = path.join(DATA_DIR, DETAILS_FILE);
-  let existingDetails: IdolDetail[] = [];
-  let skipIds: Set<string> | undefined;
+  // レジューム: 既存のdetailsディレクトリから [id].json 形式のファイル名を探して取得済みIDを特定する
+  const detailsPath = path.join(DATA_DIR, DETAILS_DIR);
+  const existingDetails: IdolDetail[] = [];
+  const skipIds: Set<string> = new Set();
 
   if (fileExists(detailsPath)) {
     try {
-      const existingData = JSON.parse(await fsp.readFile(detailsPath, "utf-8"));
-      existingDetails = existingData.data ?? [];
-      skipIds = new Set(existingDetails.map((d: IdolDetail) => extractIdolId(d.link)));
+      const files = await fsp.readdir(detailsPath);
+      const jsonFiles = files.filter((file) => file.endsWith(".json"));
+      for (const file of jsonFiles) {
+        const filepath = path.join(detailsPath, file);
+        const content = await fsp.readFile(filepath, "utf-8");
+        existingDetails.push(JSON.parse(content) as IdolDetail);
+        skipIds.add(path.basename(file, ".json"));
+      }
+
       console.log(`[resume] Found ${existingDetails.length} already fetched idols`);
     } catch {
       console.log("[resume] Could not parse existing details file, starting fresh");

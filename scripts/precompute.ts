@@ -15,6 +15,7 @@ import {
 } from "../app/lib/compute";
 
 const DATA_DIR = join(import.meta.dirname, "../data");
+const RAW_DATA_DIR = join(DATA_DIR, "raw");
 const OUTPUT_DIR = join(DATA_DIR, "precomputed");
 const IDOLS_DIR = join(OUTPUT_DIR, "idols");
 
