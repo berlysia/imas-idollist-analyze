@@ -34,12 +34,12 @@ export default createRoute(async (c) => {
   return c.render(
     <>
       <PageHeader metadata={metadata} />
-      <NavigationTabs activeTab="/pmi" />
+      <NavigationTabs activeTab="/mutual-pairs" />
       <main>
         <PMIFilter pairs={pairs} />
       </main>
       <PageFooter />
     </>,
-    { title: "相思相愛ペア - アイドルマスター 共起関係可視化" }
+    { title: "相互共起ペア - アイドルマスター アイドル名鑑 共起関係可視化" }
   );
 });

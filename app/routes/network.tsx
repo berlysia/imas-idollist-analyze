@@ -43,6 +43,6 @@ export default createRoute(async (c) => {
       </main>
       <PageFooter />
     </>,
-    { title: "ネットワーク - アイドルマスター 共起関係可視化" }
+    { title: "ネットワーク - アイドルマスター アイドル名鑑 共起関係可視化" }
   );
 });

@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { Brand } from "@/types";
-import { BRAND_COLORS, BRAND_NAMES } from "../lib/constants";
+import { BRAND_COLORS, BRAND_NAMES, SITE_TITLE } from "../lib/constants";
 
 interface MetadataData {
   scrapedAt: string;
@@ -14,7 +14,7 @@ interface MetadataData {
 export function PageHeader({ metadata }: { metadata: MetadataData }) {
   return (
     <header>
-      <h1>アイドルマスター 共起関係可視化</h1>
+      <h1>{SITE_TITLE}</h1>
       <p className="metadata">
         データ取得日: {new Date(metadata.scrapedAt).toLocaleDateString("ja-JP")} /{" "}
         {metadata.idolCount}人のアイドル
@@ -25,10 +25,10 @@ export function PageHeader({ metadata }: { metadata: MetadataData }) {
 
 const TAB_ITEMS = [
   { href: "/", label: "被共起数ランキング" },
-  { href: "/pmi", label: "相思相愛ペア" },
-  { href: "/bridges", label: "ブランド横断ペア" },
-  { href: "/clusters", label: "クラスタ" },
-  { href: "/cross-brand-clusters", label: "ブランド横断クラスタ" },
+  { href: "/mutual-pairs", label: "相互共起ペア" },
+  { href: "/cross-brand-pairs", label: "ブランド横断ペア" },
+  { href: "/cooccurrence-clusters", label: "共起クラスタ" },
+  { href: "/co-selection-clusters", label: "共選クラスタ" },
   { href: "/network", label: "ネットワーク" },
 ] as const;
 

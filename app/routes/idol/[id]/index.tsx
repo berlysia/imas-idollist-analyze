@@ -118,7 +118,7 @@ export default createRoute(
     return c.render(
       <>
         <header>
-          <h1>アイドルマスター 共起関係可視化</h1>
+          <h1>アイドルマスター アイドル名鑑 共起関係可視化</h1>
           <p className="metadata">
             データ取得日: {new Date(metadata.scrapedAt).toLocaleDateString("ja-JP")} /{" "}
             {metadata.idolCount}人のアイドル
@@ -345,7 +345,7 @@ export default createRoute(
           </p>
         </footer>
       </>,
-      { title: `${detail.name} - アイドルマスター 共起関係可視化` }
+      { title: `${detail.name} - アイドルマスター アイドル名鑑 共起関係可視化` }
     );
   }
 );

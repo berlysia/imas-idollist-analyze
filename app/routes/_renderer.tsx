@@ -1,4 +1,5 @@
 import { reactRenderer } from "@hono/react-renderer";
+import { SITE_TITLE } from "../lib/constants";
 
 export default reactRenderer(
   ({ children, title }: { children: React.ReactNode; title?: string }) => {
@@ -7,7 +8,7 @@ export default reactRenderer(
         <head>
           <meta charSet="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>{title ?? "アイドルマスター 共起関係可視化"}</title>
+          <title>{title ?? SITE_TITLE}</title>
           <link rel="stylesheet" href="/static/style.css" />
         </head>
         <body>

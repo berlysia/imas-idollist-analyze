@@ -1,12 +1,12 @@
 import { createRoute } from "honox/factory";
 import { readFile } from "fs/promises";
 import { join } from "path";
-import type { CrossBrandCluster } from "../lib/compute";
-import CrossBrandClusterList from "../islands/CrossBrandClusterList";
+import type { Cluster } from "../lib/compute";
+import ClusterList from "../islands/ClusterList";
 import { PageHeader, NavigationTabs, PageFooter } from "../components/shared";
 
 interface ClustersData {
-  data: CrossBrandCluster[];
+  data: Cluster[];
 }
 
 interface MetadataData {
@@ -18,7 +18,7 @@ interface MetadataData {
 async function loadData(): Promise<{ clusters: ClustersData; metadata: MetadataData }> {
   const dataDir = join(process.cwd(), "data/precomputed");
   const [clustersRaw, metadataRaw] = await Promise.all([
-    readFile(join(dataDir, "cross-brand-clusters.json"), "utf-8"),
+    readFile(join(dataDir, "clusters.json"), "utf-8"),
     readFile(join(dataDir, "metadata.json"), "utf-8"),
   ]);
   return {
@@ -33,12 +33,12 @@ export default createRoute(async (c) => {
   return c.render(
     <>
       <PageHeader metadata={metadata} />
-      <NavigationTabs activeTab="/cross-brand-clusters" variant="crossbrand" />
+      <NavigationTabs activeTab="/cooccurrence-clusters" />
       <main>
-        <CrossBrandClusterList clusters={clusters.data} />
+        <ClusterList clusters={clusters.data} />
       </main>
       <PageFooter />
     </>,
-    { title: "ブランド横断クラスタ - アイドルマスター 共起関係可視化" }
+    { title: "共起クラスタ - アイドルマスター アイドル名鑑 共起関係可視化" }
   );
 });

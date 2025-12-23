@@ -34,12 +34,12 @@ export default createRoute(async (c) => {
   return c.render(
     <>
       <PageHeader metadata={metadata} />
-      <NavigationTabs activeTab="/bridges" />
+      <NavigationTabs activeTab="/cross-brand-pairs" />
       <main>
         <BridgesTable bridges={bridgeList} />
       </main>
       <PageFooter />
     </>,
-    { title: "ブランド横断ペア - アイドルマスター 共起関係可視化" }
+    { title: "ブランド横断ペア - アイドルマスター アイドル名鑑 共起関係可視化" }
   );
 });
