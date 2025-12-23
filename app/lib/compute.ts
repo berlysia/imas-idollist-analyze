@@ -1305,8 +1305,8 @@ export function computeSimilarIdolGroups(
       });
     } else {
       // 新しいグループを作成
-      // 累乗平均（p=3）: 高い値を重視する指標
-      const p = 3;
+      // 累乗平均（p=5）: 高い値を重視する指標
+      const p = 5;
       const powerSum = commonAccompaniments.reduce((sum, a) => sum + Math.pow(a.idf, p), 0);
       const avgIdf = Math.pow(powerSum / commonAccompaniments.length, 1 / p);
       groupMap.set(groupKey, {

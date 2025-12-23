@@ -60,11 +60,11 @@ export default function SimilarIdolsFilter({ groups, selectedIdols }: Props) {
     });
   }, [groups, selectedFilters]);
 
-  // 選択中のフィルターの累乗平均IDF（p=3）
+  // 選択中のフィルターの累乗平均IDF（p=5）
   const selectedAvgIdf = useMemo(() => {
     if (selectedFilters.size === 0) return null;
     const selectedIdolsFiltered = selectedIdols.filter((idol) => selectedFilters.has(idol.id));
-    const p = 3;
+    const p = 5;
     const powerSum = selectedIdolsFiltered.reduce(
       (sum, idol) => sum + Math.pow(idol.score.idf, p),
       0
@@ -161,7 +161,7 @@ export default function SimilarIdolsFilter({ groups, selectedIdols }: Props) {
               color: "#666",
             }}
           >
-            選択中の平均IDF: <strong>{selectedAvgIdf.toFixed(2)}</strong>
+            選択中のレアスコア: <strong>{selectedAvgIdf.toFixed(2)}</strong>
           </div>
         )}
       </div>
@@ -233,7 +233,8 @@ export default function SimilarIdolsFilter({ groups, selectedIdols }: Props) {
                     marginLeft: "auto",
                   }}
                 >
-                  ({group.commonAccompanimentCount}人, IDF平均: {group.avgIdf.toFixed(2)})
+                  ({group.commonAccompanimentCount}人 × レアスコア {group.avgIdf.toFixed(2)} ={" "}
+                  {(group.commonAccompanimentCount * group.avgIdf).toFixed(2)})
                 </span>
               </div>
               <div
