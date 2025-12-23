@@ -10,7 +10,7 @@ interface IdolListItem {
   id: string;
   name: string;
   brand: Brand[];
-  kana?: string | undefined;
+  kana: string;
 }
 
 interface IdolListData {
@@ -29,9 +29,12 @@ async function loadData(): Promise<{ idolList: IdolListData; metadata: MetadataD
     readFile(join(dataDir, "idol-list.json"), "utf-8"),
     readFile(join(dataDir, "metadata.json"), "utf-8"),
   ]);
+  const idolList: IdolListData = JSON.parse(idolListRaw);
+  idolList.data = idolList.data.map((x: IdolListItem) => ({...x, kana: x.kana?.replaceAll(/\s/g, "")}));
+  const metadata: MetadataData = JSON.parse(metadataRaw);
   return {
-    idolList: JSON.parse(idolListRaw),
-    metadata: JSON.parse(metadataRaw),
+    idolList,
+    metadata,
   };
 }
 

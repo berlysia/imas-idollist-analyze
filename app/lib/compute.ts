@@ -5,7 +5,7 @@ export interface IdolData {
   name: string;
   brand: Brand[];
   link: string;
-  kana?: string | undefined;
+  kana: string;
 }
 
 export interface NormalizedData {
@@ -284,6 +284,7 @@ export interface SelectionScore {
 export interface IdolDetail {
   id: string;
   name: string;
+  kana: string;
   brand: Brand[];
   link: string;
   /** 自分が選んだ共起アイドル（スコア付き） */
@@ -571,7 +572,7 @@ export function detectClusters(
           (edgeWeight -
             currentCommWeight -
             (nodeWeight * (targetCommWeight - currentCommTotalWeight + nodeWeight)) /
-              (2 * totalWeight));
+            (2 * totalWeight));
 
         if (delta > bestDelta) {
           bestDelta = delta;
@@ -818,6 +819,7 @@ export function computeIdolDetail(
   return {
     id: idolId,
     name: idol.name,
+    kana: idol.kana,
     brand: idol.brand,
     link: idol.link,
     selectedIdols,
@@ -1014,7 +1016,7 @@ export function detectCrossBrandClusters(
           (edgeWeight -
             currentCommWeight -
             (nodeWeight * (targetCommWeight - currentCommTotalWeight + nodeWeight)) /
-              (2 * totalWeight));
+            (2 * totalWeight));
 
         if (delta > bestDelta) {
           bestDelta = delta;

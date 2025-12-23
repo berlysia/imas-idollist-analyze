@@ -7,7 +7,7 @@ export interface NormalizedIdol {
   name: string;
   brand: Brand[];
   link: string;
-  kana?: string | undefined;
+  kana: string;
 }
 
 /**
@@ -35,48 +35,48 @@ function extractIdFromLink(link: string): string {
 /**
  * 詳細データを正規化された形式に変換
  * @param data 詳細データ
- * @param idolList 一覧データ（kana補完用、オプション）
+ * @param idolList 一覧データ（アイドル情報補完用）
  */
 export function normalizeDetails(
   data: ScrapeResult<IdolDetail>,
-  idolList?: ScrapeResult<Idol>
+  idolList: ScrapeResult<Idol>
 ): NormalizedData {
-  // idolListからID→kanaのマップを作成
-  const kanaMap = new Map<string, string>();
-  if (idolList) {
-    for (const idol of idolList.data) {
-      const id = extractIdFromLink(idol.link);
-      if (idol.kana) {
-        kanaMap.set(id, idol.kana);
-      }
-    }
+  // idolListからID→アイドル情報のマップを作成
+  const idolMap = new Map<string, Idol>();
+  for (const idol of idolList.data) {
+    const id = extractIdFromLink(idol.link);
+    idolMap.set(id, idol);
   }
+
   const idols: Record<string, NormalizedIdol> = {};
   const accompaniments: Record<string, string[]> = {};
 
-  for (const idol of data.data) {
-    const id = extractIdFromLink(idol.link);
-    const accompanyingIdols = idol.accompanying;
+  for (const detail of data.data) {
+    const id = extractIdFromLink(detail.link);
+    const listIdol = idolMap.get(id);
 
     idols[id] = {
-      name: idol.name,
-      brand: idol.brand,
-      link: idol.link,
-      kana: idol.kana ?? kanaMap.get(id),
+      name: detail.name,
+      brand: detail.brand,
+      link: detail.link,
+      kana: detail.kana ?? listIdol?.kana,
     };
 
-    accompaniments[id] = accompanyingIdols.map((acc) => extractIdFromLink(acc.link));
+    // accompanyingは既にIDの配列
+    accompaniments[id] = detail.accompanying;
 
     // 随伴アイドルの情報もidolsに追加（まだ存在しない場合）
-    for (const acc of accompanyingIdols) {
-      const accompanyingId = extractIdFromLink(acc.link);
+    for (const accompanyingId of detail.accompanying) {
       if (!idols[accompanyingId]) {
-        idols[accompanyingId] = {
-          name: acc.name,
-          brand: acc.brand,
-          link: acc.link,
-          kana: acc.kana ?? kanaMap.get(accompanyingId),
-        };
+        const accompanyingIdol = idolMap.get(accompanyingId);
+        if (accompanyingIdol) {
+          idols[accompanyingId] = {
+            name: accompanyingIdol.name,
+            brand: accompanyingIdol.brand,
+            link: accompanyingIdol.link,
+            kana: accompanyingIdol.kana,
+          };
+        }
       }
     }
   }

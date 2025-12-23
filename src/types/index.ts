@@ -22,15 +22,15 @@ export interface Idol {
   /** アイドル名 */
   name: string;
   /** 読み仮名（ひらがな） */
-  kana?: string | undefined;
+  kana: string;
 }
 
 /**
  * 詳細ページから取得する随伴アイドル情報
  */
 export interface IdolDetail extends Idol {
-  /** 随伴アイドル一覧（このアイドルのページに掲載されているアイドル） */
-  accompanying: Idol[];
+  /** 随伴アイドルID一覧（このアイドルのページに掲載されているアイドルのID） */
+  accompanying: string[];
 }
 
 /**

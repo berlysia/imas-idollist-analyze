@@ -25,20 +25,25 @@ async function extractIdolsFromPage(page: Page): Promise<Idol[]> {
 
       // 読み仮名はspan要素から抽出
       const kanaSpan = paragraph?.querySelector("span");
-      const kana = kanaSpan?.textContent?.trim() ?? "";
+      const kana = kanaSpan?.textContent?.trim();
+
+      if (!kana) {
+        console.error(`Kana not found for idol: ${anchor?.href ?? "unknown"}`);
+        throw new Error("Kana extraction failed");
+      }
 
       // 名前はテキストノードから抽出
       const textNodes = paragraph
         ? Array.from(paragraph.childNodes)
-            .filter((node) => node.nodeType === Node.TEXT_NODE)
-            .map((node) => (node as Text).data.trim())
+          .filter((node) => node.nodeType === Node.TEXT_NODE)
+          .map((node) => (node as Text).data.trim())
         : [];
 
       return {
         link: anchor?.href ?? "",
         brand,
         name: textNodes[0] ?? "",
-        kana: kana || undefined,
+        kana: kana,
       };
     });
   });
