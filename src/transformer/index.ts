@@ -4,15 +4,25 @@ import { normalizeDetails } from "./normalizeDetails.ts";
 
 const DATA_DIR = path.resolve(import.meta.dirname, "../../data");
 
+const IDOLS_FILE = "idols.json";
 const DETAILS_FILE = "details.json";
 const NORMALIZED_FILE = "normalized.json";
 
 async function run(): Promise<void> {
   const detailsPath = path.join(DATA_DIR, DETAILS_FILE);
+  const idolsPath = path.join(DATA_DIR, IDOLS_FILE);
 
   const detailsData = JSON.parse(await fs.readFile(detailsPath, "utf-8"));
 
-  const normalized = normalizeDetails(detailsData);
+  // idols.jsonが存在すれば読み込み（kana補完用）
+  let idolsData;
+  try {
+    idolsData = JSON.parse(await fs.readFile(idolsPath, "utf-8"));
+  } catch {
+    // idols.jsonが存在しない場合はスキップ
+  }
+
+  const normalized = normalizeDetails(detailsData, idolsData);
 
   const filepath = path.join(DATA_DIR, NORMALIZED_FILE);
 

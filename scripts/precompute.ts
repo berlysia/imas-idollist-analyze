@@ -99,6 +99,16 @@ async function main() {
   };
   await writeFile(join(OUTPUT_DIR, "network.json"), JSON.stringify(networkData));
 
+  // 6.5. アイドル一覧用データを出力
+  console.log("💾 Writing idol-list.json...");
+  const idolList = Object.entries(data.idols).map(([id, idol]) => ({
+    id,
+    name: idol.name,
+    brand: idol.brand,
+    kana: idol.kana,
+  }));
+  await writeFile(join(OUTPUT_DIR, "idol-list.json"), JSON.stringify({ data: idolList }, null, 2));
+
   // 7. SSG用のIDリストを出力
   const idolIds = Object.keys(data.idols);
   console.log("💾 Writing idol-ids.json...");

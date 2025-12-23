@@ -21,6 +21,8 @@ export interface Idol {
   brand: Brand[];
   /** アイドル名 */
   name: string;
+  /** 読み仮名（ひらがな） */
+  kana?: string | undefined;
 }
 
 /**

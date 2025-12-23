@@ -26,6 +26,7 @@ export function PageHeader({ metadata }: { metadata: MetadataData }) {
 }
 
 const TAB_ITEMS = [
+  { href: "/idol-list", label: "アイドル一覧" },
   { href: "/incoming-ranking", label: "被随伴ランキング" },
   { href: "/mutual-pairs", label: "相互随伴ペア" },
   { href: "/cross-brand-pairs", label: "ブランド横断ペア" },

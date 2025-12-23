@@ -23,6 +23,10 @@ async function extractIdolsFromPage(page: Page): Promise<Idol[]> {
         (cls) => cls !== "shadow" && cls !== "cell"
       ) as Brand[];
 
+      // 読み仮名はspan要素から抽出
+      const kanaSpan = paragraph?.querySelector("span");
+      const kana = kanaSpan?.textContent?.trim() ?? "";
+
       // 名前はテキストノードから抽出
       const textNodes = paragraph
         ? Array.from(paragraph.childNodes)
@@ -34,6 +38,7 @@ async function extractIdolsFromPage(page: Page): Promise<Idol[]> {
         link: anchor?.href ?? "",
         brand,
         name: textNodes[0] ?? "",
+        kana: kana || undefined,
       };
     });
   });

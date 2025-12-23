@@ -1,4 +1,4 @@
-import type { Brand, ScrapeResult, IdolDetail } from "../types/index.ts";
+import type { Brand, Idol, ScrapeResult, IdolDetail } from "../types/index.ts";
 
 /**
  * 正規化されたアイドル情報
@@ -7,6 +7,7 @@ export interface NormalizedIdol {
   name: string;
   brand: Brand[];
   link: string;
+  kana?: string | undefined;
 }
 
 /**
@@ -33,8 +34,23 @@ function extractIdFromLink(link: string): string {
 
 /**
  * 詳細データを正規化された形式に変換
+ * @param data 詳細データ
+ * @param idolList 一覧データ（kana補完用、オプション）
  */
-export function normalizeDetails(data: ScrapeResult<IdolDetail>): NormalizedData {
+export function normalizeDetails(
+  data: ScrapeResult<IdolDetail>,
+  idolList?: ScrapeResult<Idol>
+): NormalizedData {
+  // idolListからID→kanaのマップを作成
+  const kanaMap = new Map<string, string>();
+  if (idolList) {
+    for (const idol of idolList.data) {
+      const id = extractIdFromLink(idol.link);
+      if (idol.kana) {
+        kanaMap.set(id, idol.kana);
+      }
+    }
+  }
   const idols: Record<string, NormalizedIdol> = {};
   const accompaniments: Record<string, string[]> = {};
 
@@ -46,6 +62,7 @@ export function normalizeDetails(data: ScrapeResult<IdolDetail>): NormalizedData
       name: idol.name,
       brand: idol.brand,
       link: idol.link,
+      kana: idol.kana ?? kanaMap.get(id),
     };
 
     accompaniments[id] = accompanyingIdols.map((acc) => extractIdFromLink(acc.link));
@@ -58,6 +75,7 @@ export function normalizeDetails(data: ScrapeResult<IdolDetail>): NormalizedData
           name: acc.name,
           brand: acc.brand,
           link: acc.link,
+          kana: acc.kana ?? kanaMap.get(accompanyingId),
         };
       }
     }

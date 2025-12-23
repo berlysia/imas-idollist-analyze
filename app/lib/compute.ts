@@ -5,6 +5,7 @@ export interface IdolData {
   name: string;
   brand: Brand[];
   link: string;
+  kana?: string | undefined;
 }
 
 export interface NormalizedData {
@@ -52,10 +53,7 @@ export function computePMIRanking(data: NormalizedData, minCount: number = 2): P
 
   // 各アイドルの出現回数（他のアイドルから選ばれた回数 + 自分が選んだ回数）
   const appearanceCount = new Map<string, number>();
-  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [
-    string,
-    string[],
-  ][]) {
+  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [string, string[]][]) {
     // sourceは「選んだ側」としてカウント
     appearanceCount.set(sourceId, (appearanceCount.get(sourceId) ?? 0) + targetIds.length);
     // targetは「選ばれた側」としてカウント
@@ -66,10 +64,7 @@ export function computePMIRanking(data: NormalizedData, minCount: number = 2): P
 
   // ペア単位の共起回数を計算（双方向）
   const pairCount = new Map<string, number>();
-  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [
-    string,
-    string[],
-  ][]) {
+  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [string, string[]][]) {
     for (const targetId of targetIds) {
       // 順序を正規化してキーを作成（小さいID, 大きいID）
       const key = sourceId < targetId ? `${sourceId}|${targetId}` : `${targetId}|${sourceId}`;
@@ -160,10 +155,7 @@ export function computeCrossBrandBridges(
   // 各アイドルの随伴リストに同時に現れるペアを記録
   const pairCooccurrenceSources = new Map<string, string[]>();
 
-  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [
-    string,
-    string[],
-  ][]) {
+  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [string, string[]][]) {
     for (let i = 0; i < targetIds.length; i++) {
       for (let j = i + 1; j < targetIds.length; j++) {
         const idA = targetIds[i];
@@ -232,10 +224,7 @@ export function computeIncomingStats(data: NormalizedData): CooccurrenceStats[] 
   const incomingCount = new Map<string, number>();
   const incomingByBrand = new Map<string, Record<Brand, number>>();
 
-  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [
-    string,
-    string[],
-  ][]) {
+  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [string, string[]][]) {
     const sourceIdol = data.idols[sourceId];
     if (!sourceIdol) continue;
 
@@ -428,10 +417,7 @@ export function buildWeightedGraph(data: NormalizedData): {
 
   // 有向エッジを収集
   const directedEdges = new Map<string, { source: string; target: string }>();
-  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [
-    string,
-    string[],
-  ][]) {
+  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [string, string[]][]) {
     for (const targetId of targetIds) {
       const key = `${sourceId}|${targetId}`;
       directedEdges.set(key, { source: sourceId, target: targetId });
@@ -441,10 +427,7 @@ export function buildWeightedGraph(data: NormalizedData): {
   // 無向エッジに変換し、重みを計算
   const edgeMap = new Map<string, WeightedEdge>();
 
-  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [
-    string,
-    string[],
-  ][]) {
+  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [string, string[]][]) {
     for (const targetId of targetIds) {
       // 正規化されたキー（小さいID|大きいID）
       const key = sourceId < targetId ? `${sourceId}|${targetId}` : `${targetId}|${sourceId}`;
@@ -772,10 +755,7 @@ export function computeIdolDetail(
   // 自分を選んだアイドル（相対IDF = 選択リスト内での自分の珍しさ、ランク付き）
   const selectedBy: Array<{ id: string; name: string; brand: Brand[]; score: SelectionScore }> = [];
   const myIdf = computeIDF(idolId, idfContext);
-  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [
-    string,
-    string[],
-  ][]) {
+  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [string, string[]][]) {
     if (targetIds.includes(idolId)) {
       const source = data.idols[sourceId];
       if (source) {
