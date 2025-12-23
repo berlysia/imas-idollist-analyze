@@ -3,7 +3,7 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import type { CrossBrandCluster } from "../lib/compute";
 import CrossBrandClusterList from "../islands/CrossBrandClusterList";
-import { PageHeader, NavigationTabs, PageFooter } from "../components/shared";
+import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
 
 interface ClustersData {
   data: CrossBrandCluster[];
@@ -35,7 +35,20 @@ export default createRoute(async (c) => {
       <PageHeader metadata={metadata} />
       <NavigationTabs activeTab="/co-selection-clusters" variant="crossbrand" />
       <main>
-        <CrossBrandClusterList clusters={clusters.data} />
+        <div className="chart-container">
+          <h3>共選クラスタ</h3>
+          <ExplanationBox>
+            <p>
+              <strong>共選クラスタ</strong>
+              とは、異なるブランドのアイドル同士が共起として選ばれているグループです。
+            </p>
+            <p>
+              ブランド横断ペア（異なるブランドのアイドルが同時に共起に選ばれている）のみを
+              エッジとしてLouvain法でコミュニティ検出を行っています。
+            </p>
+          </ExplanationBox>
+          <CrossBrandClusterList clusters={clusters.data} />
+        </div>
       </main>
       <PageFooter />
     </>,

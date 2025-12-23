@@ -7,7 +7,6 @@ import {
   RankBadge,
   ClusterStats,
   FilterContainer,
-  ExplanationBox,
   ClusterCardContainer,
   ClusterCardHeader,
   BrandBreakdown,
@@ -215,18 +214,7 @@ export default function ClusterList({ clusters }: Props) {
   }, [clusters]);
 
   return (
-    <div className="cluster-list">
-      <ExplanationBox>
-        <p>
-          <strong>クラスタ</strong>
-          は、互いに密接に共起し合っているアイドルのグループです。
-        </p>
-        <p>
-          Louvain法によるコミュニティ検出を使用し、IDF（珍しさ）を考慮した重み付けで
-          「珍しい選択で結びついた」クラスタを優先的に発見しています。
-        </p>
-      </ExplanationBox>
-
+    <>
       <ClusterStats>
         <div>
           <strong>全体統計:</strong> {clusters.length}クラスタ / {stats.totalMembers}人
@@ -276,6 +264,6 @@ export default function ClusterList({ clusters }: Props) {
       {filteredClusters.length === 0 && (
         <EmptyMessage message="条件に一致するクラスタがありません" />
       )}
-    </div>
+    </>
   );
 }

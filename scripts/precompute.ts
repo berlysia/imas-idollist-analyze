@@ -2,7 +2,7 @@
  * 事前計算スクリプト
  * ビルド時に実行し、全計算結果をJSONファイルとして出力
  */
-import { readFile, writeFile, mkdir, readdir } from "fs/promises";
+import { readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import {
   computeIncomingStats,
@@ -18,25 +18,17 @@ const DATA_DIR = join(import.meta.dirname, "../data");
 const OUTPUT_DIR = join(DATA_DIR, "precomputed");
 const IDOLS_DIR = join(OUTPUT_DIR, "idols");
 
-async function findLatestNormalizedFile(): Promise<string> {
-  const files = await readdir(DATA_DIR);
-  const normalizedFiles = files
-    .filter((f) => f.startsWith("normalized-") && f.endsWith(".json"))
-    .sort()
-    .reverse();
+const NORMALIZED_FILE = "normalized.json";
 
-  if (normalizedFiles.length === 0) {
-    throw new Error("No normalized data file found in data/");
-  }
-
-  return join(DATA_DIR, normalizedFiles[0]!);
+function getNormalizedFilePath(): string {
+  return join(DATA_DIR, NORMALIZED_FILE);
 }
 
 async function main() {
   console.log("🚀 Starting precomputation...");
 
-  // 1. 最新のnormalizedファイルを読み込み
-  const inputPath = await findLatestNormalizedFile();
+  // 1. normalizedファイルを読み込み
+  const inputPath = getNormalizedFilePath();
   console.log(`📂 Reading: ${inputPath}`);
   const rawData = await readFile(inputPath, "utf-8");
   const data: NormalizedData = JSON.parse(rawData);

@@ -3,7 +3,7 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import type { CooccurrenceStats } from "../lib/compute";
 import RankingChart from "../islands/RankingChart";
-import { PageHeader, NavigationTabs, PageFooter } from "../components/shared";
+import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
 
 interface RankingData {
   data: CooccurrenceStats[];
@@ -36,7 +36,16 @@ export default createRoute(async (c) => {
       <PageHeader metadata={metadata} />
       <NavigationTabs activeTab="/" />
       <main>
-        <RankingChart stats={stats} />
+        <div className="chart-container">
+          <h3>被共起数ランキング</h3>
+          <ExplanationBox>
+            <p>
+              <strong>被共起数ランキング</strong>
+              とは、各アイドルがどれだけ多くのアイドルから共起として選ばれているかを示すランキングです。
+            </p>
+          </ExplanationBox>
+          <RankingChart stats={stats} />
+        </div>
       </main>
       <PageFooter />
     </>,

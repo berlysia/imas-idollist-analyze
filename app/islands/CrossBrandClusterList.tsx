@@ -7,7 +7,6 @@ import {
   RankBadge,
   ClusterStats,
   FilterContainer,
-  ExplanationBox,
   ClusterCardContainer,
   ClusterCardHeader,
   BrandBreakdown,
@@ -423,18 +422,7 @@ export default function CrossBrandClusterList({ clusters }: Props) {
   }, [clusters]);
 
   return (
-    <div className="cluster-list">
-      <ExplanationBox>
-        <p>
-          <strong>ブランド横断クラスタ</strong>
-          は、異なるブランドのアイドル同士が共起として選ばれているグループです。
-        </p>
-        <p>
-          ブランド横断ペア（異なるブランドのアイドルが同時に共起に選ばれている）のみを
-          エッジとしてLouvain法でコミュニティ検出を行っています。
-        </p>
-      </ExplanationBox>
-
+    <>
       <ClusterStats>
         <div>
           <strong>全体統計:</strong> {clusters.length}クラスタ / {stats.totalMembers}人
@@ -484,6 +472,6 @@ export default function CrossBrandClusterList({ clusters }: Props) {
       {filteredClusters.length === 0 && (
         <EmptyMessage message="条件に一致するクラスタがありません" />
       )}
-    </div>
+    </>
   );
 }

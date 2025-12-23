@@ -3,7 +3,7 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import type { PairCooccurrence } from "../lib/compute";
 import PMIFilter from "../islands/PMIFilter";
-import { PageHeader, NavigationTabs, PageFooter } from "../components/shared";
+import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
 
 interface PMIData {
   data: PairCooccurrence[];
@@ -36,7 +36,20 @@ export default createRoute(async (c) => {
       <PageHeader metadata={metadata} />
       <NavigationTabs activeTab="/mutual-pairs" />
       <main>
-        <PMIFilter pairs={pairs} />
+        <div className="chart-container">
+          <h3>相互共起ペア</h3>
+          <ExplanationBox>
+            <p>
+              <strong>相互共起ペア</strong>
+              とは、互いに共起として選び合っているアイドルのペアです。
+            </p>
+            <p>
+              PMI（Pointwise Mutual Information）値は、このペアが偶然選ばれた場合に比べて
+              どれだけ高い確率で共起しているかを示します。値が高いほど、全体の傾向に対して「意外性のある関係」です。
+            </p>
+          </ExplanationBox>
+          <PMIFilter pairs={pairs} />
+        </div>
       </main>
       <PageFooter />
     </>,

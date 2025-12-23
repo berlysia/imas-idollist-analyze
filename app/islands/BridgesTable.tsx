@@ -31,18 +31,7 @@ function BrandDot({ brand }: { brand: Brand }) {
 
 export default function BridgesTable({ bridges }: Props) {
   return (
-    <div className="cross-brand-bridges">
-      <div className="bridges-explanation">
-        <p>
-          <strong>ブランド横断ペア</strong>
-          とは、異なるブランドのアイドル2人が、複数のアイドルから同時に共起として選ばれているペアです。
-        </p>
-        <p>
-          投票者数が多いほど、ブランドを超えた人気の組み合わせであることを示します。
-          PMI値は、このペアが偶然選ばれた場合と比較した「意外性」を示します。
-        </p>
-      </div>
-
+    <>
       <p className="bridges-count">{bridges.length} ペア</p>
 
       <table className="bridges-table">
@@ -103,6 +92,6 @@ export default function BridgesTable({ bridges }: Props) {
           ))}
         </tbody>
       </table>
-    </div>
+    </>
   );
 }

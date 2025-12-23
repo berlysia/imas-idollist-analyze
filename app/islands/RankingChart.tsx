@@ -69,10 +69,7 @@ export default function RankingChart({ stats }: Props) {
   };
 
   return (
-    <div className="chart-container">
-      <h3>被共起数ランキング</h3>
-      <p className="chart-hint">各アイドルがどれだけ多くのアイドルから選ばれたかを表示</p>
-
+    <>
       <section className="filters" style={{ marginBottom: "16px" }}>
         <div className="brand-filters">
           <span>ブランド:</span>
@@ -185,6 +182,6 @@ export default function RankingChart({ stats }: Props) {
           ))}
         </tbody>
       </table>
-    </div>
+    </>
   );
 }

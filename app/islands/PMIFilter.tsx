@@ -45,18 +45,7 @@ export default function PMIFilter({ pairs }: Props) {
   };
 
   return (
-    <div className="pmi-ranking">
-      <div className="pmi-explanation">
-        <p>
-          <strong>相思相愛ペア</strong>
-          とは、互いに共起として選び合っているアイドルのペアです。
-        </p>
-        <p>
-          PMI（Pointwise Mutual Information）値は、このペアが偶然選ばれた場合に比べて
-          どれだけ高い確率で共起しているかを示します。 値が高いほど「意外性のある関係」です。
-        </p>
-      </div>
-
+    <>
       <section className="filters" style={{ marginBottom: "16px" }}>
         <label className="brand-checkbox" style={{ cursor: "pointer" }}>
           <input
@@ -136,6 +125,6 @@ export default function PMIFilter({ pairs }: Props) {
           ))}
         </tbody>
       </table>
-    </div>
+    </>
   );
 }

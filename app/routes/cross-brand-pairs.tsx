@@ -3,7 +3,7 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import type { CrossBrandBridge } from "../lib/compute";
 import BridgesTable from "../islands/BridgesTable";
-import { PageHeader, NavigationTabs, PageFooter } from "../components/shared";
+import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
 
 interface BridgesData {
   data: CrossBrandBridge[];
@@ -36,7 +36,20 @@ export default createRoute(async (c) => {
       <PageHeader metadata={metadata} />
       <NavigationTabs activeTab="/cross-brand-pairs" />
       <main>
-        <BridgesTable bridges={bridgeList} />
+        <div className="chart-container">
+          <h3>ブランド横断ペア</h3>
+          <ExplanationBox>
+            <p>
+              <strong>ブランド横断ペア</strong>
+              とは、異なるブランドのアイドル2人が、複数のアイドルから同時に共起として選ばれているペアです。
+            </p>
+            <p>
+              投票者数が多いほど、ブランドを超えた人気の組み合わせであることを示します。
+              PMI値は、このペアが偶然選ばれた場合と比較した「意外性」を示します。
+            </p>
+          </ExplanationBox>
+          <BridgesTable bridges={bridgeList} />
+        </div>
       </main>
       <PageFooter />
     </>,

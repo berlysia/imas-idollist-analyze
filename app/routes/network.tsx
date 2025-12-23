@@ -3,7 +3,7 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import NetworkGraph from "../islands/NetworkGraph";
 import type { Brand } from "@/types";
-import { PageHeader, NavigationTabs, PageFooter } from "../components/shared";
+import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
 
 interface MetadataData {
   scrapedAt: string;
@@ -38,6 +38,12 @@ export default createRoute(async (c) => {
       <main>
         <div className="chart-container">
           <h3>ネットワークグラフ</h3>
+          <ExplanationBox>
+            <p>
+              <strong>ネットワークグラフ</strong>
+              とは、アイドル間の共起関係を視覚化したものです。ノードはアイドル、エッジは共起関係を表します。
+            </p>
+          </ExplanationBox>
           <NetworkGraph data={network} initialMinConnections={5} />
         </div>
       </main>

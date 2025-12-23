@@ -3,7 +3,7 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import type { Cluster } from "../lib/compute";
 import ClusterList from "../islands/ClusterList";
-import { PageHeader, NavigationTabs, PageFooter } from "../components/shared";
+import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
 
 interface ClustersData {
   data: Cluster[];
@@ -35,7 +35,20 @@ export default createRoute(async (c) => {
       <PageHeader metadata={metadata} />
       <NavigationTabs activeTab="/cooccurrence-clusters" />
       <main>
-        <ClusterList clusters={clusters.data} />
+        <div className="chart-container">
+          <h3>共起クラスタ</h3>
+          <ExplanationBox>
+            <p>
+              <strong>共起クラスタ</strong>
+              とは、互いに密接に共起し合っているアイドルのグループです。
+            </p>
+            <p>
+              Louvain法によるコミュニティ検出を使用し、IDF（珍しさ）を考慮した重み付けで
+              「珍しい選択で結びついた」クラスタを優先的に発見しています。
+            </p>
+          </ExplanationBox>
+          <ClusterList clusters={clusters.data} />
+        </div>
       </main>
       <PageFooter />
     </>,
