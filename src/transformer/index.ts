@@ -20,7 +20,7 @@ async function run(): Promise<void> {
 
   process.stdout.write(`Normalized data saved to ${NORMALIZED_FILE}\n`);
   process.stdout.write(`  - Idols: ${Object.keys(normalized.idols).length}\n`);
-  process.stdout.write(`  - Cooccurrences: ${Object.keys(normalized.cooccurrences).length}\n`);
+  process.stdout.write(`  - Recommendations: ${Object.keys(normalized.recommendations).length}\n`);
 }
 
 run();

@@ -10,12 +10,13 @@ export interface NormalizedIdol {
 }
 
 /**
- * 正規化された共起データ
+ * 正規化された掲載推薦データ
  */
 export interface NormalizedData {
   scrapedAt: string;
   idols: Record<string, NormalizedIdol>;
-  cooccurrences: Record<string, string[]>;
+  /** 掲載推薦関係: キーのアイドルのページに掲載されているアイドルIDの配列 */
+  recommendations: Record<string, string[]>;
 }
 
 /**
@@ -35,7 +36,7 @@ function extractIdFromLink(link: string): string {
  */
 export function normalizeDetails(data: ScrapeResult<IdolDetail>): NormalizedData {
   const idols: Record<string, NormalizedIdol> = {};
-  const cooccurrences: Record<string, string[]> = {};
+  const recommendations: Record<string, string[]> = {};
 
   for (const idol of data.data) {
     const id = extractIdFromLink(idol.link);
@@ -46,16 +47,18 @@ export function normalizeDetails(data: ScrapeResult<IdolDetail>): NormalizedData
       link: idol.link,
     };
 
-    cooccurrences[id] = idol.cooccurring.map((cooccurring) => extractIdFromLink(cooccurring.link));
+    recommendations[id] = idol.recommended.map((recommended) =>
+      extractIdFromLink(recommended.link)
+    );
 
-    // 共起アイドルの情報もidolsに追加（まだ存在しない場合）
-    for (const cooccurring of idol.cooccurring) {
-      const cooccurringId = extractIdFromLink(cooccurring.link);
-      if (!idols[cooccurringId]) {
-        idols[cooccurringId] = {
-          name: cooccurring.name,
-          brand: cooccurring.brand,
-          link: cooccurring.link,
+    // 掲載推薦アイドルの情報もidolsに追加（まだ存在しない場合）
+    for (const recommended of idol.recommended) {
+      const recommendedId = extractIdFromLink(recommended.link);
+      if (!idols[recommendedId]) {
+        idols[recommendedId] = {
+          name: recommended.name,
+          brand: recommended.brand,
+          link: recommended.link,
         };
       }
     }
@@ -64,6 +67,6 @@ export function normalizeDetails(data: ScrapeResult<IdolDetail>): NormalizedData
   return {
     scrapedAt: data.scrapedAt,
     idols,
-    cooccurrences,
+    recommendations,
   };
 }

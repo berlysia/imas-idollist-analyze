@@ -10,9 +10,11 @@ interface IdolInfo {
 interface CrossBrandBridge {
   idolA: IdolInfo;
   idolB: IdolInfo;
-  voterCount: number;
+  /** 共起元の数（このペアを同時に掲載しているアイドルの数） */
+  cooccurrenceSourceCount: number;
   pmi: number;
-  voters: IdolInfo[];
+  /** 共起元のリスト（このペアを同時に掲載しているアイドル） */
+  cooccurrenceSources: IdolInfo[];
 }
 
 interface Props {
@@ -41,7 +43,7 @@ export default function BridgesTable({ bridges }: Props) {
             <th>アイドルA</th>
             <th className="arrow">↔</th>
             <th>アイドルB</th>
-            <th className="voter-count">投票者数</th>
+            <th className="voter-count">共起元数</th>
             <th className="pmi-value">PMI</th>
           </tr>
         </thead>
@@ -86,7 +88,7 @@ export default function BridgesTable({ bridges }: Props) {
                   {bridge.idolB.name}
                 </a>
               </td>
-              <td className="voter-count">{bridge.voterCount}人</td>
+              <td className="voter-count">{bridge.cooccurrenceSourceCount}人</td>
               <td className="pmi-value">{bridge.pmi.toFixed(2)}</td>
             </tr>
           ))}

@@ -3,7 +3,7 @@ import { buildWeightedGraph, detectClusters, type NormalizedData } from "../app/
 
 function createTestData(
   idols: Record<string, { name: string; brand: ("imas" | "deremas")[] }>,
-  cooccurrences: Record<string, string[]>
+  recommendations: Record<string, string[]>
 ): NormalizedData {
   return {
     scrapedAt: new Date().toISOString(),
@@ -13,12 +13,12 @@ function createTestData(
         { ...data, link: `https://example.com/${id}` },
       ])
     ),
-    cooccurrences,
+    recommendations,
   };
 }
 
 describe("buildWeightedGraph", () => {
-  it("creates weighted edges from cooccurrences", () => {
+  it("creates weighted edges from recommendations", () => {
     const data = createTestData(
       {
         "1": { name: "A", brand: ["imas"] },
@@ -74,10 +74,10 @@ describe("buildWeightedGraph", () => {
 
     const { idfMap } = buildWeightedGraph(data);
 
-    // 4 voters total
-    // "2" is selected by 1 voter → IDF = log2(4/1) = 2
-    // "3" is selected by 3 voters → IDF = log2(4/3) ≈ 0.415
-    // "4" is selected by 1 voter → IDF = log2(4/1) = 2
+    // 4 sources total
+    // "2" is selected by 1 source → IDF = log2(4/1) = 2
+    // "3" is selected by 3 sources → IDF = log2(4/3) ≈ 0.415
+    // "4" is selected by 1 source → IDF = log2(4/1) = 2
     expect(idfMap.get("2")).toBeCloseTo(2, 1);
     expect(idfMap.get("3")).toBeCloseTo(0.415, 1);
     expect(idfMap.get("4")).toBeCloseTo(2, 1);

@@ -14,7 +14,9 @@ interface MetadataData {
 export function PageHeader({ metadata }: { metadata: MetadataData }) {
   return (
     <header>
-      <h1>{SITE_TITLE}</h1>
+      <h1>
+        <a href="/">{SITE_TITLE}</a>
+      </h1>
       <p className="metadata">
         データ取得日: {new Date(metadata.scrapedAt).toLocaleDateString("ja-JP")} /{" "}
         {metadata.idolCount}人のアイドル
@@ -24,11 +26,11 @@ export function PageHeader({ metadata }: { metadata: MetadataData }) {
 }
 
 const TAB_ITEMS = [
-  { href: "/", label: "被共起数ランキング" },
-  { href: "/mutual-pairs", label: "相互共起ペア" },
+  { href: "/incoming-ranking", label: "被掲載推薦ランキング" },
+  { href: "/mutual-pairs", label: "相互掲載推薦ペア" },
   { href: "/cross-brand-pairs", label: "ブランド横断ペア" },
-  { href: "/cooccurrence-clusters", label: "共起クラスタ" },
-  { href: "/co-selection-clusters", label: "共選クラスタ" },
+  { href: "/recommendation-clusters", label: "掲載推薦クラスタ" },
+  { href: "/cross-brand-clusters", label: "ブランド横断クラスタ" },
   { href: "/network", label: "ネットワーク" },
 ] as const;
 

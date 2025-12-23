@@ -33,17 +33,17 @@ export default createRoute(async (c) => {
   return c.render(
     <>
       <PageHeader metadata={metadata} />
-      <NavigationTabs activeTab="/co-selection-clusters" variant="crossbrand" />
+      <NavigationTabs activeTab="/cross-brand-clusters" variant="crossbrand" />
       <main>
         <div className="chart-container">
-          <h3>共選クラスタ</h3>
+          <h3>ブランド横断クラスタ</h3>
           <ExplanationBox>
             <p>
-              <strong>共選クラスタ</strong>
-              とは、異なるブランドのアイドル同士が共起として選ばれているグループです。
+              <strong>ブランド横断クラスタ</strong>
+              とは、異なるブランドのアイドル同士が同時に掲載推薦として選ばれている（共起している）グループです。
             </p>
             <p>
-              ブランド横断ペア（異なるブランドのアイドルが同時に共起に選ばれている）のみを
+              ブランド横断ペア（異なるブランドのアイドルが共起元のページに同時に掲載されている）のみを
               エッジとしてLouvain法でコミュニティ検出を行っています。
             </p>
           </ExplanationBox>
@@ -52,6 +52,6 @@ export default createRoute(async (c) => {
       </main>
       <PageFooter />
     </>,
-    { title: "共選クラスタ - アイドルマスター アイドル名鑑 共起関係可視化" }
+    { title: "ブランド横断クラスタ - アイドルマスター アイドル名鑑 共起関係可視化" }
   );
 });

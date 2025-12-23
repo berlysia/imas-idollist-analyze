@@ -34,38 +34,21 @@ export default createRoute(async (c) => {
   return c.render(
     <>
       <PageHeader metadata={metadata} />
-      <NavigationTabs activeTab="/" />
+      <NavigationTabs activeTab="/incoming-ranking" />
       <main>
         <div className="chart-container">
-          <h3>説明</h3>
+          <h3>被掲載推薦ランキング</h3>
           <ExplanationBox>
             <p>
-              このページは、アイドルマスターシリーズのアイドルが掲載されている
-              <a href="https://idollist.idolmaster-official.jp/">アイドル名鑑</a>
-              に掲載されている「このアイドルの担当プロデューサーはこちらのアイドルもお気に入りに設定しています」を分析し、各アイドルの関係性を探る試みです。
+              <strong>被掲載推薦ランキング</strong>
+              とは、各アイドルがどれだけ多くのアイドルのページに掲載推薦として表示されているかを示すランキングです。
             </p>
-            <h4>用語について</h4>
-            <ul>
-              <li>
-                <strong>掲載推薦関係（A→B）</strong>
-                ：アイドルAのページにアイドルBが掲載されている関係
-              </li>
-              <li>
-                <strong>相互掲載推薦（A↔B）</strong>：AとBが互いのページに掲載されている関係
-              </li>
-              <li>
-                <strong>共起（B‖C｜A）</strong>：アイドルAのページにBとCが同時に掲載されている関係
-              </li>
-              <li>
-                <strong>共起元</strong>：共起関係の文脈となるアイドル（上記のA）
-              </li>
-            </ul>
           </ExplanationBox>
           <RankingChart stats={stats} />
         </div>
       </main>
       <PageFooter />
     </>,
-    { title: "アイドルマスター アイドル名鑑 共起関係可視化" }
+    { title: "被掲載推薦ランキング - アイドルマスター アイドル名鑑 共起関係可視化" }
   );
 });

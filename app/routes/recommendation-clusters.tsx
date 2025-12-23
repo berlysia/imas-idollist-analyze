@@ -33,14 +33,14 @@ export default createRoute(async (c) => {
   return c.render(
     <>
       <PageHeader metadata={metadata} />
-      <NavigationTabs activeTab="/cooccurrence-clusters" />
+      <NavigationTabs activeTab="/recommendation-clusters" />
       <main>
         <div className="chart-container">
-          <h3>共起クラスタ</h3>
+          <h3>掲載推薦クラスタ</h3>
           <ExplanationBox>
             <p>
-              <strong>共起クラスタ</strong>
-              とは、互いに密接に共起し合っているアイドルのグループです。
+              <strong>掲載推薦クラスタ</strong>
+              とは、互いのページに掲載推薦として密接に結びついているアイドルのグループです。
             </p>
             <p>
               Louvain法によるコミュニティ検出を使用し、IDF（珍しさ）を考慮した重み付けで
@@ -52,6 +52,6 @@ export default createRoute(async (c) => {
       </main>
       <PageFooter />
     </>,
-    { title: "共起クラスタ - アイドルマスター アイドル名鑑 共起関係可視化" }
+    { title: "掲載推薦クラスタ - アイドルマスター アイドル名鑑 共起関係可視化" }
   );
 });

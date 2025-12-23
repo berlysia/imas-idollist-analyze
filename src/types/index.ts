@@ -24,11 +24,11 @@ export interface Idol {
 }
 
 /**
- * 詳細ページから取得する共演アイドル情報
+ * 詳細ページから取得する掲載推薦アイドル情報
  */
 export interface IdolDetail extends Idol {
-  /** 共演アイドル一覧 */
-  cooccurring: Idol[];
+  /** 掲載推薦アイドル一覧（このアイドルのページに掲載されているアイドル） */
+  recommended: Idol[];
 }
 
 /**
@@ -44,19 +44,19 @@ export interface ScrapeResult<T> {
 }
 
 /**
- * 共起データの統計情報
+ * 掲載推薦データの統計情報
  */
-export interface CooccurrenceStats {
+export interface RecommendationStats {
   /** アイドルID（linkから抽出） */
   idolId: string;
   /** アイドル名 */
   name: string;
   /** ブランド */
   brand: Brand[];
-  /** 共起アイドル数 */
-  cooccurrenceCount: number;
-  /** ブランド別共起数 */
-  cooccurrenceByBrand: Record<Brand, number>;
+  /** 掲載推薦アイドル数 */
+  recommendationCount: number;
+  /** ブランド別掲載推薦数 */
+  recommendationByBrand: Record<Brand, number>;
 }
 
 /**
@@ -70,7 +70,7 @@ export interface ChartNode {
 }
 
 /**
- * 可視化用のエッジ（共起関係）
+ * 可視化用のエッジ（掲載推薦関係）
  */
 export interface ChartEdge {
   source: string;

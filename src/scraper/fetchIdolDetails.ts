@@ -5,9 +5,9 @@ const MAX_RETRIES = 3;
 const FETCH_TIMEOUT = 30000;
 
 /**
- * HTMLから共演アイドル情報を抽出
+ * HTMLから掲載推薦アイドル情報を抽出
  */
-function extractCooccurringIdols(document: Document): Idol[] {
+function extractRecommendedIdols(document: Document): Idol[] {
   const container = document.querySelector("ul.another-chara");
   if (!container) {
     return [];
@@ -84,12 +84,12 @@ async function fetchSingleIdolDetail(
       const dom = new JSDOM(html, { url: idol.link });
       const document = dom.window.document;
 
-      const cooccurring = extractCooccurringIdols(document);
-      console.log(`${logPrefix} 取得完了: 共演者${cooccurring.length}件`);
+      const recommended = extractRecommendedIdols(document);
+      console.log(`${logPrefix} 取得完了: 掲載推薦${recommended.length}件`);
 
       return {
         ...idol,
-        cooccurring,
+        recommended,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

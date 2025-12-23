@@ -37,15 +37,15 @@ export default createRoute(async (c) => {
       <NavigationTabs activeTab="/mutual-pairs" />
       <main>
         <div className="chart-container">
-          <h3>相互共起ペア</h3>
+          <h3>相互掲載推薦ペア</h3>
           <ExplanationBox>
             <p>
-              <strong>相互共起ペア</strong>
-              とは、互いに共起として選び合っているアイドルのペアです。
+              <strong>相互掲載推薦ペア</strong>
+              とは、互いのページに掲載推薦として表示されているアイドルのペアです。
             </p>
             <p>
               PMI（Pointwise Mutual Information）値は、このペアが偶然選ばれた場合に比べて
-              どれだけ高い確率で共起しているかを示します。値が高いほど、全体の傾向に対して「意外性のある関係」です。
+              どれだけ高い確率で相互掲載推薦になっているかを示します。値が高いほど、全体の傾向に対して「意外性のある関係」です。
             </p>
           </ExplanationBox>
           <PMIFilter pairs={pairs} />
@@ -53,6 +53,6 @@ export default createRoute(async (c) => {
       </main>
       <PageFooter />
     </>,
-    { title: "相互共起ペア - アイドルマスター アイドル名鑑 共起関係可視化" }
+    { title: "相互掲載推薦ペア - アイドルマスター アイドル名鑑 共起関係可視化" }
   );
 });

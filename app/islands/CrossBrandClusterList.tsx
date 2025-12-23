@@ -29,16 +29,19 @@ interface CrossBrandClusterMember {
   coreness: number;
   degree: number;
   pmiWeightedDegree: number;
-  voterWeightedDegree: number;
+  /** 共起元数加重次数（各エッジの共起元数の合計） */
+  cooccurrenceSourceWeightedDegree: number;
   role: "core" | "peripheral";
 }
 
 interface CrossBrandEdge {
   idolA: IdolInfo;
   idolB: IdolInfo;
-  voterCount: number;
+  /** 共起元の数（このペアを同時に掲載しているアイドルの数） */
+  cooccurrenceSourceCount: number;
   pmi: number;
-  voters: IdolInfo[];
+  /** 共起元のリスト（このペアを同時に掲載しているアイドル） */
+  cooccurrenceSources: IdolInfo[];
 }
 
 interface CrossBrandCluster {
@@ -50,7 +53,8 @@ interface CrossBrandCluster {
   peripheralMembers: string[];
   coreDensity: number;
   edges: CrossBrandEdge[];
-  totalVoterCount: number;
+  /** 総共起元数（重複除去） */
+  totalCooccurrenceSourceCount: number;
   avgPmi: number;
   brands: Brand[];
   brandCount: number;
@@ -102,7 +106,7 @@ function MemberTag({
           opacity: isHidden ? 0.5 : 1,
           fontWeight: isCore ? "bold" : "normal",
         }}
-        title={`コア度: ${(member.coreness * 100).toFixed(0)}% / 次数: ${member.degree} / 投票数合計: ${member.voterWeightedDegree}`}
+        title={`コア度: ${(member.coreness * 100).toFixed(0)}% / 次数: ${member.degree} / 共起元数合計: ${member.cooccurrenceSourceWeightedDegree}`}
       >
         {isCore && (
           <span style={{ color: "#ff9800", fontSize: "12px" }} title="コアメンバー">
@@ -213,7 +217,7 @@ function EdgeVotersList({ edges }: { edges: CrossBrandEdge[] }) {
                     fontWeight: isHighPmi ? "bold" : "normal",
                   }}
                 >
-                  {edge.voterCount}人が選出 / PMI: {edge.pmi.toFixed(2)}
+                  {edge.cooccurrenceSourceCount}人が同時掲載 / PMI: {edge.pmi.toFixed(2)}
                 </span>
               </button>
 
@@ -226,13 +230,13 @@ function EdgeVotersList({ edges }: { edges: CrossBrandEdge[] }) {
                   }}
                 >
                   <div style={{ fontSize: "12px", color: "#666", marginBottom: "6px" }}>
-                    このペアを同時に共起として選出したアイドル:
+                    共起元（このペアを同時に掲載しているアイドル）:
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                    {edge.voters.map((voter) => (
+                    {edge.cooccurrenceSources.map((source) => (
                       <a
-                        key={voter.id}
-                        href={`/idol/${voter.id}`}
+                        key={source.id}
+                        href={`/idol/${source.id}`}
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
@@ -246,10 +250,10 @@ function EdgeVotersList({ edges }: { edges: CrossBrandEdge[] }) {
                           fontSize: "13px",
                         }}
                       >
-                        {voter.brand.map((b) => (
+                        {source.brand.map((b) => (
                           <BrandDot key={b} brand={b} />
                         ))}
-                        {voter.name}
+                        {source.name}
                       </a>
                     ))}
                   </div>
@@ -306,7 +310,7 @@ function ClusterCard({ cluster, rank }: { cluster: CrossBrandCluster; rank: numb
           {cluster.memberDetails.length}人 / {cluster.brandCount}ブランド
         </h3>
         <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-          <StatLabel label="投票者" value={`${cluster.totalVoterCount}人`} />
+          <StatLabel label="共起元" value={`${cluster.totalCooccurrenceSourceCount}人`} />
           <StatLabel label="平均PMI" value={cluster.avgPmi.toFixed(2)} color="#8e44ad" />
           <StatLabel label="エッジ" value={`${cluster.edges.length}本`} />
           <StatLabel label="コア" value={`${coreMembers.length}人`} color="#ff9800" />

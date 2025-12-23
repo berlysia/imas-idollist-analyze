@@ -150,8 +150,10 @@ export default createRoute(
             </div>
 
             <div className="detail-section">
-              <h3>被共起数</h3>
-              <p className="section-description">このアイドルを共起として選んだアイドルの数</p>
+              <h3>被掲載推薦数</h3>
+              <p className="section-description">
+                このアイドルを掲載推薦として表示しているアイドルの数
+              </p>
               <p className="stat-number">{detail.incomingCount}人</p>
               <div className="brand-breakdown">
                 {(Object.entries(detail.incomingByBrand) as [Brand, number][])
@@ -167,7 +169,7 @@ export default createRoute(
 
             {detail.mutualPairs.length > 0 && (
               <div className="detail-section">
-                <h3>互いに選出されているアイドル</h3>
+                <h3>相互掲載推薦アイドル</h3>
                 <ul className="idol-list">
                   {detail.mutualPairs.map((idol) => (
                     <li key={idol.id}>
@@ -185,8 +187,10 @@ export default createRoute(
             )}
 
             <div className="detail-section">
-              <h3>選んだ共起アイドル</h3>
-              <p className="section-description">このアイドルが共起として選んだアイドル</p>
+              <h3>掲載推薦アイドル</h3>
+              <p className="section-description">
+                このアイドルのページに掲載推薦として表示されているアイドル
+              </p>
               {detail.selectedIdols.length > 0 ? (
                 (() => {
                   // ブランド横断ペアのPMI情報をマップ化
@@ -249,13 +253,15 @@ export default createRoute(
                   );
                 })()
               ) : (
-                <p className="empty-message">共起データなし</p>
+                <p className="empty-message">掲載推薦データなし</p>
               )}
             </div>
 
             <div className="detail-section">
-              <h3>選んでくれたアイドル</h3>
-              <p className="section-description">このアイドルを共起として選んだアイドル</p>
+              <h3>掲載推薦元アイドル</h3>
+              <p className="section-description">
+                このアイドルを掲載推薦として表示しているアイドル
+              </p>
               <p className="section-description">
                 このアイドルを選ぶことの珍しさ{" "}
                 <ScoreBadge
@@ -286,7 +292,7 @@ export default createRoute(
                   ))}
                 </ul>
               ) : (
-                <p className="empty-message">選んでくれたアイドルなし</p>
+                <p className="empty-message">掲載推薦元アイドルなし</p>
               )}
             </div>
 
@@ -294,7 +300,7 @@ export default createRoute(
               <div className="detail-section">
                 <h3>ブランド横断ペア</h3>
                 <p className="section-description">
-                  異なるブランドのアイドルと一緒に選ばれているペア
+                  異なるブランドのアイドルと一緒に掲載推薦として表示されているペア
                 </p>
                 <ul className="bridge-list">
                   {detail.crossBrandBridges.slice(0, 10).map((bridge) => (
@@ -306,23 +312,26 @@ export default createRoute(
                           ))}
                           {bridge.partner.name}
                         </a>
-                        <span className="voter-badge">{bridge.voterCount}人が同時選択</span>
+                        <span className="voter-badge">
+                          {bridge.cooccurrenceSourceCount}人が同時掲載
+                        </span>
                         <ScoreBadge metric="pmi" value={bridge.pmi.toFixed(2)} />
                       </div>
                       <p className="bridge-voters">
-                        選んだ人:{" "}
-                        {bridge.voters.slice(0, 5).map((voter, i) => (
-                          <span key={voter.id}>
+                        共起元:{" "}
+                        {bridge.cooccurrenceSources.slice(0, 5).map((source, i) => (
+                          <span key={source.id}>
                             {i > 0 && ", "}
-                            <a href={`/idol/${voter.id}`} className="idol-link">
-                              {voter.brand.map((b) => (
+                            <a href={`/idol/${source.id}`} className="idol-link">
+                              {source.brand.map((b) => (
                                 <BrandDot key={b} brand={b} size="small" />
                               ))}
-                              {voter.name}
+                              {source.name}
                             </a>
                           </span>
                         ))}
-                        {bridge.voters.length > 5 && ` 他${bridge.voters.length - 5}人`}
+                        {bridge.cooccurrenceSources.length > 5 &&
+                          ` 他${bridge.cooccurrenceSources.length - 5}人`}
                       </p>
                     </li>
                   ))}

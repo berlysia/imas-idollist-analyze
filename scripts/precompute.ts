@@ -95,7 +95,7 @@ async function main() {
     idols: Object.fromEntries(
       Object.entries(data.idols).map(([id, idol]) => [id, { name: idol.name, brand: idol.brand }])
     ),
-    cooccurrences: data.cooccurrences,
+    recommendations: data.recommendations,
   };
   await writeFile(join(OUTPUT_DIR, "network.json"), JSON.stringify(networkData));
 

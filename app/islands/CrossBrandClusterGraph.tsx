@@ -21,7 +21,8 @@ interface CrossBrandClusterMember {
 interface CrossBrandEdge {
   idolA: IdolInfo;
   idolB: IdolInfo;
-  voterCount: number;
+  /** 共起元の数（このペアを同時に掲載しているアイドルの数） */
+  cooccurrenceSourceCount: number;
   pmi: number;
 }
 
@@ -47,7 +48,7 @@ interface GraphNode extends d3.SimulationNodeDatum {
 }
 
 interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
-  voterCount: number;
+  cooccurrenceSourceCount: number;
   pmi: number;
 }
 
@@ -89,21 +90,21 @@ export default function CrossBrandClusterGraph({
       .map((e) => ({
         source: nodeMap.get(e.idolA.id)!,
         target: nodeMap.get(e.idolB.id)!,
-        voterCount: e.voterCount,
+        cooccurrenceSourceCount: e.cooccurrenceSourceCount,
         pmi: e.pmi,
       }));
 
-    const maxVoterCount = Math.max(...links.map((l) => l.voterCount), 1);
+    const maxCooccurrenceSourceCount = Math.max(...links.map((l) => l.cooccurrenceSourceCount), 1);
     const maxPmi = Math.max(...links.map((l) => l.pmi), 1);
 
     // PMI ≥ 3.0 を高PMIとする（期待の8倍以上の頻度で共起 = 強い関連性）
     const HIGH_PMI_THRESHOLD = 3.0;
 
-    // 正規化した投票数とPMIを組み合わせた重み
+    // 正規化した共起元数とPMIを組み合わせた重み
     const getWeight = (l: GraphLink) => {
-      const normVoter = l.voterCount / maxVoterCount;
+      const normSource = l.cooccurrenceSourceCount / maxCooccurrenceSourceCount;
       const normPmi = l.pmi / maxPmi;
-      return normVoter * 0.6 + normPmi * 0.4;
+      return normSource * 0.6 + normPmi * 0.4;
     };
 
     const isHighPmi = (l: GraphLink) => l.pmi >= HIGH_PMI_THRESHOLD;
@@ -143,7 +144,9 @@ export default function CrossBrandClusterGraph({
       .attr("font-weight", (d) => (isHighPmi(d) ? "bold" : "normal"))
       .attr("text-anchor", "middle")
       .attr("dy", -3)
-      .text((d) => `${isHighPmi(d) ? "★ " : ""}${d.voterCount}票 / PMI:${d.pmi.toFixed(1)}`);
+      .text(
+        (d) => `${isHighPmi(d) ? "★ " : ""}${d.cooccurrenceSourceCount}人 / PMI:${d.pmi.toFixed(1)}`
+      );
 
     const dragBehavior = d3
       .drag<SVGGElement, GraphNode>()
@@ -231,7 +234,7 @@ export default function CrossBrandClusterGraph({
     <GraphSvgContainer svgRef={svgRef} width={width} height={height}>
       <GraphLegend>
         <LegendLine color="#d4a017" width={4} label="PMI≥3.0（強い関連性）" bold icon="★" />
-        <LegendLine color="#8e44ad" width={3} label="ブランド横断ペア（太いほど多くの投票者）" />
+        <LegendLine color="#8e44ad" width={3} label="ブランド横断ペア（太いほど多くの共起元）" />
         <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
           <span
             style={{

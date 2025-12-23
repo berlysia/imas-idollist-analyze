@@ -10,7 +10,8 @@ export interface IdolData {
 export interface NormalizedData {
   scrapedAt: string;
   idols: Record<string, IdolData>;
-  cooccurrences: Record<string, string[]>;
+  /** 掲載推薦関係: キーのアイドルのページに掲載されているアイドルIDの配列 */
+  recommendations: Record<string, string[]>;
 }
 
 export interface CooccurrenceStats {
@@ -42,8 +43,8 @@ export interface PairCooccurrence {
 }
 
 /**
- * PMIベースの「意外性のある共起」を計算
- * @param minCount 最低共起数（統計的安定性のため）
+ * PMIベースの「意外性のある相互掲載推薦」を計算
+ * @param minCount 最低掲載推薦数（統計的安定性のため）
  */
 export function computePMIRanking(data: NormalizedData, minCount: number = 2): PairCooccurrence[] {
   const idolIds = Object.keys(data.idols);
@@ -51,7 +52,10 @@ export function computePMIRanking(data: NormalizedData, minCount: number = 2): P
 
   // 各アイドルの出現回数（他のアイドルから選ばれた回数 + 自分が選んだ回数）
   const appearanceCount = new Map<string, number>();
-  for (const [sourceId, targetIds] of Object.entries(data.cooccurrences)) {
+  for (const [sourceId, targetIds] of Object.entries(data.recommendations) as [
+    string,
+    string[],
+  ][]) {
     // sourceは「選んだ側」としてカウント
     appearanceCount.set(sourceId, (appearanceCount.get(sourceId) ?? 0) + targetIds.length);
     // targetは「選ばれた側」としてカウント
@@ -62,7 +66,10 @@ export function computePMIRanking(data: NormalizedData, minCount: number = 2): P
 
   // ペア単位の共起回数を計算（双方向）
   const pairCount = new Map<string, number>();
-  for (const [sourceId, targetIds] of Object.entries(data.cooccurrences)) {
+  for (const [sourceId, targetIds] of Object.entries(data.recommendations) as [
+    string,
+    string[],
+  ][]) {
     for (const targetId of targetIds) {
       // 順序を正規化してキーを作成（小さいID, 大きいID）
       const key = sourceId < targetId ? `${sourceId}|${targetId}` : `${targetId}|${sourceId}`;
@@ -70,7 +77,7 @@ export function computePMIRanking(data: NormalizedData, minCount: number = 2): P
     }
   }
 
-  // 総共起数（PMI計算の分母用）
+  // 総掲載推薦数（PMI計算の分母用）
   const totalCooccurrences = Array.from(pairCount.values()).reduce((a, b) => a + b, 0);
 
   const results: PairCooccurrence[] = [];
@@ -92,7 +99,7 @@ export function computePMIRanking(data: NormalizedData, minCount: number = 2): P
 
     // P(A,B) = このペアの共起回数 / 総共起回数
     const pAB = count / totalCooccurrences;
-    // P(A) = Aの出現回数 / (アイドル数 * 平均共起数)
+    // P(A) = Aの出現回数 / (アイドル数 * 平均掲載推薦数)
     const pA = countA / (totalIdols * (totalCooccurrences / totalIdols));
     const pB = countB / (totalIdols * (totalCooccurrences / totalIdols));
 
@@ -118,16 +125,16 @@ export function computePMIRanking(data: NormalizedData, minCount: number = 2): P
 }
 
 /**
- * ブランド横断ペア: 異なるブランドの2人が、複数のアイドルから同時に共起として選ばれている
+ * ブランド横断ペア: 異なるブランドの2人が、複数のアイドルのページ上で同時に掲載されている（共起）
  */
 export interface CrossBrandBridge {
   idolA: { id: string; name: string; brand: Brand[] };
   idolB: { id: string; name: string; brand: Brand[] };
-  /** 同時に選んだアイドルの数 */
-  voterCount: number;
-  /** 同時に選んだアイドルのリスト */
-  voters: Array<{ id: string; name: string; brand: Brand[] }>;
-  /** PMI値: この2人が同時に選ばれる意外性 */
+  /** 共起元の数（このペアを同時に掲載しているアイドルの数） */
+  cooccurrenceSourceCount: number;
+  /** 共起元のリスト（このペアを同時に掲載しているアイドル） */
+  cooccurrenceSources: Array<{ id: string; name: string; brand: Brand[] }>;
+  /** PMI値: この2人が同時に掲載される意外性 */
   pmi: number;
 }
 
@@ -139,21 +146,24 @@ export function computeCrossBrandBridges(
   data: NormalizedData,
   minVoters: number = 2
 ): CrossBrandBridge[] {
-  // 各アイドルが共起リストに現れる回数（被共起数）
+  // 各アイドルが掲載推薦リストに現れる回数（被掲載推薦数）
   const appearanceCount = new Map<string, number>();
-  for (const targetIds of Object.values(data.cooccurrences)) {
+  for (const targetIds of Object.values(data.recommendations)) {
     for (const targetId of targetIds) {
       appearanceCount.set(targetId, (appearanceCount.get(targetId) ?? 0) + 1);
     }
   }
 
   // 総投票者数（共起リストを持つアイドルの数）
-  const totalVoters = Object.keys(data.cooccurrences).length;
+  const totalVoters = Object.keys(data.recommendations).length;
 
   // 各アイドルの共起リストに同時に現れるペアを記録
   const pairVoters = new Map<string, string[]>();
 
-  for (const [sourceId, targetIds] of Object.entries(data.cooccurrences)) {
+  for (const [sourceId, targetIds] of Object.entries(data.recommendations) as [
+    string,
+    string[],
+  ][]) {
     for (let i = 0; i < targetIds.length; i++) {
       for (let j = i + 1; j < targetIds.length; j++) {
         const idA = targetIds[i];
@@ -205,8 +215,8 @@ export function computeCrossBrandBridges(
     results.push({
       idolA: { id: idA, name: idolA.name, brand: idolA.brand },
       idolB: { id: idB, name: idolB.name, brand: idolB.brand },
-      voterCount: voters.length,
-      voters: voters.map((v) => {
+      cooccurrenceSourceCount: voters.length,
+      cooccurrenceSources: voters.map((v) => {
         const idol = data.idols[v];
         return { id: v, name: idol?.name ?? v, brand: idol?.brand ?? [] };
       }),
@@ -222,7 +232,10 @@ export function computeIncomingStats(data: NormalizedData): CooccurrenceStats[] 
   const incomingCount = new Map<string, number>();
   const incomingByBrand = new Map<string, Record<Brand, number>>();
 
-  for (const [sourceId, targetIds] of Object.entries(data.cooccurrences)) {
+  for (const [sourceId, targetIds] of Object.entries(data.recommendations) as [
+    string,
+    string[],
+  ][]) {
     const sourceIdol = data.idols[sourceId];
     if (!sourceIdol) continue;
 
@@ -290,16 +303,16 @@ export interface IdolDetail {
   selectedBy: Array<{ id: string; name: string; brand: Brand[]; score: SelectionScore }>;
   /** 相思相愛ペア（互いに選び合っている） */
   mutualPairs: Array<{ id: string; name: string; brand: Brand[]; pmi: number }>;
-  /** ブランド横断ペア（異なるブランドのアイドルと同時に選ばれている） */
+  /** ブランド横断ペア（異なるブランドのアイドルと同時に掲載されている） */
   crossBrandBridges: Array<{
     partner: { id: string; name: string; brand: Brand[] };
-    voterCount: number;
+    cooccurrenceSourceCount: number;
     pmi: number;
-    voters: Array<{ id: string; name: string; brand: Brand[] }>;
+    cooccurrenceSources: Array<{ id: string; name: string; brand: Brand[] }>;
   }>;
-  /** 被共起数 */
+  /** 被掲載推薦数 */
   incomingCount: number;
-  /** ブランド別被共起数 */
+  /** ブランド別被掲載推薦数 */
   incomingByBrand: Record<Brand, number>;
 }
 
@@ -315,7 +328,7 @@ function computeIDFContext(data: NormalizedData): {
   const incomingCount = new Map<string, number>();
   let totalVoters = 0;
 
-  for (const [, targetIds] of Object.entries(data.cooccurrences)) {
+  for (const [, targetIds] of Object.entries(data.recommendations) as [string, string[]][]) {
     totalVoters++;
     for (const targetId of targetIds) {
       incomingCount.set(targetId, (incomingCount.get(targetId) ?? 0) + 1);
@@ -415,7 +428,10 @@ export function buildWeightedGraph(data: NormalizedData): {
 
   // 有向エッジを収集
   const directedEdges = new Map<string, { source: string; target: string }>();
-  for (const [sourceId, targetIds] of Object.entries(data.cooccurrences)) {
+  for (const [sourceId, targetIds] of Object.entries(data.recommendations) as [
+    string,
+    string[],
+  ][]) {
     for (const targetId of targetIds) {
       const key = `${sourceId}|${targetId}`;
       directedEdges.set(key, { source: sourceId, target: targetId });
@@ -425,7 +441,10 @@ export function buildWeightedGraph(data: NormalizedData): {
   // 無向エッジに変換し、重みを計算
   const edgeMap = new Map<string, WeightedEdge>();
 
-  for (const [sourceId, targetIds] of Object.entries(data.cooccurrences)) {
+  for (const [sourceId, targetIds] of Object.entries(data.recommendations) as [
+    string,
+    string[],
+  ][]) {
     for (const targetId of targetIds) {
       // 正規化されたキー（小さいID|大きいID）
       const key = sourceId < targetId ? `${sourceId}|${targetId}` : `${targetId}|${sourceId}`;
@@ -740,7 +759,7 @@ export function computeIdolDetail(
   const idfContext = computeIDFContext(data);
 
   // 自分が選んだ共起アイドル（スコア付き、元の順序を維持）
-  const selectedIds = data.cooccurrences[idolId] ?? [];
+  const selectedIds = data.recommendations[idolId] ?? [];
   const selectedIdols = selectedIds
     .map((id) => {
       const i = data.idols[id];
@@ -753,7 +772,10 @@ export function computeIdolDetail(
   // 自分を選んだアイドル（相対IDF = 選択リスト内での自分の珍しさ、ランク付き）
   const selectedBy: Array<{ id: string; name: string; brand: Brand[]; score: SelectionScore }> = [];
   const myIdf = computeIDF(idolId, idfContext);
-  for (const [sourceId, targetIds] of Object.entries(data.cooccurrences)) {
+  for (const [sourceId, targetIds] of Object.entries(data.recommendations) as [
+    string,
+    string[],
+  ][]) {
     if (targetIds.includes(idolId)) {
       const source = data.idols[sourceId];
       if (source) {
@@ -791,14 +813,14 @@ export function computeIdolDetail(
       const partner = b.idolA.id === idolId ? b.idolB : b.idolA;
       return {
         partner,
-        voterCount: b.voterCount,
+        cooccurrenceSourceCount: b.cooccurrenceSourceCount,
         pmi: b.pmi,
-        voters: b.voters,
+        cooccurrenceSources: b.cooccurrenceSources,
       };
     })
     .sort((a, b) => b.pmi - a.pmi);
 
-  // 被共起数計算
+  // 被掲載推薦数計算
   const incomingByBrand: Record<Brand, number> = {
     imas: 0,
     deremas: 0,
@@ -840,8 +862,8 @@ export interface CrossBrandClusterMember {
   degree: number;
   /** PMI加重次数（各エッジのPMIの合計） */
   pmiWeightedDegree: number;
-  /** 投票数加重次数（各エッジの投票数の合計） */
-  voterWeightedDegree: number;
+  /** 共起元数加重次数（各エッジの共起元数の合計） */
+  cooccurrenceSourceWeightedDegree: number;
   /** 役割: core=密に結合、peripheral=コアに接続 */
   role: "core" | "peripheral";
 }
@@ -865,13 +887,13 @@ export interface CrossBrandCluster {
   edges: Array<{
     idolA: { id: string; name: string; brand: Brand[] };
     idolB: { id: string; name: string; brand: Brand[] };
-    voterCount: number;
+    cooccurrenceSourceCount: number;
     pmi: number;
-    /** このペアを同時に共起として選出したアイドル */
-    voters: Array<{ id: string; name: string; brand: Brand[] }>;
+    /** 共起元（このペアを同時に掲載しているアイドル） */
+    cooccurrenceSources: Array<{ id: string; name: string; brand: Brand[] }>;
   }>;
-  /** 総投票者数（重複除去） */
-  totalVoterCount: number;
+  /** 総共起元数（重複除去） */
+  totalCooccurrenceSourceCount: number;
   /** 平均PMI */
   avgPmi: number;
   /** 含まれるブランドの種類 */
@@ -911,12 +933,12 @@ export function detectCrossBrandClusters(
   if (filteredBridges.length === 0) return [];
 
   // 正規化用の最大値を計算
-  const maxVoterCount = Math.max(...filteredBridges.map((b) => b.voterCount), 1);
+  const maxVoterCount = Math.max(...filteredBridges.map((b) => b.cooccurrenceSourceCount), 1);
   const maxPmi = Math.max(...filteredBridges.map((b) => b.pmi), 1);
 
   // 正規化した投票数とPMIを組み合わせた重みを計算
-  const getWeight = (voterCount: number, pmi: number) => {
-    const normVoter = voterCount / maxVoterCount;
+  const getWeight = (cooccurrenceSourceCount: number, pmi: number) => {
+    const normVoter = cooccurrenceSourceCount / maxVoterCount;
     const normPmi = pmi / maxPmi;
     return normVoter * 0.6 + normPmi * 0.4;
   };
@@ -927,8 +949,8 @@ export function detectCrossBrandClusters(
   const nodeSet = new Set<string>();
 
   for (const bridge of filteredBridges) {
-    const { idolA, idolB, voterCount, pmi } = bridge;
-    const weight = getWeight(voterCount, pmi);
+    const { idolA, idolB, cooccurrenceSourceCount, pmi } = bridge;
+    const weight = getWeight(cooccurrenceSourceCount, pmi);
     nodeSet.add(idolA.id);
     nodeSet.add(idolB.id);
 
@@ -943,7 +965,10 @@ export function detectCrossBrandClusters(
   if (nodes.length < minSize) return [];
 
   // 総重み
-  const totalWeight = filteredBridges.reduce((sum, b) => sum + getWeight(b.voterCount, b.pmi), 0);
+  const totalWeight = filteredBridges.reduce(
+    (sum, b) => sum + getWeight(b.cooccurrenceSourceCount, b.pmi),
+    0
+  );
   if (totalWeight === 0) return [];
 
   // 各ノードの重み合計
@@ -1054,11 +1079,11 @@ export function detectCrossBrandClusters(
       })
       .filter((x): x is NonNullable<typeof x> => x !== null);
 
-    // 総投票者数（重複除去）
-    const allVoters = new Set<string>();
+    // 総共起元数（重複除去）
+    const allCooccurrenceSources = new Set<string>();
     for (const edge of clusterEdges) {
-      for (const voter of edge.voters) {
-        allVoters.add(voter.id);
+      for (const source of edge.cooccurrenceSources) {
+        allCooccurrenceSources.add(source.id);
       }
     }
 
@@ -1097,11 +1122,11 @@ export function detectCrossBrandClusters(
       // 投票数加重次数を加算
       memberVoterWeighted.set(
         edge.idolA.id,
-        (memberVoterWeighted.get(edge.idolA.id) ?? 0) + edge.voterCount
+        (memberVoterWeighted.get(edge.idolA.id) ?? 0) + edge.cooccurrenceSourceCount
       );
       memberVoterWeighted.set(
         edge.idolB.id,
-        (memberVoterWeighted.get(edge.idolB.id) ?? 0) + edge.voterCount
+        (memberVoterWeighted.get(edge.idolB.id) ?? 0) + edge.cooccurrenceSourceCount
       );
     }
 
@@ -1141,7 +1166,7 @@ export function detectCrossBrandClusters(
       const coreness = memberCoreness.get(memberId) ?? 0;
       const degree = memberDegree.get(memberId) ?? 0;
       const pmiWeightedDegree = memberPmiWeighted.get(memberId) ?? 0;
-      const voterWeightedDegree = memberVoterWeighted.get(memberId) ?? 0;
+      const cooccurrenceSourceWeightedDegree = memberVoterWeighted.get(memberId) ?? 0;
       const role = coreness >= coreThreshold ? "core" : "peripheral";
 
       if (role === "core") {
@@ -1157,7 +1182,7 @@ export function detectCrossBrandClusters(
         coreness,
         degree,
         pmiWeightedDegree,
-        voterWeightedDegree,
+        cooccurrenceSourceWeightedDegree,
         role,
       });
     }
@@ -1183,21 +1208,21 @@ export function detectCrossBrandClusters(
       edges: clusterEdges.map((e) => ({
         idolA: e.idolA,
         idolB: e.idolB,
-        voterCount: e.voterCount,
+        cooccurrenceSourceCount: e.cooccurrenceSourceCount,
         pmi: e.pmi,
-        voters: e.voters,
+        cooccurrenceSources: e.cooccurrenceSources,
       })),
-      totalVoterCount: allVoters.size,
+      totalCooccurrenceSourceCount: allCooccurrenceSources.size,
       avgPmi,
       brands,
       brandCount: brands.length,
     });
   }
 
-  // ブランド数 × 総投票者数でソート（多様なブランドを繋ぐクラスタを優先）
+  // ブランド数 × 総共起元数でソート（多様なブランドを繋ぐクラスタを優先）
   return clusters.sort((a, b) => {
-    const scoreA = a.brandCount * a.totalVoterCount;
-    const scoreB = b.brandCount * b.totalVoterCount;
+    const scoreA = a.brandCount * a.totalCooccurrenceSourceCount;
+    const scoreB = b.brandCount * b.totalCooccurrenceSourceCount;
     return scoreB - scoreA;
   });
 }

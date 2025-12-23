@@ -69,7 +69,7 @@ export default function PMIFilter({ pairs }: Props) {
             <th>アイドルA</th>
             <th className="arrow">↔</th>
             <th>アイドルB</th>
-            <th className="count">共起数</th>
+            <th className="count">掲載数</th>
             <th className="pmi-value">PMI</th>
             <th className="cross-brand-indicator">横断</th>
           </tr>
