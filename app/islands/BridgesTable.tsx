@@ -127,7 +127,9 @@ function ExpandedSourcesRow({ sources, colSpan }: { sources: IdolInfo[]; colSpan
 }
 
 export default function BridgesTable({ bridges, pairToCluster }: Props) {
-  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(
+    () => new Set(bridges.map((b) => `${b.idolA.id}-${b.idolB.id}`))
+  );
   const hasClusterData = pairToCluster && Object.keys(pairToCluster).length > 0;
   const colSpan = hasClusterData ? 7 : 6;
 
@@ -152,52 +154,14 @@ export default function BridgesTable({ bridges, pairToCluster }: Props) {
     setExpandedKeys(new Set());
   };
 
+  const allExpanded = expandedKeys.size === bridges.length;
+  const noneExpanded = expandedKeys.size === 0;
+
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "8px",
-        }}
-      >
-        <p className="bridges-count" style={{ margin: 0 }}>
-          {bridges.length} ペア
-        </p>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button
-            type="button"
-            onClick={expandAll}
-            style={{
-              padding: "4px 12px",
-              fontSize: "12px",
-              cursor: "pointer",
-              backgroundColor: "#f0e6f6",
-              border: "1px solid #8e44ad",
-              borderRadius: "4px",
-              color: "#8e44ad",
-            }}
-          >
-            全て開く
-          </button>
-          <button
-            type="button"
-            onClick={collapseAll}
-            style={{
-              padding: "4px 12px",
-              fontSize: "12px",
-              cursor: "pointer",
-              backgroundColor: "#fff",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              color: "#666",
-            }}
-          >
-            全て閉じる
-          </button>
-        </div>
-      </div>
+      <p className="bridges-count" style={{ marginBottom: "8px" }}>
+        {bridges.length} ペア
+      </p>
 
       <table className="bridges-table">
         <thead>
@@ -206,7 +170,47 @@ export default function BridgesTable({ bridges, pairToCluster }: Props) {
             <th>アイドルA</th>
             <th className="arrow">↔</th>
             <th>アイドルB</th>
-            <th className="voter-count">共起元</th>
+            <th className="voter-count">
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span>共起元</span>
+                <div style={{ display: "flex", gap: "4px" }}>
+                  <button
+                    type="button"
+                    onClick={expandAll}
+                    disabled={allExpanded}
+                    style={{
+                      padding: "2px 6px",
+                      fontSize: "10px",
+                      cursor: allExpanded ? "default" : "pointer",
+                      backgroundColor: allExpanded ? "#e0e0e0" : "#f0e6f6",
+                      border: `1px solid ${allExpanded ? "#ccc" : "#8e44ad"}`,
+                      borderRadius: "3px",
+                      color: allExpanded ? "#999" : "#8e44ad",
+                    }}
+                    title="全て開く"
+                  >
+                    ▼
+                  </button>
+                  <button
+                    type="button"
+                    onClick={collapseAll}
+                    disabled={noneExpanded}
+                    style={{
+                      padding: "2px 6px",
+                      fontSize: "10px",
+                      cursor: noneExpanded ? "default" : "pointer",
+                      backgroundColor: noneExpanded ? "#e0e0e0" : "#fff",
+                      border: `1px solid ${noneExpanded ? "#ccc" : "#999"}`,
+                      borderRadius: "3px",
+                      color: noneExpanded ? "#ccc" : "#666",
+                    }}
+                    title="全て閉じる"
+                  >
+                    ▲
+                  </button>
+                </div>
+              </div>
+            </th>
             <th className="pmi-value">PMI</th>
             {hasClusterData && <th className="cluster-link">クラスタ</th>}
           </tr>
