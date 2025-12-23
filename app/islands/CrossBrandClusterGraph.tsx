@@ -69,12 +69,18 @@ export default function CrossBrandClusterGraph({
     // memberRolesからメンバー情報を取得（コア度とロール情報を含む）
     const visibleMembers = cluster.memberRoles.filter((m) => !hiddenIds.has(m.id));
 
-    const nodes: GraphNode[] = visibleMembers.map((m) => ({
+    // 表示するノードがない場合は何もしない
+    if (visibleMembers.length === 0) return;
+
+    const nodes: GraphNode[] = visibleMembers.map((m, i) => ({
       id: m.id,
       name: m.name,
       brand: m.brand,
       coreness: m.coreness,
       role: m.role,
+      // 初期座標を設定（D3シミュレーション開始時のNaN防止）
+      x: width / 2 + Math.cos((2 * Math.PI * i) / visibleMembers.length) * 100,
+      y: height / 2 + Math.sin((2 * Math.PI * i) / visibleMembers.length) * 100,
     }));
 
     const nodeMap = new Map(nodes.map((n) => [n.id, n]));
