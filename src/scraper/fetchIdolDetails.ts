@@ -1,41 +1,27 @@
-import type { Idol, IdolDetail, Brand } from "../types/index.ts";
+import type { Idol, IdolDetail } from "../types/index.ts";
 import { JSDOM } from "jsdom";
 
 const MAX_RETRIES = 3;
 const FETCH_TIMEOUT = 30000;
 
 /**
- * HTMLから随伴アイドル情報を抽出
+ * HTMLから随伴アイドルIDを抽出
  */
-function extractAccompanyingIdols(document: Document): Idol[] {
+function extractAccompanyingIdolIds(document: Document): string[] {
   const container = document.querySelector("ul.another-chara");
   if (!container) {
     return [];
   }
 
   const items = container.querySelectorAll("li");
-  return Array.from(items).map((li) => {
-    const anchor = li.querySelector("a");
-    const paragraph = li.querySelector("p");
-
-    const brand = Array.from(li.classList).filter(
-      (cls) => cls !== "shadow" && cls !== "cell"
-    ) as Brand[];
-
-    // テキストノードから名前を抽出
-    const textNodes = paragraph
-      ? Array.from(paragraph.childNodes)
-          .filter((node) => node.nodeType === 3) // Node.TEXT_NODE
-          .map((node) => node.textContent?.trim() ?? "")
-          .filter((text) => text.length > 0)
-      : [];
-
-    return {
-      link: anchor?.href ?? "",
-      brand,
-      name: textNodes[0] ?? "",
-    };
-  });
+  return Array.from(items)
+    .map((li) => {
+      const anchor = li.querySelector("a");
+      const href = anchor?.href ?? "";
+      const match = href.match(/\/detail\/(\d+)$/);
+      return match?.[1] ?? "";
+    })
+    .filter((id) => id !== "");
 }
 
 /**
@@ -84,7 +70,7 @@ async function fetchSingleIdolDetail(
       const dom = new JSDOM(html, { url: idol.link });
       const document = dom.window.document;
 
-      const accompanying = extractAccompanyingIdols(document);
+      const accompanying = extractAccompanyingIdolIds(document);
       console.log(`${logPrefix} 取得完了: 随伴${accompanying.length}件`);
 
       return {
