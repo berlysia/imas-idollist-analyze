@@ -4,6 +4,7 @@ import { join } from "path";
 import type { CrossBrandCluster } from "../lib/compute";
 import CrossBrandClusterList from "../islands/CrossBrandClusterList";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
+import { SITE_TITLE } from "app/lib/constants";
 
 interface ClustersData {
   data: CrossBrandCluster[];
@@ -52,6 +53,6 @@ export default createRoute(async (c) => {
       </main>
       <PageFooter />
     </>,
-    { title: "ブランド横断クラスタ - アイドルマスター アイドル名鑑 共起関係可視化" }
+    { title: `ブランド横断クラスタ - ${SITE_TITLE}` }
   );
 });

@@ -4,6 +4,7 @@ import { join } from "path";
 import type { CrossBrandBridge } from "../lib/compute";
 import BridgesTable from "../islands/BridgesTable";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
+import { SITE_TITLE } from "app/lib/constants";
 
 interface BridgesData {
   data: CrossBrandBridge[];
@@ -53,6 +54,6 @@ export default createRoute(async (c) => {
       </main>
       <PageFooter />
     </>,
-    { title: "ブランド横断ペア - アイドルマスター アイドル名鑑 共起関係可視化" }
+    { title: `ブランド横断ペア - ${SITE_TITLE}` }
   );
 });

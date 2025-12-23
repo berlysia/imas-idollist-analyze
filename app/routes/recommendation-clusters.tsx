@@ -4,6 +4,7 @@ import { join } from "path";
 import type { Cluster } from "../lib/compute";
 import ClusterList from "../islands/ClusterList";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
+import { SITE_TITLE } from "app/lib/constants";
 
 interface ClustersData {
   data: Cluster[];
@@ -52,6 +53,6 @@ export default createRoute(async (c) => {
       </main>
       <PageFooter />
     </>,
-    { title: "掲載推薦クラスタ - アイドルマスター アイドル名鑑 共起関係可視化" }
+    { title: `掲載推薦クラスタ - ${SITE_TITLE}` }
   );
 });

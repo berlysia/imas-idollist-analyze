@@ -4,6 +4,7 @@ import { join } from "path";
 import NetworkGraph from "../islands/NetworkGraph";
 import type { Brand } from "@/types";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
+import { SITE_TITLE } from "app/lib/constants";
 
 interface MetadataData {
   scrapedAt: string;
@@ -49,6 +50,6 @@ export default createRoute(async (c) => {
       </main>
       <PageFooter />
     </>,
-    { title: "ネットワーク - アイドルマスター アイドル名鑑 共起関係可視化" }
+    { title: `ネットワーク - ${SITE_TITLE}` }
   );
 });

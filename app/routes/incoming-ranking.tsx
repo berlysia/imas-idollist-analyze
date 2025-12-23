@@ -4,6 +4,7 @@ import { join } from "path";
 import type { CooccurrenceStats } from "../lib/compute";
 import RankingChart from "../islands/RankingChart";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
+import { SITE_TITLE } from "app/lib/constants";
 
 interface RankingData {
   data: CooccurrenceStats[];
@@ -49,6 +50,6 @@ export default createRoute(async (c) => {
       </main>
       <PageFooter />
     </>,
-    { title: "被掲載推薦ランキング - アイドルマスター アイドル名鑑 共起関係可視化" }
+    { title: `被掲載推薦ランキング - ${SITE_TITLE}` }
   );
 });
