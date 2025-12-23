@@ -125,9 +125,9 @@ export function computePMIRanking(data: NormalizedData, minCount: number = 2): P
 export interface CrossBrandBridge {
   idolA: { id: string; name: string; brand: Brand[] };
   idolB: { id: string; name: string; brand: Brand[] };
-  /** 共起元の数（このペアを同時に掲載しているアイドルの数） */
+  /** 共起元の数（このペアを同時に随伴しているアイドルの数） */
   cooccurrenceSourceCount: number;
-  /** 共起元のリスト（このペアを同時に掲載しているアイドル） */
+  /** 共起元のリスト（このペアを同時に随伴しているアイドル） */
   cooccurrenceSources: Array<{ id: string; name: string; brand: Brand[] }>;
   /** PMI値: この2人が同時に掲載される意外性 */
   pmi: number;
@@ -193,7 +193,7 @@ export function computeCrossBrandBridges(
     if (!isCrossBrand) continue;
 
     // PMI計算
-    // P(A,B) = このペアを同時に掲載している共起元数 / 総共起元数
+    // P(A,B) = このペアを同時に随伴している共起元数 / 総共起元数
     const pAB = sources.length / totalCooccurrenceSources;
     // P(A) = Aが掲載されている回数 / 総共起元数
     const countA = appearanceCount.get(idA) ?? 0;
@@ -588,7 +588,7 @@ export function detectClusters(
           (edgeWeight -
             currentCommWeight -
             (nodeWeight * (targetCommWeight - currentCommTotalWeight + nodeWeight)) /
-              (2 * totalWeight));
+            (2 * totalWeight));
 
         if (delta > bestDelta) {
           bestDelta = delta;
@@ -887,7 +887,7 @@ export interface CrossBrandCluster {
     idolB: { id: string; name: string; brand: Brand[] };
     cooccurrenceSourceCount: number;
     pmi: number;
-    /** 共起元（このペアを同時に掲載しているアイドル） */
+    /** 共起元（このペアを同時に随伴しているアイドル） */
     cooccurrenceSources: Array<{ id: string; name: string; brand: Brand[] }>;
   }>;
   /** 総共起元数（重複除去） */
@@ -1032,7 +1032,7 @@ export function detectCrossBrandClusters(
           (edgeWeight -
             currentCommWeight -
             (nodeWeight * (targetCommWeight - currentCommTotalWeight + nodeWeight)) /
-              (2 * totalWeight));
+            (2 * totalWeight));
 
         if (delta > bestDelta) {
           bestDelta = delta;

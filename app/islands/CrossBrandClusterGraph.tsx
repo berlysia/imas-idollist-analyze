@@ -21,7 +21,7 @@ interface CrossBrandClusterMember {
 interface CrossBrandEdge {
   idolA: IdolInfo;
   idolB: IdolInfo;
-  /** 共起元の数（このペアを同時に掲載しているアイドルの数） */
+  /** 共起元の数（このペアを同時に随伴しているアイドルの数） */
   cooccurrenceSourceCount: number;
   pmi: number;
 }

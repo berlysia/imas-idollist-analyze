@@ -37,10 +37,10 @@ interface CrossBrandClusterMember {
 interface CrossBrandEdge {
   idolA: IdolInfo;
   idolB: IdolInfo;
-  /** 共起元の数（このペアを同時に掲載しているアイドルの数） */
+  /** 共起元の数（このペアを同時に随伴しているアイドルの数） */
   cooccurrenceSourceCount: number;
   pmi: number;
-  /** 共起元のリスト（このペアを同時に掲載しているアイドル） */
+  /** 共起元のリスト（このペアを同時に随伴しているアイドル） */
   cooccurrenceSources: IdolInfo[];
 }
 
@@ -225,7 +225,7 @@ function EdgeVotersList({ edges }: { edges: CrossBrandEdge[] }) {
                 }}
               >
                 <div style={{ fontSize: "12px", color: "#666", marginBottom: "6px" }}>
-                  共起元（このペアを同時に掲載しているアイドル）:
+                  共起元（このペアを同時に随伴しているアイドル）:
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                   {edge.cooccurrenceSources.map((source) => (
