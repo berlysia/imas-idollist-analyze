@@ -11,7 +11,7 @@ export interface NormalizedData {
   scrapedAt: string;
   idols: Record<string, IdolData>;
   /** 随伴関係: キーのアイドルのページに掲載されているアイドルIDの配列 */
-  recommendations: Record<string, string[]>;
+  accompaniments: Record<string, string[]>;
 }
 
 export interface CooccurrenceStats {
@@ -52,7 +52,7 @@ export function computePMIRanking(data: NormalizedData, minCount: number = 2): P
 
   // 各アイドルの出現回数（他のアイドルから選ばれた回数 + 自分が選んだ回数）
   const appearanceCount = new Map<string, number>();
-  for (const [sourceId, targetIds] of Object.entries(data.recommendations) as [
+  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [
     string,
     string[],
   ][]) {
@@ -66,7 +66,7 @@ export function computePMIRanking(data: NormalizedData, minCount: number = 2): P
 
   // ペア単位の共起回数を計算（双方向）
   const pairCount = new Map<string, number>();
-  for (const [sourceId, targetIds] of Object.entries(data.recommendations) as [
+  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [
     string,
     string[],
   ][]) {
@@ -148,19 +148,19 @@ export function computeCrossBrandBridges(
 ): CrossBrandBridge[] {
   // 各アイドルが随伴リストに現れる回数（被随伴数）
   const appearanceCount = new Map<string, number>();
-  for (const targetIds of Object.values(data.recommendations)) {
+  for (const targetIds of Object.values(data.accompaniments)) {
     for (const targetId of targetIds) {
       appearanceCount.set(targetId, (appearanceCount.get(targetId) ?? 0) + 1);
     }
   }
 
   // 総共起元数（随伴リストを持つアイドルの数）
-  const totalCooccurrenceSources = Object.keys(data.recommendations).length;
+  const totalCooccurrenceSources = Object.keys(data.accompaniments).length;
 
   // 各アイドルの随伴リストに同時に現れるペアを記録
   const pairCooccurrenceSources = new Map<string, string[]>();
 
-  for (const [sourceId, targetIds] of Object.entries(data.recommendations) as [
+  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [
     string,
     string[],
   ][]) {
@@ -232,7 +232,7 @@ export function computeIncomingStats(data: NormalizedData): CooccurrenceStats[] 
   const incomingCount = new Map<string, number>();
   const incomingByBrand = new Map<string, Record<Brand, number>>();
 
-  for (const [sourceId, targetIds] of Object.entries(data.recommendations) as [
+  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [
     string,
     string[],
   ][]) {
@@ -328,7 +328,7 @@ function computeIDFContext(data: NormalizedData): {
   const incomingCount = new Map<string, number>();
   let totalVoters = 0;
 
-  for (const [, targetIds] of Object.entries(data.recommendations) as [string, string[]][]) {
+  for (const [, targetIds] of Object.entries(data.accompaniments) as [string, string[]][]) {
     totalVoters++;
     for (const targetId of targetIds) {
       incomingCount.set(targetId, (incomingCount.get(targetId) ?? 0) + 1);
@@ -428,7 +428,7 @@ export function buildWeightedGraph(data: NormalizedData): {
 
   // 有向エッジを収集
   const directedEdges = new Map<string, { source: string; target: string }>();
-  for (const [sourceId, targetIds] of Object.entries(data.recommendations) as [
+  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [
     string,
     string[],
   ][]) {
@@ -441,7 +441,7 @@ export function buildWeightedGraph(data: NormalizedData): {
   // 無向エッジに変換し、重みを計算
   const edgeMap = new Map<string, WeightedEdge>();
 
-  for (const [sourceId, targetIds] of Object.entries(data.recommendations) as [
+  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [
     string,
     string[],
   ][]) {
@@ -759,7 +759,7 @@ export function computeIdolDetail(
   const idfContext = computeIDFContext(data);
 
   // 自分が選んだ共起アイドル（スコア付き、元の順序を維持）
-  const selectedIds = data.recommendations[idolId] ?? [];
+  const selectedIds = data.accompaniments[idolId] ?? [];
   const selectedIdols = selectedIds
     .map((id) => {
       const i = data.idols[id];
@@ -772,7 +772,7 @@ export function computeIdolDetail(
   // 自分を選んだアイドル（相対IDF = 選択リスト内での自分の珍しさ、ランク付き）
   const selectedBy: Array<{ id: string; name: string; brand: Brand[]; score: SelectionScore }> = [];
   const myIdf = computeIDF(idolId, idfContext);
-  for (const [sourceId, targetIds] of Object.entries(data.recommendations) as [
+  for (const [sourceId, targetIds] of Object.entries(data.accompaniments) as [
     string,
     string[],
   ][]) {

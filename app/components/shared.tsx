@@ -29,7 +29,7 @@ const TAB_ITEMS = [
   { href: "/incoming-ranking", label: "被随伴ランキング" },
   { href: "/mutual-pairs", label: "相互随伴ペア" },
   { href: "/cross-brand-pairs", label: "ブランド横断ペア" },
-  { href: "/recommendation-clusters", label: "随伴クラスタ" },
+  { href: "/accompaniment-clusters", label: "随伴クラスタ" },
   { href: "/cross-brand-clusters", label: "ブランド横断クラスタ" },
   { href: "/network", label: "ネットワーク" },
 ] as const;

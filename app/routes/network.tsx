@@ -14,7 +14,7 @@ interface MetadataData {
 
 interface NetworkData {
   idols: Record<string, { name: string; brand: Brand[] }>;
-  cooccurrences: Record<string, string[]>;
+  accompaniments: Record<string, string[]>;
 }
 
 async function loadData(): Promise<{ metadata: MetadataData; network: NetworkData }> {

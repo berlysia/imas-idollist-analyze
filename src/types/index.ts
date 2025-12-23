@@ -28,7 +28,7 @@ export interface Idol {
  */
 export interface IdolDetail extends Idol {
   /** 随伴アイドル一覧（このアイドルのページに掲載されているアイドル） */
-  recommended: Idol[];
+  accompanying: Idol[];
 }
 
 /**
@@ -46,7 +46,7 @@ export interface ScrapeResult<T> {
 /**
  * 随伴データの統計情報
  */
-export interface RecommendationStats {
+export interface AccompanimentStats {
   /** アイドルID（linkから抽出） */
   idolId: string;
   /** アイドル名 */
@@ -54,9 +54,9 @@ export interface RecommendationStats {
   /** ブランド */
   brand: Brand[];
   /** 随伴アイドル数 */
-  recommendationCount: number;
+  accompanimentCount: number;
   /** ブランド別随伴数 */
-  recommendationByBrand: Record<Brand, number>;
+  accompanimentByBrand: Record<Brand, number>;
 }
 
 /**

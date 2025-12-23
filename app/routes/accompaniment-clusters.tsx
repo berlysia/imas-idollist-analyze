@@ -34,7 +34,7 @@ export default createRoute(async (c) => {
   return c.render(
     <>
       <PageHeader metadata={metadata} />
-      <NavigationTabs activeTab="/recommendation-clusters" />
+      <NavigationTabs activeTab="/accompaniment-clusters" />
       <main>
         <div className="chart-container">
           <h3>随伴クラスタ</h3>

@@ -9,7 +9,7 @@ interface IdolInfo {
 
 interface NetworkData {
   idols: Record<string, IdolInfo>;
-  cooccurrences: Record<string, string[]>;
+  accompaniments: Record<string, string[]>;
 }
 
 interface Props {
@@ -66,7 +66,7 @@ export default function NetworkGraph({ data, initialMinConnections = 5 }: Props)
     const newEdges: Edge[] = [];
 
     const incomingCounts = new Map<string, number>();
-    for (const targetIds of Object.values(data.cooccurrences)) {
+    for (const targetIds of Object.values(data.accompaniments)) {
       for (const targetId of targetIds) {
         incomingCounts.set(targetId, (incomingCounts.get(targetId) ?? 0) + 1);
       }
@@ -96,7 +96,7 @@ export default function NetworkGraph({ data, initialMinConnections = 5 }: Props)
       });
     }
 
-    for (const [sourceId, targetIds] of Object.entries(data.cooccurrences)) {
+    for (const [sourceId, targetIds] of Object.entries(data.accompaniments)) {
       if (!filteredIds.has(sourceId)) continue;
       for (const targetId of targetIds) {
         if (filteredIds.has(targetId) && sourceId < targetId) {

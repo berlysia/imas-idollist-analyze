@@ -16,7 +16,7 @@ export interface NormalizedData {
   scrapedAt: string;
   idols: Record<string, NormalizedIdol>;
   /** 随伴関係: キーのアイドルのページに掲載されているアイドルIDの配列 */
-  recommendations: Record<string, string[]>;
+  accompaniments: Record<string, string[]>;
 }
 
 /**
@@ -36,10 +36,11 @@ function extractIdFromLink(link: string): string {
  */
 export function normalizeDetails(data: ScrapeResult<IdolDetail>): NormalizedData {
   const idols: Record<string, NormalizedIdol> = {};
-  const recommendations: Record<string, string[]> = {};
+  const accompaniments: Record<string, string[]> = {};
 
   for (const idol of data.data) {
     const id = extractIdFromLink(idol.link);
+    const accompanyingIdols = idol.accompanying;
 
     idols[id] = {
       name: idol.name,
@@ -47,18 +48,16 @@ export function normalizeDetails(data: ScrapeResult<IdolDetail>): NormalizedData
       link: idol.link,
     };
 
-    recommendations[id] = idol.recommended.map((recommended) =>
-      extractIdFromLink(recommended.link)
-    );
+    accompaniments[id] = accompanyingIdols.map((acc) => extractIdFromLink(acc.link));
 
     // 随伴アイドルの情報もidolsに追加（まだ存在しない場合）
-    for (const recommended of idol.recommended) {
-      const recommendedId = extractIdFromLink(recommended.link);
-      if (!idols[recommendedId]) {
-        idols[recommendedId] = {
-          name: recommended.name,
-          brand: recommended.brand,
-          link: recommended.link,
+    for (const acc of accompanyingIdols) {
+      const accompanyingId = extractIdFromLink(acc.link);
+      if (!idols[accompanyingId]) {
+        idols[accompanyingId] = {
+          name: acc.name,
+          brand: acc.brand,
+          link: acc.link,
         };
       }
     }
@@ -67,6 +66,6 @@ export function normalizeDetails(data: ScrapeResult<IdolDetail>): NormalizedData
   return {
     scrapedAt: data.scrapedAt,
     idols,
-    recommendations,
+    accompaniments,
   };
 }

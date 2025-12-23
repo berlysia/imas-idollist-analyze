@@ -7,7 +7,7 @@ const FETCH_TIMEOUT = 30000;
 /**
  * HTMLから随伴アイドル情報を抽出
  */
-function extractRecommendedIdols(document: Document): Idol[] {
+function extractAccompanyingIdols(document: Document): Idol[] {
   const container = document.querySelector("ul.another-chara");
   if (!container) {
     return [];
@@ -84,12 +84,12 @@ async function fetchSingleIdolDetail(
       const dom = new JSDOM(html, { url: idol.link });
       const document = dom.window.document;
 
-      const recommended = extractRecommendedIdols(document);
-      console.log(`${logPrefix} 取得完了: 随伴${recommended.length}件`);
+      const accompanying = extractAccompanyingIdols(document);
+      console.log(`${logPrefix} 取得完了: 随伴${accompanying.length}件`);
 
       return {
         ...idol,
-        recommended,
+        accompanying,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

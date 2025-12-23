@@ -3,7 +3,7 @@ import { buildWeightedGraph, detectClusters, type NormalizedData } from "../app/
 
 function createTestData(
   idols: Record<string, { name: string; brand: ("imas" | "deremas")[] }>,
-  recommendations: Record<string, string[]>
+  accompaniments: Record<string, string[]>
 ): NormalizedData {
   return {
     scrapedAt: new Date().toISOString(),
@@ -13,12 +13,12 @@ function createTestData(
         { ...data, link: `https://example.com/${id}` },
       ])
     ),
-    recommendations,
+    accompaniments,
   };
 }
 
 describe("buildWeightedGraph", () => {
-  it("creates weighted edges from recommendations", () => {
+  it("creates weighted edges from accompaniments", () => {
     const data = createTestData(
       {
         "1": { name: "A", brand: ["imas"] },
