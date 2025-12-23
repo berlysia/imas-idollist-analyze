@@ -279,18 +279,17 @@ export interface SelectionScore {
 }
 
 /**
- * 類似アイドル（ブランド横断ペアの共通性に基づく）
+ * 類似アイドルグループ（同じ共通随伴を持つアイドルをグループ化）
  */
-export interface SimilarIdol {
-  id: string;
-  name: string;
-  brand: Brand[];
+export interface SimilarIdolGroup {
   /** 共通する随伴アイドルの数 */
   commonAccompanimentCount: number;
   /** 共通する随伴アイドルのIDF平均（珍しさ指標） */
   avgIdf: number;
   /** 共通する随伴アイドルのリスト */
   commonAccompaniments: Array<{ id: string; name: string; brand: Brand[]; idf: number }>;
+  /** このグループに属するアイドル（同じ共通随伴を持つ） */
+  idols: Array<{ id: string; name: string; brand: Brand[] }>;
 }
 
 /**
@@ -319,8 +318,8 @@ export interface IdolDetail {
   incomingCount: number;
   /** ブランド別被随伴数 */
   incomingByBrand: Record<Brand, number>;
-  /** 類似アイドル（ブランド横断ペアの共通性に基づく） */
-  similarIdols?: SimilarIdol[];
+  /** 類似アイドルグループ（同じ共通随伴を持つアイドルをグループ化） */
+  similarIdolGroups?: SimilarIdolGroup[];
 }
 
 /**
@@ -1230,16 +1229,16 @@ export function detectCrossBrandClusters(
 }
 
 /**
- * 類似アイドル計算
- * 同じ随伴アイドルを選んでいる他のアイドルを見つける
- * 例: アイドルAがB,Cを随伴として選んでいるとき、同様にB,Cを選んでいるアイドルXを見つける
+ * 類似アイドルグループ計算
+ * 同じ随伴アイドルを選んでいる他のアイドルを見つけ、共通随伴の構成でグループ化する
+ * 例: アイドルAがB,Cを随伴として選んでいるとき、同様にB,Cを選んでいるアイドルX,Yを1グループにまとめる
  */
-export function computeSimilarIdols(
+export function computeSimilarIdolGroups(
   data: NormalizedData,
   targetIdolId: string,
   idfMap: Map<string, number>,
   topN: number = 10
-): SimilarIdol[] {
+): SimilarIdolGroup[] {
   // ターゲットアイドルの随伴リストを取得
   const targetAccompaniments = data.accompaniments[targetIdolId];
   if (!targetAccompaniments || targetAccompaniments.length === 0) return [];
@@ -1247,7 +1246,17 @@ export function computeSimilarIdols(
   // ターゲットの随伴アイドルをSetに
   const targetSet = new Set(targetAccompaniments);
 
-  const similarities: SimilarIdol[] = [];
+  // 共通随伴の構成でグループ化するためのMap
+  // キー: 共通随伴IDをソートして結合した文字列
+  // 値: グループ情報
+  const groupMap = new Map<
+    string,
+    {
+      commonAccompaniments: Array<{ id: string; name: string; brand: Brand[]; idf: number }>;
+      avgIdf: number;
+      idols: Array<{ id: string; name: string; brand: Brand[] }>;
+    }
+  >();
 
   // 他のすべてのアイドルと比較
   for (const [otherIdolId, otherAccompaniments] of Object.entries(data.accompaniments)) {
@@ -1281,22 +1290,47 @@ export function computeSimilarIdols(
     const otherIdol = data.idols[otherIdolId];
     if (!otherIdol) continue;
 
-    const avgIdf = totalIdf / commonAccompaniments.length;
+    // グループキーを作成（共通随伴IDをソートして結合）
+    const groupKey = commonAccompaniments
+      .map((a) => a.id)
+      .sort()
+      .join("|");
 
-    similarities.push({
-      id: otherIdolId,
-      name: otherIdol.name,
-      brand: otherIdol.brand,
-      commonAccompanimentCount: commonAccompaniments.length,
-      avgIdf,
-      commonAccompaniments: commonAccompaniments.sort((a, b) => b.idf - a.idf),
-    });
+    if (groupMap.has(groupKey)) {
+      // 既存グループにアイドルを追加
+      groupMap.get(groupKey)!.idols.push({
+        id: otherIdolId,
+        name: otherIdol.name,
+        brand: otherIdol.brand,
+      });
+    } else {
+      // 新しいグループを作成
+      const avgIdf = totalIdf / commonAccompaniments.length;
+      groupMap.set(groupKey, {
+        commonAccompaniments: commonAccompaniments.sort((a, b) => b.idf - a.idf),
+        avgIdf,
+        idols: [
+          {
+            id: otherIdolId,
+            name: otherIdol.name,
+            brand: otherIdol.brand,
+          },
+        ],
+      });
+    }
   }
+
+  // グループをSimilarIdolGroup形式に変換
+  const groups: SimilarIdolGroup[] = Array.from(groupMap.values()).map((group) => ({
+    commonAccompanimentCount: group.commonAccompaniments.length,
+    avgIdf: group.avgIdf,
+    commonAccompaniments: group.commonAccompaniments,
+    idols: group.idols,
+  }));
 
   // スコア = 共通数 × IDF平均 でソート
   // これにより「3人のちょいレア」が「6人の有名どころ」より上に来る
-  // 例：3人×IDF平均2.0 = 6.0 > 6人×IDF平均0.5 = 3.0
-  return similarities
+  return groups
     .sort((a, b) => {
       const scoreA = a.commonAccompanimentCount * a.avgIdf;
       const scoreB = b.commonAccompanimentCount * b.avgIdf;

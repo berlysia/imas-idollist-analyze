@@ -311,83 +311,101 @@ export default createRoute(
               </div>
             )}
 
-            {detail.similarIdols && detail.similarIdols.length > 0 && (
+            {detail.similarIdolGroups && detail.similarIdolGroups.length > 0 && (
               <div className="detail-section">
                 <h3>類似アイドル</h3>
                 <p className="section-description">
-                  同じ随伴アイドルを選んでいる他のアイドル（共通する随伴の珍しさでスコアリング）
+                  同じ随伴アイドルを選んでいる他のアイドル（共通する随伴の構成でグループ化）
                 </p>
                 <ul className="similar-list">
-                  {detail.similarIdols.map((similar) => (
-                    <li key={similar.id}>
-                      <div className="similar-header">
-                        <a href={`/idol/${similar.id}`} className="idol-link">
-                          {similar.brand.map((b) => (
-                            <BrandDot key={b} brand={b} size="small" />
-                          ))}
-                          {similar.name}
-                        </a>
+                  {detail.similarIdolGroups.map((group, idx) => (
+                    <li
+                      key={idx}
+                      style={{
+                        padding: "12px",
+                        backgroundColor: "#fafafa",
+                        borderRadius: "8px",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "6px",
+                          marginBottom: "8px",
+                        }}
+                      >
                         <span
                           style={{
-                            marginLeft: "8px",
-                            fontSize: "12px",
-                            color: "#8e44ad",
-                            fontWeight: 500,
-                          }}
-                        >
-                          {similar.commonAccompanimentCount}人の共通随伴
-                        </span>
-                        <span
-                          style={{
-                            marginLeft: "8px",
                             fontSize: "12px",
                             color: "#666",
+                            marginRight: "4px",
                           }}
                         >
-                          (IDF平均: {similar.avgIdf.toFixed(2)})
+                          共通随伴:
+                        </span>
+                        {group.commonAccompaniments.map((accomp) => (
+                          <a
+                            key={accomp.id}
+                            href={`/idol/${accomp.id}`}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              padding: "2px 6px",
+                              backgroundColor: "#fff",
+                              border: "1px solid #ddd",
+                              borderRadius: "4px",
+                              textDecoration: "none",
+                              color: "inherit",
+                              fontSize: "12px",
+                            }}
+                            title={`IDF: ${accomp.idf.toFixed(2)}`}
+                          >
+                            {accomp.brand.map((b) => (
+                              <BrandDot key={b} brand={b} size="small" />
+                            ))}
+                            {accomp.name}
+                          </a>
+                        ))}
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            color: "#888",
+                            marginLeft: "auto",
+                          }}
+                        >
+                          ({group.commonAccompanimentCount}人, IDF平均: {group.avgIdf.toFixed(2)})
                         </span>
                       </div>
-                      <details style={{ marginTop: "4px", marginLeft: "16px" }}>
-                        <summary style={{ cursor: "pointer", fontSize: "12px", color: "#666" }}>
-                          共通随伴アイドル詳細
-                        </summary>
-                        <div
-                          style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: "6px",
-                            marginTop: "4px",
-                            padding: "8px",
-                            backgroundColor: "#f8f4fc",
-                            borderRadius: "4px",
-                          }}
-                        >
-                          {similar.commonAccompaniments.map((accomp) => (
-                            <a
-                              key={accomp.id}
-                              href={`/idol/${accomp.id}`}
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                padding: "2px 6px",
-                                backgroundColor: "#fff",
-                                border: "1px solid #ddd",
-                                borderRadius: "4px",
-                                textDecoration: "none",
-                                color: "inherit",
-                                fontSize: "12px",
-                              }}
-                              title={`IDF: ${accomp.idf.toFixed(2)}`}
-                            >
-                              {accomp.brand.map((b) => (
-                                <BrandDot key={b} brand={b} size="small" />
-                              ))}
-                              {accomp.name}
-                            </a>
-                          ))}
-                        </div>
-                      </details>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "8px",
+                          paddingLeft: "8px",
+                          borderLeft: "3px solid #8e44ad",
+                        }}
+                      >
+                        {group.idols.map((idol) => (
+                          <a
+                            key={idol.id}
+                            href={`/idol/${idol.id}`}
+                            className="idol-link"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                            }}
+                          >
+                            {idol.brand.map((b) => (
+                              <BrandDot key={b} brand={b} size="small" />
+                            ))}
+                            {idol.name}
+                          </a>
+                        ))}
+                      </div>
                     </li>
                   ))}
                 </ul>

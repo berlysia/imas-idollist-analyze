@@ -11,7 +11,7 @@ import {
   computeIdolDetail,
   detectClusters,
   detectCrossBrandClusters,
-  computeSimilarIdols,
+  computeSimilarIdolGroups,
   buildIdfMap,
   type NormalizedData,
 } from "../app/lib/compute";
@@ -127,8 +127,8 @@ async function main() {
   for (const idolId of idolIds) {
     const detail = computeIdolDetail(data, idolId, pmiPairs, crossBrandBridges);
     if (detail) {
-      // 類似アイドルを計算して追加
-      detail.similarIdols = computeSimilarIdols(data, idolId, idfMap, 10);
+      // 類似アイドルグループを計算して追加
+      detail.similarIdolGroups = computeSimilarIdolGroups(data, idolId, idfMap, 20);
       await writeFile(join(IDOLS_DIR, `${idolId}.json`), JSON.stringify(detail, null, 2));
       count++;
       if (count % 100 === 0) {
