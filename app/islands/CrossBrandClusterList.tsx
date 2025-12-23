@@ -123,8 +123,6 @@ function MemberTag({
 }
 
 function EdgeVotersList({ edges }: { edges: CrossBrandEdge[] }) {
-  const [expandedEdge, setExpandedEdge] = useState<string | null>(null);
-
   // PMI順でソート
   const sortedEdges = useMemo(() => [...edges].sort((a, b) => b.pmi - a.pmi), [edges]);
 
@@ -150,21 +148,20 @@ function EdgeVotersList({ edges }: { edges: CrossBrandEdge[] }) {
       <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
         {sortedEdges.map((edge) => {
           const edgeKey = `${edge.idolA.id}-${edge.idolB.id}`;
-          const isExpanded = expandedEdge === edgeKey;
           const isHighPmi = edge.pmi >= HIGH_PMI_THRESHOLD;
 
           return (
-            <div
+            <details
               key={edgeKey}
               style={{
                 border: isHighPmi ? "2px solid #d4a017" : "1px solid #e0e0e0",
                 borderRadius: "4px",
-                background: isExpanded ? "#f9f0ff" : isHighPmi ? "#fffbeb" : "#fafafa",
+                // background: isExpanded ? "#f9f0ff" : isHighPmi ? "#fffbeb" : "#fafafa",
+                background: isHighPmi ? "#fffbeb" : "#fafafa",
                 boxShadow: isHighPmi ? "0 2px 8px rgba(212, 160, 23, 0.2)" : undefined,
               }}
             >
-              <button
-                onClick={() => setExpandedEdge(isExpanded ? null : edgeKey)}
+              <summary
                 style={{
                   width: "100%",
                   padding: "8px 12px",
@@ -178,7 +175,6 @@ function EdgeVotersList({ edges }: { edges: CrossBrandEdge[] }) {
                   fontSize: "13px",
                 }}
               >
-                <span style={{ color: "#8e44ad" }}>{isExpanded ? "▼" : "▶"}</span>
                 {isHighPmi && (
                   <span style={{ color: "#d4a017", fontSize: "14px" }} title="PMI上位ペア">
                     ★
@@ -217,49 +213,47 @@ function EdgeVotersList({ edges }: { edges: CrossBrandEdge[] }) {
                     fontWeight: isHighPmi ? "bold" : "normal",
                   }}
                 >
-                  {edge.cooccurrenceSourceCount}人が同時掲載 / PMI: {edge.pmi.toFixed(2)}
+                  {edge.cooccurrenceSourceCount}人が同時選出 / PMI: {edge.pmi.toFixed(2)}
                 </span>
-              </button>
+              </summary>
 
-              {isExpanded && (
-                <div
-                  style={{
-                    padding: "8px 12px 12px 28px",
-                    borderTop: "1px solid #e0e0e0",
-                    background: "#fff",
-                  }}
-                >
-                  <div style={{ fontSize: "12px", color: "#666", marginBottom: "6px" }}>
-                    共起元（このペアを同時に掲載しているアイドル）:
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                    {edge.cooccurrenceSources.map((source) => (
-                      <a
-                        key={source.id}
-                        href={`/idol/${source.id}`}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          padding: "4px 8px",
-                          background: "#f5f5f5",
-                          border: "1px solid #ddd",
-                          borderRadius: "4px",
-                          textDecoration: "none",
-                          color: "inherit",
-                          fontSize: "13px",
-                        }}
-                      >
-                        {source.brand.map((b) => (
-                          <BrandDot key={b} brand={b} />
-                        ))}
-                        {source.name}
-                      </a>
-                    ))}
-                  </div>
+              <div
+                style={{
+                  padding: "8px 12px 12px 28px",
+                  borderTop: "1px solid #e0e0e0",
+                  background: "#fff",
+                }}
+              >
+                <div style={{ fontSize: "12px", color: "#666", marginBottom: "6px" }}>
+                  共起元（このペアを同時に掲載しているアイドル）:
                 </div>
-              )}
-            </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                  {edge.cooccurrenceSources.map((source) => (
+                    <a
+                      key={source.id}
+                      href={`/idol/${source.id}`}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        padding: "4px 8px",
+                        background: "#f5f5f5",
+                        border: "1px solid #ddd",
+                        borderRadius: "4px",
+                        textDecoration: "none",
+                        color: "inherit",
+                        fontSize: "13px",
+                      }}
+                    >
+                      {source.brand.map((b) => (
+                        <BrandDot key={b} brand={b} />
+                      ))}
+                      {source.name}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </details>
           );
         })}
       </div>
@@ -310,7 +304,7 @@ function ClusterCard({ cluster, rank }: { cluster: CrossBrandCluster; rank: numb
           {cluster.memberDetails.length}人 / {cluster.brandCount}ブランド
         </h3>
         <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-          <StatLabel label="共起元" value={`${cluster.totalCooccurrenceSourceCount}人`} />
+          <StatLabel label="同時選出" value={`${cluster.totalCooccurrenceSourceCount}件`} />
           <StatLabel label="平均PMI" value={cluster.avgPmi.toFixed(2)} color="#8e44ad" />
           <StatLabel label="エッジ" value={`${cluster.edges.length}本`} />
           <StatLabel label="コア" value={`${coreMembers.length}人`} color="#ff9800" />
