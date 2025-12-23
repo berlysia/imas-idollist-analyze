@@ -1,7 +1,7 @@
 import { createRoute } from "honox/factory";
 import { readFile } from "fs/promises";
 import { join } from "path";
-import type { PairCooccurrence } from "../lib/compute";
+import type { PairCooccurrence, Cluster } from "../lib/compute";
 import PMIFilter from "../islands/PMIFilter";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
 import { SITE_TITLE } from "../lib/constants";
@@ -10,27 +10,58 @@ interface PMIData {
   data: PairCooccurrence[];
 }
 
+interface ClustersData {
+  data: Cluster[];
+}
+
 interface MetadataData {
   scrapedAt: string;
   generatedAt: string;
   idolCount: number;
 }
 
-async function loadData(): Promise<{ pmiPairs: PMIData; metadata: MetadataData }> {
+interface ClusterInfo {
+  clusterId: number;
+  clusterIndex: number;
+}
+
+function makePairKey(idA: string, idB: string): string {
+  return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
+}
+
+function buildPairToClusterMap(clusters: Cluster[]): Record<string, ClusterInfo> {
+  const map: Record<string, ClusterInfo> = {};
+  clusters.forEach((cluster, clusterIndex) => {
+    for (const edge of cluster.edges) {
+      const pairKey = makePairKey(edge.source, edge.target);
+      map[pairKey] = { clusterId: cluster.id, clusterIndex };
+    }
+  });
+  return map;
+}
+
+async function loadData(): Promise<{
+  pmiPairs: PMIData;
+  clusters: ClustersData;
+  metadata: MetadataData;
+}> {
   const dataDir = join(process.cwd(), "data/precomputed");
-  const [pmiRaw, metadataRaw] = await Promise.all([
+  const [pmiRaw, clustersRaw, metadataRaw] = await Promise.all([
     readFile(join(dataDir, "pmi-pairs.json"), "utf-8"),
+    readFile(join(dataDir, "clusters.json"), "utf-8"),
     readFile(join(dataDir, "metadata.json"), "utf-8"),
   ]);
   return {
     pmiPairs: JSON.parse(pmiRaw),
+    clusters: JSON.parse(clustersRaw),
     metadata: JSON.parse(metadataRaw),
   };
 }
 
 export default createRoute(async (c) => {
-  const { pmiPairs, metadata } = await loadData();
+  const { pmiPairs, clusters, metadata } = await loadData();
   const pairs = pmiPairs.data;
+  const pairToCluster = buildPairToClusterMap(clusters.data);
 
   return c.render(
     <>
@@ -45,11 +76,14 @@ export default createRoute(async (c) => {
               とは、互いのページに随伴として表示されているアイドルのペアです。
             </p>
             <p>
-              PMI（Pointwise Mutual Information）値は、このペアが出現する可能性がどれだけ珍しいか、意味を伴っているかを示します。値が高いほど、全体の傾向に対して特徴的な関係です。
+              PMI（Pointwise Mutual
+              Information）値は、このペアが出現する可能性がどれだけ珍しいか、意味を伴っているかを示します。値が高いほど、全体の傾向に対して特徴的な関係です。
             </p>
-            <p>とくにこの分析ではユニット等の文脈を全く参照していないので、ユニットメンバーや血縁関係などを反映しているように見える場合は、実際にプロデューサーたちの行動からそれが読み取れることを示しています。</p>
+            <p>
+              とくにこの分析ではユニット等の文脈を全く参照していないので、ユニットメンバーや血縁関係などを反映しているように見える場合は、実際にプロデューサーたちの行動からそれが読み取れることを示しています。
+            </p>
           </ExplanationBox>
-          <PMIFilter pairs={pairs} />
+          <PMIFilter pairs={pairs} pairToCluster={pairToCluster} />
         </div>
       </main>
       <PageFooter />

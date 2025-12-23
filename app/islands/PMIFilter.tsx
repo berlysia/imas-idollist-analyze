@@ -16,8 +16,15 @@ interface PairCooccurrence {
   crossBrand: boolean;
 }
 
+interface ClusterInfo {
+  clusterId: number;
+  clusterIndex: number;
+}
+
 interface Props {
   pairs: PairCooccurrence[];
+  /** ペアID（"小さいID|大きいID"形式）からクラスタ情報へのマッピング */
+  pairToCluster?: Record<string, ClusterInfo>;
 }
 
 function BrandDot({ brand }: { brand: Brand }) {
@@ -30,8 +37,38 @@ function BrandDot({ brand }: { brand: Brand }) {
   );
 }
 
-export default function PMIFilter({ pairs }: Props) {
+function makePairKey(idA: string, idB: string): string {
+  return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
+}
+
+function ClusterLink({ clusterInfo }: { clusterInfo: ClusterInfo | undefined }) {
+  if (!clusterInfo) return <span style={{ color: "#999" }}>-</span>;
+
+  return (
+    <a
+      href={`/accompaniment-clusters#cluster-${clusterInfo.clusterIndex}`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "4px",
+        padding: "2px 8px",
+        backgroundColor: "#e3f2fd",
+        color: "#1976d2",
+        borderRadius: "4px",
+        textDecoration: "none",
+        fontSize: "0.85em",
+        fontWeight: 500,
+      }}
+      title={`随伴クラスタ #${clusterInfo.clusterIndex + 1} に属する`}
+    >
+      <span style={{ fontSize: "0.9em" }}>🔗</span>#{clusterInfo.clusterIndex + 1}
+    </a>
+  );
+}
+
+export default function PMIFilter({ pairs, pairToCluster }: Props) {
   const [crossBrandOnly, setCrossBrandOnly] = useState(false);
+  const hasClusterData = pairToCluster && Object.keys(pairToCluster).length > 0;
 
   const filteredPairs = useMemo(() => {
     if (crossBrandOnly) {
@@ -72,57 +109,69 @@ export default function PMIFilter({ pairs }: Props) {
             <th className="count">掲載数</th>
             <th className="pmi-value">PMI</th>
             <th className="cross-brand-indicator">横断</th>
+            {hasClusterData && <th className="cluster-link">クラスタ</th>}
           </tr>
         </thead>
         <tbody>
-          {filteredPairs.map((pair, index) => (
-            <tr
-              key={`${pair.idolA.id}-${pair.idolB.id}`}
-              className={pair.crossBrand ? "cross-brand" : ""}
-            >
-              <td className="rank">{index + 1}</td>
-              <td>
-                <a
-                  href={`/idol/${pair.idolA.id}`}
-                  className="idol-name clickable"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    textDecoration: "none",
-                    color: "inherit",
-                  }}
-                >
-                  {pair.idolA.brand.map((b) => (
-                    <BrandDot key={b} brand={b} />
-                  ))}
-                  {pair.idolA.name}
-                </a>
-              </td>
-              <td className="arrow">↔</td>
-              <td>
-                <a
-                  href={`/idol/${pair.idolB.id}`}
-                  className="idol-name clickable"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    textDecoration: "none",
-                    color: "inherit",
-                  }}
-                >
-                  {pair.idolB.brand.map((b) => (
-                    <BrandDot key={b} brand={b} />
-                  ))}
-                  {pair.idolB.name}
-                </a>
-              </td>
-              <td className="count">{pair.count}</td>
-              <td className="pmi-value">{pair.pmi.toFixed(2)}</td>
-              <td className="cross-brand-indicator">{pair.crossBrand ? "✓" : ""}</td>
-            </tr>
-          ))}
+          {filteredPairs.map((pair, index) => {
+            const pairKey = makePairKey(pair.idolA.id, pair.idolB.id);
+            const clusterInfo = pairToCluster?.[pairKey];
+
+            return (
+              <tr
+                key={`${pair.idolA.id}-${pair.idolB.id}`}
+                className={pair.crossBrand ? "cross-brand" : ""}
+                style={clusterInfo ? { backgroundColor: "#f5faff" } : undefined}
+              >
+                <td className="rank">{index + 1}</td>
+                <td>
+                  <a
+                    href={`/idol/${pair.idolA.id}`}
+                    className="idol-name clickable"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      textDecoration: "none",
+                      color: "inherit",
+                    }}
+                  >
+                    {pair.idolA.brand.map((b) => (
+                      <BrandDot key={b} brand={b} />
+                    ))}
+                    {pair.idolA.name}
+                  </a>
+                </td>
+                <td className="arrow">↔</td>
+                <td>
+                  <a
+                    href={`/idol/${pair.idolB.id}`}
+                    className="idol-name clickable"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      textDecoration: "none",
+                      color: "inherit",
+                    }}
+                  >
+                    {pair.idolB.brand.map((b) => (
+                      <BrandDot key={b} brand={b} />
+                    ))}
+                    {pair.idolB.name}
+                  </a>
+                </td>
+                <td className="count">{pair.count}</td>
+                <td className="pmi-value">{pair.pmi.toFixed(2)}</td>
+                <td className="cross-brand-indicator">{pair.crossBrand ? "✓" : ""}</td>
+                {hasClusterData && (
+                  <td className="cluster-link">
+                    <ClusterLink clusterInfo={clusterInfo} />
+                  </td>
+                )}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </>

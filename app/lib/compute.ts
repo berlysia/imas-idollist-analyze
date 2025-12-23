@@ -279,6 +279,21 @@ export interface SelectionScore {
 }
 
 /**
+ * 類似アイドル（ブランド横断ペアの共通性に基づく）
+ */
+export interface SimilarIdol {
+  id: string;
+  name: string;
+  brand: Brand[];
+  /** 共通する随伴アイドルの数 */
+  commonAccompanimentCount: number;
+  /** 共通する随伴アイドルのIDF平均（珍しさ指標） */
+  avgIdf: number;
+  /** 共通する随伴アイドルのリスト */
+  commonAccompaniments: Array<{ id: string; name: string; brand: Brand[]; idf: number }>;
+}
+
+/**
  * アイドル詳細情報
  */
 export interface IdolDetail {
@@ -304,6 +319,8 @@ export interface IdolDetail {
   incomingCount: number;
   /** ブランド別被随伴数 */
   incomingByBrand: Record<Brand, number>;
+  /** 類似アイドル（ブランド横断ペアの共通性に基づく） */
+  similarIdols?: SimilarIdol[];
 }
 
 /**
@@ -572,7 +589,7 @@ export function detectClusters(
           (edgeWeight -
             currentCommWeight -
             (nodeWeight * (targetCommWeight - currentCommTotalWeight + nodeWeight)) /
-            (2 * totalWeight));
+              (2 * totalWeight));
 
         if (delta > bestDelta) {
           bestDelta = delta;
@@ -1016,7 +1033,7 @@ export function detectCrossBrandClusters(
           (edgeWeight -
             currentCommWeight -
             (nodeWeight * (targetCommWeight - currentCommTotalWeight + nodeWeight)) /
-            (2 * totalWeight));
+              (2 * totalWeight));
 
         if (delta > bestDelta) {
           bestDelta = delta;
@@ -1210,4 +1227,106 @@ export function detectCrossBrandClusters(
     const scoreB = b.brandCount * b.totalCooccurrenceSourceCount;
     return scoreB - scoreA;
   });
+}
+
+/**
+ * 類似アイドル計算
+ * 同じ随伴アイドルを選んでいる他のアイドルを見つける
+ * 例: アイドルAがB,Cを随伴として選んでいるとき、同様にB,Cを選んでいるアイドルXを見つける
+ */
+export function computeSimilarIdols(
+  data: NormalizedData,
+  targetIdolId: string,
+  idfMap: Map<string, number>,
+  topN: number = 10
+): SimilarIdol[] {
+  // ターゲットアイドルの随伴リストを取得
+  const targetAccompaniments = data.accompaniments[targetIdolId];
+  if (!targetAccompaniments || targetAccompaniments.length === 0) return [];
+
+  // ターゲットの随伴アイドルをSetに
+  const targetSet = new Set(targetAccompaniments);
+
+  const similarities: SimilarIdol[] = [];
+
+  // 他のすべてのアイドルと比較
+  for (const [otherIdolId, otherAccompaniments] of Object.entries(data.accompaniments)) {
+    if (otherIdolId === targetIdolId) continue;
+    if (!otherAccompaniments || otherAccompaniments.length === 0) continue;
+
+    // 共通する随伴アイドルを探す
+    const commonAccompaniments: Array<{ id: string; name: string; brand: Brand[]; idf: number }> =
+      [];
+    let totalIdf = 0;
+
+    for (const accompId of otherAccompaniments) {
+      if (targetSet.has(accompId)) {
+        const accompIdol = data.idols[accompId];
+        if (accompIdol) {
+          const idf = idfMap.get(accompId) ?? 0;
+          commonAccompaniments.push({
+            id: accompId,
+            name: accompIdol.name,
+            brand: accompIdol.brand,
+            idf,
+          });
+          totalIdf += idf;
+        }
+      }
+    }
+
+    // 共通随伴が2人以上の場合のみ類似とみなす
+    if (commonAccompaniments.length < 2) continue;
+
+    const otherIdol = data.idols[otherIdolId];
+    if (!otherIdol) continue;
+
+    const avgIdf = totalIdf / commonAccompaniments.length;
+
+    similarities.push({
+      id: otherIdolId,
+      name: otherIdol.name,
+      brand: otherIdol.brand,
+      commonAccompanimentCount: commonAccompaniments.length,
+      avgIdf,
+      commonAccompaniments: commonAccompaniments.sort((a, b) => b.idf - a.idf),
+    });
+  }
+
+  // スコア = 共通数 × IDF平均 でソート
+  // これにより「3人のちょいレア」が「6人の有名どころ」より上に来る
+  // 例：3人×IDF平均2.0 = 6.0 > 6人×IDF平均0.5 = 3.0
+  return similarities
+    .sort((a, b) => {
+      const scoreA = a.commonAccompanimentCount * a.avgIdf;
+      const scoreB = b.commonAccompanimentCount * b.avgIdf;
+      return scoreB - scoreA;
+    })
+    .slice(0, topN);
+}
+
+/**
+ * 各アイドルのIDFマップを構築
+ * アイドルID → そのアイドルを選ぶことのIDF値
+ */
+export function buildIdfMap(data: NormalizedData): Map<string, number> {
+  // 各アイドルが随伴として選ばれた回数
+  const selectionCount = new Map<string, number>();
+  for (const targetIds of Object.values(data.accompaniments)) {
+    for (const targetId of targetIds) {
+      selectionCount.set(targetId, (selectionCount.get(targetId) ?? 0) + 1);
+    }
+  }
+
+  // 総共起元数（随伴を選んだアイドルの数）
+  const totalSources = Object.keys(data.accompaniments).length;
+
+  // IDF計算: log(総数 / 選ばれた回数)
+  const idfMap = new Map<string, number>();
+  for (const [idolId, count] of selectionCount.entries()) {
+    const idf = Math.log(totalSources / count);
+    idfMap.set(idolId, idf);
+  }
+
+  return idfMap;
 }

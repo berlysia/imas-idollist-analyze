@@ -23,7 +23,11 @@ async function loadIdolDetail(id: string): Promise<IdolDetail | null> {
   }
 }
 
-async function loadMetadata(): Promise<{ scrapedAt: string; generatedAt: string; idolCount: number }> {
+async function loadMetadata(): Promise<{
+  scrapedAt: string;
+  generatedAt: string;
+  idolCount: number;
+}> {
   const dataDir = join(process.cwd(), "data/precomputed");
   const raw = await readFile(join(dataDir, "metadata.json"), "utf-8");
   return JSON.parse(raw);
@@ -215,7 +219,8 @@ export default createRoute(
             <div className="detail-section">
               <h3>随伴元アイドル</h3>
               <p className="section-description">
-                このアイドルを随伴として表示しているアイドルの数： <span className="stat-number">{detail.incomingCount}人</span>
+                このアイドルを随伴として表示しているアイドルの数：{" "}
+                <span className="stat-number">{detail.incomingCount}人</span>
               </p>
               <p className="section-description">
                 このアイドルを選ぶことの珍しさ{" "}
@@ -300,6 +305,89 @@ export default createRoute(
                         {bridge.cooccurrenceSources.length > 5 &&
                           ` 他${bridge.cooccurrenceSources.length - 5}人`}
                       </p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {detail.similarIdols && detail.similarIdols.length > 0 && (
+              <div className="detail-section">
+                <h3>類似アイドル</h3>
+                <p className="section-description">
+                  同じ随伴アイドルを選んでいる他のアイドル（共通する随伴の珍しさでスコアリング）
+                </p>
+                <ul className="similar-list">
+                  {detail.similarIdols.map((similar) => (
+                    <li key={similar.id}>
+                      <div className="similar-header">
+                        <a href={`/idol/${similar.id}`} className="idol-link">
+                          {similar.brand.map((b) => (
+                            <BrandDot key={b} brand={b} size="small" />
+                          ))}
+                          {similar.name}
+                        </a>
+                        <span
+                          style={{
+                            marginLeft: "8px",
+                            fontSize: "12px",
+                            color: "#8e44ad",
+                            fontWeight: 500,
+                          }}
+                        >
+                          {similar.commonAccompanimentCount}人の共通随伴
+                        </span>
+                        <span
+                          style={{
+                            marginLeft: "8px",
+                            fontSize: "12px",
+                            color: "#666",
+                          }}
+                        >
+                          (IDF平均: {similar.avgIdf.toFixed(2)})
+                        </span>
+                      </div>
+                      <details style={{ marginTop: "4px", marginLeft: "16px" }}>
+                        <summary style={{ cursor: "pointer", fontSize: "12px", color: "#666" }}>
+                          共通随伴アイドル詳細
+                        </summary>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: "6px",
+                            marginTop: "4px",
+                            padding: "8px",
+                            backgroundColor: "#f8f4fc",
+                            borderRadius: "4px",
+                          }}
+                        >
+                          {similar.commonAccompaniments.map((accomp) => (
+                            <a
+                              key={accomp.id}
+                              href={`/idol/${accomp.id}`}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                padding: "2px 6px",
+                                backgroundColor: "#fff",
+                                border: "1px solid #ddd",
+                                borderRadius: "4px",
+                                textDecoration: "none",
+                                color: "inherit",
+                                fontSize: "12px",
+                              }}
+                              title={`IDF: ${accomp.idf.toFixed(2)}`}
+                            >
+                              {accomp.brand.map((b) => (
+                                <BrandDot key={b} brand={b} size="small" />
+                              ))}
+                              {accomp.name}
+                            </a>
+                          ))}
+                        </div>
+                      </details>
                     </li>
                   ))}
                 </ul>

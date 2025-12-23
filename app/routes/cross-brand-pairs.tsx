@@ -1,7 +1,7 @@
 import { createRoute } from "honox/factory";
 import { readFile } from "fs/promises";
 import { join } from "path";
-import type { CrossBrandBridge } from "../lib/compute";
+import type { CrossBrandBridge, CrossBrandCluster } from "../lib/compute";
 import BridgesTable from "../islands/BridgesTable";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
 import { SITE_TITLE } from "../lib/constants";
@@ -10,27 +10,58 @@ interface BridgesData {
   data: CrossBrandBridge[];
 }
 
+interface ClustersData {
+  data: CrossBrandCluster[];
+}
+
 interface MetadataData {
   scrapedAt: string;
   generatedAt: string;
   idolCount: number;
 }
 
-async function loadData(): Promise<{ bridges: BridgesData; metadata: MetadataData }> {
+interface ClusterInfo {
+  clusterId: number;
+  clusterIndex: number;
+}
+
+function makePairKey(idA: string, idB: string): string {
+  return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
+}
+
+function buildPairToClusterMap(clusters: CrossBrandCluster[]): Record<string, ClusterInfo> {
+  const map: Record<string, ClusterInfo> = {};
+  clusters.forEach((cluster, clusterIndex) => {
+    for (const edge of cluster.edges) {
+      const pairKey = makePairKey(edge.idolA.id, edge.idolB.id);
+      map[pairKey] = { clusterId: cluster.id, clusterIndex };
+    }
+  });
+  return map;
+}
+
+async function loadData(): Promise<{
+  bridges: BridgesData;
+  clusters: ClustersData;
+  metadata: MetadataData;
+}> {
   const dataDir = join(process.cwd(), "data/precomputed");
-  const [bridgesRaw, metadataRaw] = await Promise.all([
+  const [bridgesRaw, clustersRaw, metadataRaw] = await Promise.all([
     readFile(join(dataDir, "cross-brand.json"), "utf-8"),
+    readFile(join(dataDir, "cross-brand-clusters.json"), "utf-8"),
     readFile(join(dataDir, "metadata.json"), "utf-8"),
   ]);
   return {
     bridges: JSON.parse(bridgesRaw),
+    clusters: JSON.parse(clustersRaw),
     metadata: JSON.parse(metadataRaw),
   };
 }
 
 export default createRoute(async (c) => {
-  const { bridges, metadata } = await loadData();
+  const { bridges, clusters, metadata } = await loadData();
   const bridgeList = bridges.data;
+  const pairToCluster = buildPairToClusterMap(clusters.data);
 
   return c.render(
     <>
@@ -48,10 +79,11 @@ export default createRoute(async (c) => {
               共起元数が多いほど、そのペアのアイドルと随伴して「お気に入り」されているアイドルが多いことを示します。
             </p>
             <p>
-              PMI（Pointwise Mutual Information）値は、このペアが出現する可能性がどれだけ珍しいか、意味を伴っているかを示します。値が高いほど、全体の傾向に対して特徴的な関係です。
+              PMI（Pointwise Mutual
+              Information）値は、このペアが出現する可能性がどれだけ珍しいか、意味を伴っているかを示します。値が高いほど、全体の傾向に対して特徴的な関係です。
             </p>
           </ExplanationBox>
-          <BridgesTable bridges={bridgeList} />
+          <BridgesTable bridges={bridgeList} pairToCluster={pairToCluster} />
         </div>
       </main>
       <PageFooter />

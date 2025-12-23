@@ -99,11 +99,16 @@ export function BrandDot({ brand, size = "small" }: { brand: Brand; size?: "smal
   const SIZE = {
     small: 12,
     large: 20,
-  }
+  };
   return (
     <span
       className="brand-dot"
-      style={{ display: "inline-block", backgroundColor: BRAND_COLORS[brand], width: SIZE[size], height: SIZE[size] }}
+      style={{
+        display: "inline-block",
+        backgroundColor: BRAND_COLORS[brand],
+        width: SIZE[size],
+        height: SIZE[size],
+      }}
       title={BRAND_NAMES[brand]}
     />
   );
@@ -216,9 +221,10 @@ export function ExplanationBox({ children }: { children: React.ReactNode }) {
 /**
  * クラスタカードコンテナ
  */
-export function ClusterCardContainer({ children }: { children: React.ReactNode }) {
+export function ClusterCardContainer({ children, id }: { children: React.ReactNode; id?: string }) {
   return (
     <div
+      id={id}
       className="cluster-card"
       style={{
         border: "1px solid #ddd",

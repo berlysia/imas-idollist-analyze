@@ -11,11 +11,12 @@ import {
   computeIdolDetail,
   detectClusters,
   detectCrossBrandClusters,
+  computeSimilarIdols,
+  buildIdfMap,
   type NormalizedData,
 } from "../app/lib/compute";
 
 const DATA_DIR = join(import.meta.dirname, "../data");
-const RAW_DATA_DIR = join(DATA_DIR, "raw");
 const OUTPUT_DIR = join(DATA_DIR, "precomputed");
 const IDOLS_DIR = join(OUTPUT_DIR, "idols");
 
@@ -117,10 +118,17 @@ async function main() {
 
   // 8. 個人ページ用データを出力
   console.log(`👤 Computing and writing ${idolIds.length} idol details...`);
+
+  // 類似アイドル計算用のIDFマップを構築
+  console.log("🔄 Building IDF map for similarity computation...");
+  const idfMap = buildIdfMap(data);
+
   let count = 0;
   for (const idolId of idolIds) {
     const detail = computeIdolDetail(data, idolId, pmiPairs, crossBrandBridges);
     if (detail) {
+      // 類似アイドルを計算して追加
+      detail.similarIdols = computeSimilarIdols(data, idolId, idfMap, 10);
       await writeFile(join(IDOLS_DIR, `${idolId}.json`), JSON.stringify(detail, null, 2));
       count++;
       if (count % 100 === 0) {

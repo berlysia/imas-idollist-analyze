@@ -1,5 +1,5 @@
 import { fetchIdolList } from "./fetchIdolList.ts";
-import { fetchAllIdolDetails, extractIdolId } from "./fetchIdolDetails.ts";
+import { fetchAllIdolDetails } from "./fetchIdolDetails.ts";
 import type { IdolDetail } from "../types/index.ts";
 import * as fsp from "node:fs/promises";
 import * as fs from "node:fs";
@@ -28,7 +28,7 @@ async function runListScrape(): Promise<void> {
 
 async function runDetailsScrape(): Promise<void> {
   const idolsPath = path.join(DATA_DIR, IDOLS_FILE);
-  if (!(fileExists(idolsPath))) {
+  if (!fileExists(idolsPath)) {
     throw new Error("No idols file found. Run list scrape first.");
   }
 

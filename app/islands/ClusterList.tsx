@@ -113,7 +113,15 @@ function MemberTag({
   );
 }
 
-function ClusterCard({ cluster, rank }: { cluster: Cluster; rank: number }) {
+function ClusterCard({
+  cluster,
+  rank,
+  originalIndex,
+}: {
+  cluster: Cluster;
+  rank: number;
+  originalIndex: number;
+}) {
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 
   const toggleHide = (id: string) => {
@@ -143,7 +151,7 @@ function ClusterCard({ cluster, rank }: { cluster: Cluster; rank: number }) {
   const displayMembers = cluster.memberRoles;
 
   return (
-    <ClusterCardContainer>
+    <ClusterCardContainer id={`cluster-${originalIndex}`}>
       <ClusterCardHeader>
         <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
           <RankBadge rank={rank} />
@@ -193,13 +201,15 @@ export default function ClusterList({ clusters }: Props) {
   const [minSize, setMinSize] = useState(3);
 
   const filteredClusters = useMemo(() => {
-    return clusters.filter((cluster) => {
-      if (cluster.memberDetails.length < minSize) return false;
-      if (brandFilter) {
-        return cluster.dominantBrands.includes(brandFilter);
-      }
-      return true;
-    });
+    return clusters
+      .map((cluster, originalIndex) => ({ cluster, originalIndex }))
+      .filter(({ cluster }) => {
+        if (cluster.memberDetails.length < minSize) return false;
+        if (brandFilter) {
+          return cluster.dominantBrands.includes(brandFilter);
+        }
+        return true;
+      });
   }, [clusters, brandFilter, minSize]);
 
   const stats = useMemo(() => {
@@ -257,8 +267,13 @@ export default function ClusterList({ clusters }: Props) {
         {filteredClusters.length} クラスタを表示中
       </p>
 
-      {filteredClusters.map((cluster, index) => (
-        <ClusterCard key={cluster.id} cluster={cluster} rank={index + 1} />
+      {filteredClusters.map(({ cluster, originalIndex }, index) => (
+        <ClusterCard
+          key={cluster.id}
+          cluster={cluster}
+          rank={index + 1}
+          originalIndex={originalIndex}
+        />
       ))}
 
       {filteredClusters.length === 0 && (
