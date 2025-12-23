@@ -10,6 +10,7 @@ import {
   computeCrossBrandBridges,
   computeIdolDetail,
   detectClusters,
+  detectCrossBrandClusters,
   type NormalizedData,
 } from "../app/lib/compute";
 
@@ -58,6 +59,12 @@ async function main() {
   console.log("🔍 Detecting clusters...");
   const clusters = detectClusters(data, { minSize: 3, minDensity: 0.3 });
 
+  console.log("🌐 Detecting cross-brand clusters...");
+  const crossBrandClusters = detectCrossBrandClusters(data, crossBrandBridges, {
+    minSize: 3,
+    minEdges: 2,
+  });
+
   // 4. メタデータ
   const metadata = {
     scrapedAt: data.scrapedAt,
@@ -80,6 +87,12 @@ async function main() {
 
   console.log("💾 Writing clusters.json...");
   await writeFile(join(OUTPUT_DIR, "clusters.json"), JSON.stringify({ data: clusters }, null, 2));
+
+  console.log("💾 Writing cross-brand-clusters.json...");
+  await writeFile(
+    join(OUTPUT_DIR, "cross-brand-clusters.json"),
+    JSON.stringify({ data: crossBrandClusters }, null, 2)
+  );
 
   console.log("💾 Writing metadata.json...");
   await writeFile(join(OUTPUT_DIR, "metadata.json"), JSON.stringify(metadata, null, 2));
@@ -118,6 +131,7 @@ async function main() {
   console.log(`   - pmi-pairs.json: ${pmiPairs.length} pairs`);
   console.log(`   - cross-brand.json: ${crossBrandBridges.length} bridges`);
   console.log(`   - clusters.json: ${clusters.length} clusters`);
+  console.log(`   - cross-brand-clusters.json: ${crossBrandClusters.length} cross-brand clusters`);
   console.log(`   - idols/: ${count} files`);
 }
 

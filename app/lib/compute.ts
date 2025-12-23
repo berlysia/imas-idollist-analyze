@@ -826,3 +826,246 @@ export function computeIdolDetail(
     incomingByBrand,
   };
 }
+
+/**
+ * ブランド横断クラスタ: cross-brand bridgesのみからグラフを構築
+ */
+export interface CrossBrandCluster {
+  id: number;
+  members: string[];
+  memberDetails: Array<{ id: string; name: string; brand: Brand[] }>;
+  /** クラスタ内のブランド横断エッジ */
+  edges: Array<{
+    idolA: { id: string; name: string; brand: Brand[] };
+    idolB: { id: string; name: string; brand: Brand[] };
+    voterCount: number;
+    pmi: number;
+  }>;
+  /** 総投票者数（重複除去） */
+  totalVoterCount: number;
+  /** 平均PMI */
+  avgPmi: number;
+  /** 含まれるブランドの種類 */
+  brands: Brand[];
+  /** ブランド数 */
+  brandCount: number;
+}
+
+/**
+ * ブランド横断ペアのみでクラスタを検出
+ * 異なるブランドを繋ぐコミュニティを発見する
+ */
+export function detectCrossBrandClusters(
+  data: NormalizedData,
+  crossBrandBridges: CrossBrandBridge[],
+  options: {
+    /** 最小クラスタサイズ（デフォルト: 3） */
+    minSize?: number;
+    /** 最小エッジ数（デフォルト: 2） */
+    minEdges?: number;
+    /** 最小PMI閾値（これ以上のPMIを持つエッジのみ使用、デフォルト: 中央値） */
+    minPmi?: number;
+  } = {}
+): CrossBrandCluster[] {
+  const { minSize = 3, minEdges = 2 } = options;
+
+  if (crossBrandBridges.length === 0) return [];
+
+  // PMI閾値を計算（指定がなければ中央値を使用）
+  const sortedPmis = crossBrandBridges.map((b) => b.pmi).sort((a, b) => a - b);
+  const medianPmi = sortedPmis[Math.floor(sortedPmis.length / 2)] ?? 0;
+  const minPmi = options.minPmi ?? medianPmi;
+
+  // PMI閾値でフィルタ（意外性のある関係のみ抽出）
+  const filteredBridges = crossBrandBridges.filter((b) => b.pmi >= minPmi);
+
+  if (filteredBridges.length === 0) return [];
+
+  // 正規化用の最大値を計算
+  const maxVoterCount = Math.max(...filteredBridges.map((b) => b.voterCount), 1);
+  const maxPmi = Math.max(...filteredBridges.map((b) => b.pmi), 1);
+
+  // 正規化した投票数とPMIを組み合わせた重みを計算
+  const getWeight = (voterCount: number, pmi: number) => {
+    const normVoter = voterCount / maxVoterCount;
+    const normPmi = pmi / maxPmi;
+    return normVoter * 0.6 + normPmi * 0.4;
+  };
+
+  // ブランド横断ペアからグラフを構築
+  // 重み = 投票数(60%) + PMI(40%) の組み合わせ
+  const adjacency = new Map<string, Map<string, number>>();
+  const nodeSet = new Set<string>();
+
+  for (const bridge of filteredBridges) {
+    const { idolA, idolB, voterCount, pmi } = bridge;
+    const weight = getWeight(voterCount, pmi);
+    nodeSet.add(idolA.id);
+    nodeSet.add(idolB.id);
+
+    if (!adjacency.has(idolA.id)) adjacency.set(idolA.id, new Map());
+    if (!adjacency.has(idolB.id)) adjacency.set(idolB.id, new Map());
+
+    adjacency.get(idolA.id)!.set(idolB.id, weight);
+    adjacency.get(idolB.id)!.set(idolA.id, weight);
+  }
+
+  const nodes = Array.from(nodeSet);
+  if (nodes.length < minSize) return [];
+
+  // 総重み
+  const totalWeight = filteredBridges.reduce((sum, b) => sum + getWeight(b.voterCount, b.pmi), 0);
+  if (totalWeight === 0) return [];
+
+  // 各ノードの重み合計
+  const nodeWeights = new Map<string, number>();
+  for (const node of nodes) {
+    let sum = 0;
+    for (const w of adjacency.get(node)?.values() ?? []) {
+      sum += w;
+    }
+    nodeWeights.set(node, sum);
+  }
+
+  // 初期コミュニティ割り当て
+  const community = new Map<string, number>();
+  for (let i = 0; i < nodes.length; i++) {
+    community.set(nodes[i]!, i);
+  }
+
+  // Louvainアルゴリズム
+  let improved = true;
+  let iteration = 0;
+  const maxIterations = 100;
+  const resolution = 1.0;
+
+  while (improved && iteration < maxIterations) {
+    improved = false;
+    iteration++;
+
+    for (const node of nodes) {
+      const currentCommunity = community.get(node)!;
+      const nodeWeight = nodeWeights.get(node)!;
+
+      const neighborCommunities = new Map<number, number>();
+      for (const [neighbor, weight] of adjacency.get(node) ?? []) {
+        const neighborComm = community.get(neighbor)!;
+        neighborCommunities.set(
+          neighborComm,
+          (neighborCommunities.get(neighborComm) ?? 0) + weight
+        );
+      }
+
+      const currentCommWeight = neighborCommunities.get(currentCommunity) ?? 0;
+
+      const commWeights = new Map<number, number>();
+      for (const [n, c] of community) {
+        commWeights.set(c, (commWeights.get(c) ?? 0) + nodeWeights.get(n)!);
+      }
+
+      let bestCommunity = currentCommunity;
+      let bestDelta = 0;
+
+      for (const [targetComm, edgeWeight] of neighborCommunities) {
+        if (targetComm === currentCommunity) continue;
+
+        const targetCommWeight = commWeights.get(targetComm) ?? 0;
+        const currentCommTotalWeight = commWeights.get(currentCommunity) ?? 0;
+
+        const delta =
+          resolution *
+          (edgeWeight -
+            currentCommWeight -
+            (nodeWeight * (targetCommWeight - currentCommTotalWeight + nodeWeight)) /
+              (2 * totalWeight));
+
+        if (delta > bestDelta) {
+          bestDelta = delta;
+          bestCommunity = targetComm;
+        }
+      }
+
+      if (bestCommunity !== currentCommunity) {
+        community.set(node, bestCommunity);
+        improved = true;
+      }
+    }
+  }
+
+  // コミュニティをクラスタに変換
+  const clusterMembers = new Map<number, string[]>();
+  for (const [node, comm] of community) {
+    if (!clusterMembers.has(comm)) {
+      clusterMembers.set(comm, []);
+    }
+    clusterMembers.get(comm)!.push(node);
+  }
+
+  // クラスタ情報を構築
+  const clusters: CrossBrandCluster[] = [];
+  let clusterId = 0;
+
+  for (const [, members] of clusterMembers) {
+    if (members.length < minSize) continue;
+
+    const memberSet = new Set(members);
+
+    // クラスタ内のブランド横断エッジ（フィルタ済みのものを使用）
+    const clusterEdges = filteredBridges.filter(
+      (b) => memberSet.has(b.idolA.id) && memberSet.has(b.idolB.id)
+    );
+
+    if (clusterEdges.length < minEdges) continue;
+
+    // メンバー詳細
+    const memberDetails = members
+      .map((id) => {
+        const idol = data.idols[id];
+        return idol ? { id, name: idol.name, brand: idol.brand } : null;
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+
+    // 総投票者数（重複除去）
+    const allVoters = new Set<string>();
+    for (const edge of clusterEdges) {
+      for (const voter of edge.voters) {
+        allVoters.add(voter.id);
+      }
+    }
+
+    // 平均PMI
+    const avgPmi = clusterEdges.reduce((sum, e) => sum + e.pmi, 0) / clusterEdges.length;
+
+    // 含まれるブランド
+    const brandSet = new Set<Brand>();
+    for (const member of memberDetails) {
+      for (const brand of member.brand) {
+        brandSet.add(brand);
+      }
+    }
+    const brands = Array.from(brandSet);
+
+    clusters.push({
+      id: clusterId++,
+      members,
+      memberDetails,
+      edges: clusterEdges.map((e) => ({
+        idolA: e.idolA,
+        idolB: e.idolB,
+        voterCount: e.voterCount,
+        pmi: e.pmi,
+      })),
+      totalVoterCount: allVoters.size,
+      avgPmi,
+      brands,
+      brandCount: brands.length,
+    });
+  }
+
+  // ブランド数 × 総投票者数でソート（多様なブランドを繋ぐクラスタを優先）
+  return clusters.sort((a, b) => {
+    const scoreA = a.brandCount * a.totalVoterCount;
+    const scoreB = b.brandCount * b.totalVoterCount;
+    return scoreB - scoreA;
+  });
+}
