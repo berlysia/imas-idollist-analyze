@@ -1284,8 +1284,8 @@ export function computeSimilarIdolGroups(
       }
     }
 
-    // 共通随伴が2人以上の場合のみ類似とみなす
-    if (commonAccompaniments.length < 2) continue;
+    // 共通随伴が1人以上の場合のみ類似とみなす
+    if (commonAccompaniments.length < 1) continue;
 
     const otherIdol = data.idols[otherIdolId];
     if (!otherIdol) continue;
