@@ -81,12 +81,17 @@ export default function CrossBrandClusterGraph({
     const maxVoterCount = Math.max(...links.map((l) => l.voterCount), 1);
     const maxPmi = Math.max(...links.map((l) => l.pmi), 1);
 
+    // PMI ≥ 3.0 を高PMIとする（期待の8倍以上の頻度で共起 = 強い関連性）
+    const HIGH_PMI_THRESHOLD = 3.0;
+
     // 正規化した投票数とPMIを組み合わせた重み
     const getWeight = (l: GraphLink) => {
       const normVoter = l.voterCount / maxVoterCount;
       const normPmi = l.pmi / maxPmi;
       return normVoter * 0.6 + normPmi * 0.4;
     };
+
+    const isHighPmi = (l: GraphLink) => l.pmi >= HIGH_PMI_THRESHOLD;
 
     const simulation = d3
       .forceSimulation(nodes)
@@ -109,20 +114,21 @@ export default function CrossBrandClusterGraph({
       .selectAll("line")
       .data(links)
       .join("line")
-      .attr("stroke", "#8e44ad")
-      .attr("stroke-opacity", 0.6)
-      .attr("stroke-width", (d) => 1 + getWeight(d) * 5);
+      .attr("stroke", (d) => (isHighPmi(d) ? "#d4a017" : "#8e44ad"))
+      .attr("stroke-opacity", (d) => (isHighPmi(d) ? 0.9 : 0.6))
+      .attr("stroke-width", (d) => (isHighPmi(d) ? 3 + getWeight(d) * 5 : 1 + getWeight(d) * 5));
 
     const linkLabels = g
       .append("g")
       .selectAll("text")
       .data(links)
       .join("text")
-      .attr("font-size", "9px")
-      .attr("fill", "#666")
+      .attr("font-size", (d) => (isHighPmi(d) ? "10px" : "9px"))
+      .attr("fill", (d) => (isHighPmi(d) ? "#b8860b" : "#666"))
+      .attr("font-weight", (d) => (isHighPmi(d) ? "bold" : "normal"))
       .attr("text-anchor", "middle")
       .attr("dy", -3)
-      .text((d) => `${d.voterCount}票 / PMI:${d.pmi.toFixed(1)}`);
+      .text((d) => `${isHighPmi(d) ? "★ " : ""}${d.voterCount}票 / PMI:${d.pmi.toFixed(1)}`);
 
     const dragBehavior = d3
       .drag<SVGGElement, GraphNode>()
@@ -218,6 +224,19 @@ export default function CrossBrandClusterGraph({
           borderRadius: "4px",
         }}
       >
+        <div style={{ marginBottom: "4px" }}>
+          <span
+            style={{
+              display: "inline-block",
+              width: "20px",
+              height: "4px",
+              background: "#d4a017",
+              marginRight: "4px",
+              verticalAlign: "middle",
+            }}
+          />
+          <span style={{ color: "#b8860b", fontWeight: "bold" }}>★ PMI≥3.0（強い関連性）</span>
+        </div>
         <div>
           <span
             style={{

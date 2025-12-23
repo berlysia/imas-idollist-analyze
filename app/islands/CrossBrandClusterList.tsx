@@ -97,23 +97,31 @@ function EdgeVotersList({ edges }: { edges: CrossBrandEdge[] }) {
   // PMI順でソート
   const sortedEdges = useMemo(() => [...edges].sort((a, b) => b.pmi - a.pmi), [edges]);
 
+  // PMI ≥ 3.0 を高PMIとする（期待の8倍以上の頻度で共起 = 強い関連性）
+  const HIGH_PMI_THRESHOLD = 3.0;
+
   return (
     <div style={{ marginTop: "12px" }}>
       <h4 style={{ margin: "0 0 8px 0", fontSize: "14px", color: "#666" }}>
         ブランド横断ペア詳細（クリックで選出者を表示）
+        <span style={{ marginLeft: "8px", fontSize: "12px", color: "#d4a017" }}>
+          ★ PMI≥3.0（強い関連性）
+        </span>
       </h4>
       <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
         {sortedEdges.map((edge) => {
           const edgeKey = `${edge.idolA.id}-${edge.idolB.id}`;
           const isExpanded = expandedEdge === edgeKey;
+          const isHighPmi = edge.pmi >= HIGH_PMI_THRESHOLD;
 
           return (
             <div
               key={edgeKey}
               style={{
-                border: "1px solid #e0e0e0",
+                border: isHighPmi ? "2px solid #d4a017" : "1px solid #e0e0e0",
                 borderRadius: "4px",
-                background: isExpanded ? "#f9f0ff" : "#fafafa",
+                background: isExpanded ? "#f9f0ff" : isHighPmi ? "#fffbeb" : "#fafafa",
+                boxShadow: isHighPmi ? "0 2px 8px rgba(212, 160, 23, 0.2)" : undefined,
               }}
             >
               <button
@@ -132,6 +140,11 @@ function EdgeVotersList({ edges }: { edges: CrossBrandEdge[] }) {
                 }}
               >
                 <span style={{ color: "#8e44ad" }}>{isExpanded ? "▼" : "▶"}</span>
+                {isHighPmi && (
+                  <span style={{ color: "#d4a017", fontSize: "14px" }} title="PMI上位ペア">
+                    ★
+                  </span>
+                )}
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
                   {edge.idolA.brand.map((b) => (
                     <BrandDot key={b} brand={b} />
@@ -157,7 +170,14 @@ function EdgeVotersList({ edges }: { edges: CrossBrandEdge[] }) {
                     {edge.idolB.name}
                   </a>
                 </span>
-                <span style={{ marginLeft: "auto", fontSize: "12px", color: "#666" }}>
+                <span
+                  style={{
+                    marginLeft: "auto",
+                    fontSize: "12px",
+                    color: isHighPmi ? "#b8860b" : "#666",
+                    fontWeight: isHighPmi ? "bold" : "normal",
+                  }}
+                >
                   {edge.voterCount}人が選出 / PMI: {edge.pmi.toFixed(2)}
                 </span>
               </button>

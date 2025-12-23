@@ -188,19 +188,66 @@ export default createRoute(
               <h3>選んだ共起アイドル</h3>
               <p className="section-description">このアイドルが共起として選んだアイドル</p>
               {detail.selectedIdols.length > 0 ? (
-                <ul className="idol-list compact">
-                  {detail.selectedIdols.map((idol) => (
-                    <li key={idol.id}>
-                      <a href={`/idol/${idol.id}`} className="idol-link">
-                        {idol.brand.map((b) => (
-                          <BrandDot key={b} brand={b} size="small" />
-                        ))}
-                        {idol.name}
-                      </a>
-                      <ScoreBadge metric="idf" value={idol.score.idf.toFixed(2)} />
-                    </li>
-                  ))}
-                </ul>
+                (() => {
+                  // ブランド横断ペアのPMI情報をマップ化
+                  const crossBrandPmiMap = new Map(
+                    detail.crossBrandBridges.map((b) => [b.partner.id, b.pmi])
+                  );
+                  // PMI ≥ 3.0 を高PMIとする（期待の8倍以上の頻度で共起 = 強い関連性）
+                  const HIGH_PMI_THRESHOLD = 3.0;
+
+                  return (
+                    <ul className="idol-list compact">
+                      {detail.selectedIdols.map((idol) => {
+                        const crossBrandPmi = crossBrandPmiMap.get(idol.id);
+                        const isHighPmi =
+                          crossBrandPmi !== undefined && crossBrandPmi >= HIGH_PMI_THRESHOLD;
+                        return (
+                          <li
+                            key={idol.id}
+                            style={
+                              isHighPmi
+                                ? {
+                                    background: "#fffbeb",
+                                    border: "2px solid #d4a017",
+                                    borderRadius: "4px",
+                                    padding: "4px 8px",
+                                    boxShadow: "0 2px 8px rgba(212, 160, 23, 0.2)",
+                                  }
+                                : crossBrandPmi !== undefined
+                                  ? {
+                                      background: "#f9f0ff",
+                                      borderLeft: "3px solid #8e44ad",
+                                      paddingLeft: "8px",
+                                    }
+                                  : undefined
+                            }
+                          >
+                            <a href={`/idol/${idol.id}`} className="idol-link">
+                              {idol.brand.map((b) => (
+                                <BrandDot key={b} brand={b} size="small" />
+                              ))}
+                              {idol.name}
+                            </a>
+                            <ScoreBadge metric="idf" value={idol.score.idf.toFixed(2)} />
+                            {crossBrandPmi !== undefined && (
+                              <span
+                                style={{
+                                  marginLeft: "8px",
+                                  fontSize: "12px",
+                                  color: isHighPmi ? "#b8860b" : "#8e44ad",
+                                  fontWeight: isHighPmi ? "bold" : "normal",
+                                }}
+                              >
+                                {isHighPmi && "★ "}ブランド横断PMI: {crossBrandPmi.toFixed(2)}
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  );
+                })()
               ) : (
                 <p className="empty-message">共起データなし</p>
               )}
