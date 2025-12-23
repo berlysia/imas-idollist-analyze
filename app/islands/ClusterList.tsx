@@ -1,7 +1,21 @@
 import { useState, useMemo } from "react";
 import type { Brand } from "@/types";
-import { BRAND_COLORS, BRAND_NAMES, ALL_BRANDS } from "../lib/constants";
+import { BRAND_NAMES, ALL_BRANDS } from "../lib/constants";
 import ClusterGraph from "./ClusterGraph";
+import {
+  BrandDot,
+  RankBadge,
+  ClusterStats,
+  FilterContainer,
+  ExplanationBox,
+  ClusterCardContainer,
+  ClusterCardHeader,
+  BrandBreakdown,
+  MemberTagList,
+  EmptyMessage,
+  StatLabel,
+  GraphSection,
+} from "../components/shared";
 
 interface IdolInfo {
   id: string;
@@ -42,16 +56,6 @@ interface Cluster {
 
 interface Props {
   clusters: Cluster[];
-}
-
-function BrandDot({ brand }: { brand: Brand }) {
-  return (
-    <span
-      className="brand-dot"
-      style={{ backgroundColor: BRAND_COLORS[brand] }}
-      title={BRAND_NAMES[brand]}
-    />
-  );
 }
 
 function MemberTag({
@@ -111,7 +115,6 @@ function MemberTag({
 }
 
 function ClusterCard({ cluster, rank }: { cluster: Cluster; rank: number }) {
-  const [showGraph, setShowGraph] = useState(true);
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 
   const toggleHide = (id: string) => {
@@ -141,102 +144,37 @@ function ClusterCard({ cluster, rank }: { cluster: Cluster; rank: number }) {
   const displayMembers = cluster.memberRoles;
 
   return (
-    <div
-      className="cluster-card"
-      style={{
-        border: "1px solid #ddd",
-        borderRadius: "8px",
-        padding: "16px",
-        marginBottom: "16px",
-        background: "#fff",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "12px",
-        }}
-      >
+    <ClusterCardContainer>
+      <ClusterCardHeader>
         <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-          <span
-            style={{
-              background: "#333",
-              color: "#fff",
-              padding: "4px 8px",
-              borderRadius: "4px",
-              fontSize: "14px",
-            }}
-          >
-            #{rank}
-          </span>
+          <RankBadge rank={rank} />
           {cluster.memberRoles.length}人のクラスタ
         </h3>
         <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-          <span style={{ fontSize: "12px", color: "#666" }}>
-            密度: {(cluster.density * 100).toFixed(0)}%
-          </span>
-          <span style={{ fontSize: "12px", color: "#1976d2" }}>
-            コア: {cluster.coreMembers.length}人 ({(cluster.coreDensity * 100).toFixed(0)}%)
-          </span>
-          <span style={{ fontSize: "12px", color: "#666" }}>
-            周辺: {cluster.peripheralMembers.length}人
-          </span>
-          <button
-            onClick={() => setShowGraph(!showGraph)}
-            style={{
-              padding: "4px 8px",
-              background: showGraph ? "#1976d2" : "#e0e0e0",
-              color: showGraph ? "#fff" : "#333",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-              fontSize: "12px",
-            }}
-          >
-            {showGraph ? "グラフを隠す" : "グラフ表示"}
-          </button>
+          <StatLabel label="密度" value={`${(cluster.density * 100).toFixed(0)}%`} />
+          <StatLabel
+            label="コア"
+            value={`${cluster.coreMembers.length}人 (${(cluster.coreDensity * 100).toFixed(0)}%)`}
+            color="#1976d2"
+          />
+          <StatLabel label="周辺" value={`${cluster.peripheralMembers.length}人`} />
         </div>
-      </div>
+      </ClusterCardHeader>
 
-      {showGraph && (
-        <div style={{ marginBottom: "16px" }}>
-          <ClusterGraph cluster={cluster} width={700} height={500} hiddenIds={hiddenIds} />
-        </div>
-      )}
+      <GraphSection>
+        {(width) => (
+          <ClusterGraph cluster={cluster} width={width} height={500} hiddenIds={hiddenIds} />
+        )}
+      </GraphSection>
 
-      <div style={{ marginBottom: "12px" }}>
-        {brandCounts.map(([brand, count]) => (
-          <span
-            key={brand}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              marginRight: "12px",
-              fontSize: "12px",
-            }}
-          >
-            <BrandDot brand={brand} />
-            {BRAND_NAMES[brand]}: {count}人
-          </span>
-        ))}
-      </div>
+      <BrandBreakdown brandCounts={brandCounts} />
 
       <div style={{ marginBottom: "8px", fontSize: "12px", color: "#666" }}>
         <span style={{ color: "#1976d2", fontWeight: "bold" }}>*</span> = コアメンバー
         （クラスタ内で密に結合）
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "8px",
-          marginBottom: "12px",
-        }}
-      >
+      <MemberTagList>
         {displayMembers.map((member) => (
           <MemberTag
             key={member.id}
@@ -246,8 +184,8 @@ function ClusterCard({ cluster, rank }: { cluster: Cluster; rank: number }) {
             onToggleHide={toggleHide}
           />
         ))}
-      </div>
-    </div>
+      </MemberTagList>
+    </ClusterCardContainer>
   );
 }
 
@@ -278,7 +216,7 @@ export default function ClusterList({ clusters }: Props) {
 
   return (
     <div className="cluster-list">
-      <div className="cluster-explanation" style={{ marginBottom: "16px" }}>
+      <ExplanationBox>
         <p>
           <strong>クラスタ</strong>
           は、互いに密接に共起し合っているアイドルのグループです。
@@ -287,29 +225,17 @@ export default function ClusterList({ clusters }: Props) {
           Louvain法によるコミュニティ検出を使用し、IDF（珍しさ）を考慮した重み付けで
           「珍しい選択で結びついた」クラスタを優先的に発見しています。
         </p>
-      </div>
+      </ExplanationBox>
 
-      <div
-        style={{
-          display: "flex",
-          gap: "16px",
-          marginBottom: "16px",
-          padding: "12px",
-          background: "#f9f9f9",
-          borderRadius: "8px",
-        }}
-      >
+      <ClusterStats>
         <div>
           <strong>全体統計:</strong> {clusters.length}クラスタ / {stats.totalMembers}人
         </div>
         <div>平均サイズ: {stats.avgSize.toFixed(1)}人</div>
         <div>平均密度: {(stats.avgDensity * 100).toFixed(0)}%</div>
-      </div>
+      </ClusterStats>
 
-      <div
-        className="filters"
-        style={{ marginBottom: "16px", display: "flex", gap: "16px", flexWrap: "wrap" }}
-      >
+      <FilterContainer>
         <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           主要ブランド:
           <select
@@ -337,7 +263,7 @@ export default function ClusterList({ clusters }: Props) {
             style={{ width: "60px", padding: "4px 8px" }}
           />
         </label>
-      </div>
+      </FilterContainer>
 
       <p style={{ marginBottom: "16px", color: "#666" }}>
         {filteredClusters.length} クラスタを表示中
@@ -348,9 +274,7 @@ export default function ClusterList({ clusters }: Props) {
       ))}
 
       {filteredClusters.length === 0 && (
-        <p style={{ textAlign: "center", color: "#999", padding: "32px" }}>
-          条件に一致するクラスタがありません
-        </p>
+        <EmptyMessage message="条件に一致するクラスタがありません" />
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import type { Brand } from "@/types";
 import { BRAND_COLORS } from "../lib/constants";
+import { GraphSvgContainer, GraphLegend, LegendNode } from "../components/shared";
 
 interface ClusterMember {
   id: string;
@@ -258,30 +259,9 @@ export default function ClusterGraph({
   }, [cluster, width, height, coreSet, hiddenIds]);
 
   return (
-    <div style={{ position: "relative" }}>
-      <svg
-        ref={svgRef}
-        width={width}
-        height={height}
-        style={{
-          background: "#fafafa",
-          borderRadius: "8px",
-          border: "1px solid #eee",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          bottom: "8px",
-          left: "8px",
-          fontSize: "10px",
-          color: "#666",
-          background: "rgba(255,255,255,0.9)",
-          padding: "4px 8px",
-          borderRadius: "4px",
-        }}
-      >
-        <div>
+    <GraphSvgContainer svgRef={svgRef} width={width} height={height}>
+      <GraphLegend>
+        <div style={{ marginBottom: "2px" }}>
           <svg width="24" height="12" style={{ verticalAlign: "middle", marginRight: "4px" }}>
             <defs>
               <marker
@@ -320,7 +300,7 @@ export default function ClusterGraph({
           </svg>
           双方向（相互選択）
         </div>
-        <div>
+        <div style={{ marginBottom: "2px" }}>
           <svg width="24" height="12" style={{ verticalAlign: "middle", marginRight: "4px" }}>
             <defs>
               <marker
@@ -347,21 +327,8 @@ export default function ClusterGraph({
           </svg>
           片方向（一方のみ選択）
         </div>
-        <div>
-          <span
-            style={{
-              display: "inline-block",
-              width: "10px",
-              height: "10px",
-              border: "2px solid #1976d2",
-              borderRadius: "50%",
-              marginRight: "4px",
-              verticalAlign: "middle",
-            }}
-          />
-          コア
-        </div>
-      </div>
-    </div>
+        <LegendNode color="#1976d2" label="コア" />
+      </GraphLegend>
+    </GraphSvgContainer>
   );
 }

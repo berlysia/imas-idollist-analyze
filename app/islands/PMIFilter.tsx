@@ -32,8 +32,6 @@ function BrandDot({ brand }: { brand: Brand }) {
 
 export default function PMIFilter({ pairs }: Props) {
   const [crossBrandOnly, setCrossBrandOnly] = useState(false);
-  const [page, setPage] = useState(0);
-  const itemsPerPage = 50;
 
   const filteredPairs = useMemo(() => {
     if (crossBrandOnly) {
@@ -42,12 +40,8 @@ export default function PMIFilter({ pairs }: Props) {
     return pairs;
   }, [pairs, crossBrandOnly]);
 
-  const totalPages = Math.ceil(filteredPairs.length / itemsPerPage);
-  const currentPairs = filteredPairs.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
-
   const handleCrossBrandChange = (checked: boolean) => {
     setCrossBrandOnly(checked);
-    setPage(0);
   };
 
   return (
@@ -92,12 +86,12 @@ export default function PMIFilter({ pairs }: Props) {
           </tr>
         </thead>
         <tbody>
-          {currentPairs.map((pair, index) => (
+          {filteredPairs.map((pair, index) => (
             <tr
               key={`${pair.idolA.id}-${pair.idolB.id}`}
               className={pair.crossBrand ? "cross-brand" : ""}
             >
-              <td className="rank">{page * itemsPerPage + index + 1}</td>
+              <td className="rank">{index + 1}</td>
               <td>
                 <a
                   href={`/idol/${pair.idolA.id}`}
@@ -142,45 +136,6 @@ export default function PMIFilter({ pairs }: Props) {
           ))}
         </tbody>
       </table>
-
-      {totalPages > 1 && (
-        <div
-          className="pagination"
-          style={{
-            marginTop: "16px",
-            display: "flex",
-            gap: "8px",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            style={{
-              padding: "8px 16px",
-              cursor: page === 0 ? "not-allowed" : "pointer",
-              opacity: page === 0 ? 0.5 : 1,
-            }}
-          >
-            前へ
-          </button>
-          <span>
-            {page + 1} / {totalPages} ページ
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page === totalPages - 1}
-            style={{
-              padding: "8px 16px",
-              cursor: page === totalPages - 1 ? "not-allowed" : "pointer",
-              opacity: page === totalPages - 1 ? 0.5 : 1,
-            }}
-          >
-            次へ
-          </button>
-        </div>
-      )}
     </div>
   );
 }

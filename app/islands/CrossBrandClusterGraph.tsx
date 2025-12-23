@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import type { Brand } from "@/types";
 import { BRAND_COLORS } from "../lib/constants";
+import { GraphSvgContainer, GraphLegend, LegendLine } from "../components/shared";
 
 interface IdolInfo {
   id: string;
@@ -201,56 +202,11 @@ export default function CrossBrandClusterGraph({
   }, [cluster, width, height, hiddenIds]);
 
   return (
-    <div style={{ position: "relative" }}>
-      <svg
-        ref={svgRef}
-        width={width}
-        height={height}
-        style={{
-          background: "#fafafa",
-          borderRadius: "8px",
-          border: "1px solid #eee",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          bottom: "8px",
-          left: "8px",
-          fontSize: "10px",
-          color: "#666",
-          background: "rgba(255,255,255,0.9)",
-          padding: "4px 8px",
-          borderRadius: "4px",
-        }}
-      >
-        <div style={{ marginBottom: "4px" }}>
-          <span
-            style={{
-              display: "inline-block",
-              width: "20px",
-              height: "4px",
-              background: "#d4a017",
-              marginRight: "4px",
-              verticalAlign: "middle",
-            }}
-          />
-          <span style={{ color: "#b8860b", fontWeight: "bold" }}>★ PMI≥3.0（強い関連性）</span>
-        </div>
-        <div>
-          <span
-            style={{
-              display: "inline-block",
-              width: "20px",
-              height: "3px",
-              background: "#8e44ad",
-              marginRight: "4px",
-              verticalAlign: "middle",
-            }}
-          />
-          ブランド横断ペア（太いほど多くの投票者）
-        </div>
-      </div>
-    </div>
+    <GraphSvgContainer svgRef={svgRef} width={width} height={height}>
+      <GraphLegend>
+        <LegendLine color="#d4a017" width={4} label="PMI≥3.0（強い関連性）" bold icon="★" />
+        <LegendLine color="#8e44ad" width={3} label="ブランド横断ペア（太いほど多くの投票者）" />
+      </GraphLegend>
+    </GraphSvgContainer>
   );
 }

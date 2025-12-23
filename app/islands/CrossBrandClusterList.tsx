@@ -1,7 +1,21 @@
 import { useState, useMemo } from "react";
 import type { Brand } from "@/types";
-import { BRAND_COLORS, BRAND_NAMES, ALL_BRANDS } from "../lib/constants";
+import { BRAND_NAMES, ALL_BRANDS } from "../lib/constants";
 import CrossBrandClusterGraph from "./CrossBrandClusterGraph";
+import {
+  BrandDot,
+  RankBadge,
+  ClusterStats,
+  FilterContainer,
+  ExplanationBox,
+  ClusterCardContainer,
+  ClusterCardHeader,
+  BrandBreakdown,
+  MemberTagList,
+  EmptyMessage,
+  StatLabel,
+  GraphSection,
+} from "../components/shared";
 
 interface IdolInfo {
   id: string;
@@ -30,16 +44,6 @@ interface CrossBrandCluster {
 
 interface Props {
   clusters: CrossBrandCluster[];
-}
-
-function BrandDot({ brand }: { brand: Brand }) {
-  return (
-    <span
-      className="brand-dot"
-      style={{ backgroundColor: BRAND_COLORS[brand] }}
-      title={BRAND_NAMES[brand]}
-    />
-  );
 }
 
 function MemberTag({
@@ -101,13 +105,21 @@ function EdgeVotersList({ edges }: { edges: CrossBrandEdge[] }) {
   const HIGH_PMI_THRESHOLD = 3.0;
 
   return (
-    <div style={{ marginTop: "12px" }}>
-      <h4 style={{ margin: "0 0 8px 0", fontSize: "14px", color: "#666" }}>
-        ブランド横断ペア詳細（クリックで選出者を表示）
+    <details style={{ marginTop: "12px" }}>
+      <summary
+        style={{
+          cursor: "pointer",
+          fontSize: "14px",
+          color: "#666",
+          padding: "8px 0",
+          margin: "0 0 8px 0",
+        }}
+      >
+        ブランド横断ペア詳細（クリックで選出者を表示）- {edges.length}件
         <span style={{ marginLeft: "8px", fontSize: "12px", color: "#d4a017" }}>
           ★ PMI≥3.0（強い関連性）
         </span>
-      </h4>
+      </summary>
       <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
         {sortedEdges.map((edge) => {
           const edgeKey = `${edge.idolA.id}-${edge.idolB.id}`;
@@ -224,12 +236,11 @@ function EdgeVotersList({ edges }: { edges: CrossBrandEdge[] }) {
           );
         })}
       </div>
-    </div>
+    </details>
   );
 }
 
 function ClusterCard({ cluster, rank }: { cluster: CrossBrandCluster; rank: number }) {
-  const [showGraph, setShowGraph] = useState(true);
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 
   const toggleHide = (id: string) => {
@@ -255,102 +266,33 @@ function ClusterCard({ cluster, rank }: { cluster: CrossBrandCluster; rank: numb
   }, [cluster.memberDetails]);
 
   return (
-    <div
-      className="cluster-card"
-      style={{
-        border: "1px solid #ddd",
-        borderRadius: "8px",
-        padding: "16px",
-        marginBottom: "16px",
-        background: "#fff",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "12px",
-          flexWrap: "wrap",
-          gap: "8px",
-        }}
-      >
+    <ClusterCardContainer>
+      <ClusterCardHeader>
         <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-          <span
-            style={{
-              background: "#8e44ad",
-              color: "#fff",
-              padding: "4px 8px",
-              borderRadius: "4px",
-              fontSize: "14px",
-            }}
-          >
-            #{rank}
-          </span>
+          <RankBadge rank={rank} variant="crossbrand" />
           {cluster.memberDetails.length}人 / {cluster.brandCount}ブランド
         </h3>
         <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-          <span style={{ fontSize: "12px", color: "#666" }}>
-            投票者: {cluster.totalVoterCount}人
-          </span>
-          <span style={{ fontSize: "12px", color: "#8e44ad" }}>
-            平均PMI: {cluster.avgPmi.toFixed(2)}
-          </span>
-          <span style={{ fontSize: "12px", color: "#666" }}>エッジ: {cluster.edges.length}本</span>
-          <button
-            onClick={() => setShowGraph(!showGraph)}
-            style={{
-              padding: "4px 8px",
-              background: showGraph ? "#8e44ad" : "#e0e0e0",
-              color: showGraph ? "#fff" : "#333",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-              fontSize: "12px",
-            }}
-          >
-            {showGraph ? "グラフを隠す" : "グラフ表示"}
-          </button>
+          <StatLabel label="投票者" value={`${cluster.totalVoterCount}人`} />
+          <StatLabel label="平均PMI" value={cluster.avgPmi.toFixed(2)} color="#8e44ad" />
+          <StatLabel label="エッジ" value={`${cluster.edges.length}本`} />
         </div>
-      </div>
+      </ClusterCardHeader>
 
-      {showGraph && (
-        <div style={{ marginBottom: "16px" }}>
+      <GraphSection>
+        {(width) => (
           <CrossBrandClusterGraph
             cluster={cluster}
-            width={700}
+            width={width}
             height={500}
             hiddenIds={hiddenIds}
           />
-        </div>
-      )}
+        )}
+      </GraphSection>
 
-      <div style={{ marginBottom: "12px" }}>
-        {brandCounts.map(([brand, count]) => (
-          <span
-            key={brand}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              marginRight: "12px",
-              fontSize: "12px",
-            }}
-          >
-            <BrandDot brand={brand} />
-            {BRAND_NAMES[brand]}: {count}人
-          </span>
-        ))}
-      </div>
+      <BrandBreakdown brandCounts={brandCounts} />
 
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "8px",
-          marginBottom: "12px",
-        }}
-      >
+      <MemberTagList>
         {cluster.memberDetails.map((member) => (
           <MemberTag
             key={member.id}
@@ -359,22 +301,10 @@ function ClusterCard({ cluster, rank }: { cluster: CrossBrandCluster; rank: numb
             onToggleHide={toggleHide}
           />
         ))}
-      </div>
+      </MemberTagList>
 
-      <details style={{ marginTop: "12px" }}>
-        <summary
-          style={{
-            cursor: "pointer",
-            fontSize: "14px",
-            color: "#666",
-            padding: "8px 0",
-          }}
-        >
-          ペア詳細を表示（{cluster.edges.length}件）
-        </summary>
-        <EdgeVotersList edges={cluster.edges} />
-      </details>
-    </div>
+      <EdgeVotersList edges={cluster.edges} />
+    </ClusterCardContainer>
   );
 }
 
@@ -407,7 +337,7 @@ export default function CrossBrandClusterList({ clusters }: Props) {
 
   return (
     <div className="cluster-list">
-      <div className="cluster-explanation" style={{ marginBottom: "16px" }}>
+      <ExplanationBox>
         <p>
           <strong>ブランド横断クラスタ</strong>
           は、異なるブランドのアイドル同士が共起として選ばれているグループです。
@@ -416,30 +346,17 @@ export default function CrossBrandClusterList({ clusters }: Props) {
           ブランド横断ペア（異なるブランドのアイドルが同時に共起に選ばれている）のみを
           エッジとしてLouvain法でコミュニティ検出を行っています。
         </p>
-      </div>
+      </ExplanationBox>
 
-      <div
-        style={{
-          display: "flex",
-          gap: "16px",
-          marginBottom: "16px",
-          padding: "12px",
-          background: "#f9f9f9",
-          borderRadius: "8px",
-          flexWrap: "wrap",
-        }}
-      >
+      <ClusterStats>
         <div>
           <strong>全体統計:</strong> {clusters.length}クラスタ / {stats.totalMembers}人
         </div>
         <div>平均サイズ: {stats.avgSize.toFixed(1)}人</div>
         <div>平均ブランド数: {stats.avgBrands.toFixed(1)}</div>
-      </div>
+      </ClusterStats>
 
-      <div
-        className="filters"
-        style={{ marginBottom: "16px", display: "flex", gap: "16px", flexWrap: "wrap" }}
-      >
+      <FilterContainer>
         <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           ブランド:
           <select
@@ -467,7 +384,7 @@ export default function CrossBrandClusterList({ clusters }: Props) {
             style={{ width: "60px", padding: "4px 8px" }}
           />
         </label>
-      </div>
+      </FilterContainer>
 
       <p style={{ marginBottom: "16px", color: "#666" }}>
         {filteredClusters.length} クラスタを表示中
@@ -478,9 +395,7 @@ export default function CrossBrandClusterList({ clusters }: Props) {
       ))}
 
       {filteredClusters.length === 0 && (
-        <p style={{ textAlign: "center", color: "#999", padding: "32px" }}>
-          条件に一致するクラスタがありません
-        </p>
+        <EmptyMessage message="条件に一致するクラスタがありません" />
       )}
     </div>
   );
