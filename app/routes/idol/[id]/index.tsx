@@ -6,6 +6,7 @@ import type { IdolDetail } from "../../../lib/compute";
 import { BRAND_NAMES, SITE_TITLE } from "../../../lib/constants";
 import type { Brand } from "@/types";
 import { BrandDot, NavigationTabs, PageFooter, PageHeader } from "../../../components/shared";
+import SimilarIdolsFilter from "../../../islands/SimilarIdolsFilter";
 
 async function loadIdolIds(): Promise<string[]> {
   const dataDir = join(process.cwd(), "data/precomputed");
@@ -312,104 +313,10 @@ export default createRoute(
             )}
 
             {detail.similarIdolGroups && detail.similarIdolGroups.length > 0 && (
-              <div className="detail-section">
-                <h3>類似アイドル</h3>
-                <p className="section-description">
-                  同じ随伴アイドルを選んでいる他のアイドル（共通する随伴の構成でグループ化）
-                </p>
-                <ul className="similar-list">
-                  {detail.similarIdolGroups.map((group, idx) => (
-                    <li
-                      key={idx}
-                      style={{
-                        padding: "12px",
-                        backgroundColor: "#fafafa",
-                        borderRadius: "8px",
-                        marginBottom: "8px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: "6px",
-                          marginBottom: "8px",
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: "12px",
-                            color: "#666",
-                            marginRight: "4px",
-                          }}
-                        >
-                          共通随伴:
-                        </span>
-                        {group.commonAccompaniments.map((accomp) => (
-                          <a
-                            key={accomp.id}
-                            href={`/idol/${accomp.id}`}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              padding: "2px 6px",
-                              backgroundColor: "#fff",
-                              border: "1px solid #ddd",
-                              borderRadius: "4px",
-                              textDecoration: "none",
-                              color: "inherit",
-                              fontSize: "12px",
-                            }}
-                            title={`IDF: ${accomp.idf.toFixed(2)}`}
-                          >
-                            {accomp.brand.map((b) => (
-                              <BrandDot key={b} brand={b} size="small" />
-                            ))}
-                            {accomp.name}
-                          </a>
-                        ))}
-                        <span
-                          style={{
-                            fontSize: "11px",
-                            color: "#888",
-                            marginLeft: "auto",
-                          }}
-                        >
-                          ({group.commonAccompanimentCount}人, IDF平均: {group.avgIdf.toFixed(2)})
-                        </span>
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: "8px",
-                          paddingLeft: "8px",
-                          borderLeft: "3px solid #8e44ad",
-                        }}
-                      >
-                        {group.idols.map((idol) => (
-                          <a
-                            key={idol.id}
-                            href={`/idol/${idol.id}`}
-                            className="idol-link"
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px",
-                            }}
-                          >
-                            {idol.brand.map((b) => (
-                              <BrandDot key={b} brand={b} size="small" />
-                            ))}
-                            {idol.name}
-                          </a>
-                        ))}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <SimilarIdolsFilter
+                groups={detail.similarIdolGroups}
+                selectedIdols={detail.selectedIdols}
+              />
             )}
           </div>
         </main>
