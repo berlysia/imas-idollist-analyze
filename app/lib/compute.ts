@@ -284,8 +284,8 @@ export interface SelectionScore {
 export interface SimilarIdolGroup {
   /** 共通する随伴アイドルの数 */
   commonAccompanimentCount: number;
-  /** 共通する随伴アイドルのIDF平均（珍しさ指標） */
-  avgIdf: number;
+  /** レアスコア: IDFの累乗平均（p=5）で高い値を重視 */
+  rareScore: number;
   /** 共通する随伴アイドルのリスト */
   commonAccompaniments: Array<{ id: string; name: string; brand: Brand[]; idf: number }>;
   /** このグループに属するアイドル（同じ共通随伴を持つ） */
@@ -1253,7 +1253,7 @@ export function computeSimilarIdolGroups(
     string,
     {
       commonAccompaniments: Array<{ id: string; name: string; brand: Brand[]; idf: number }>;
-      avgIdf: number;
+      rareScore: number;
       idols: Array<{ id: string; name: string; brand: Brand[] }>;
     }
   >();
@@ -1308,10 +1308,10 @@ export function computeSimilarIdolGroups(
       // 累乗平均（p=5）: 高い値を重視する指標
       const p = 5;
       const powerSum = commonAccompaniments.reduce((sum, a) => sum + Math.pow(a.idf, p), 0);
-      const avgIdf = Math.pow(powerSum / commonAccompaniments.length, 1 / p);
+      const rareScore = Math.pow(powerSum / commonAccompaniments.length, 1 / p);
       groupMap.set(groupKey, {
         commonAccompaniments: commonAccompaniments.sort((a, b) => b.idf - a.idf),
-        avgIdf,
+        rareScore,
         idols: [
           {
             id: otherIdolId,
@@ -1326,14 +1326,14 @@ export function computeSimilarIdolGroups(
   // グループをSimilarIdolGroup形式に変換
   const groups: SimilarIdolGroup[] = Array.from(groupMap.values()).map((group) => ({
     commonAccompanimentCount: group.commonAccompaniments.length,
-    avgIdf: group.avgIdf,
+    rareScore: group.rareScore,
     commonAccompaniments: group.commonAccompaniments,
     idols: group.idols,
   }));
 
   // レアスコア（累乗平均）のみでソート
   // 人数を掛けると結局人数が支配的になるため、純粋にレアさで並べる
-  return groups.sort((a, b) => b.avgIdf - a.avgIdf).slice(0, topN);
+  return groups.sort((a, b) => b.rareScore - a.rareScore).slice(0, topN);
 }
 
 /**

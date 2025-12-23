@@ -11,7 +11,7 @@ interface CommonAccompaniment {
 
 interface SimilarIdolGroup {
   commonAccompanimentCount: number;
-  avgIdf: number;
+  rareScore: number;
   commonAccompaniments: CommonAccompaniment[];
   idols: Array<{ id: string; name: string; brand: Brand[] }>;
 }
@@ -233,7 +233,7 @@ export default function SimilarIdolsFilter({ groups, selectedIdols }: Props) {
                     marginLeft: "auto",
                   }}
                 >
-                  ({group.commonAccompanimentCount}人, レアスコア: {group.avgIdf.toFixed(2)})
+                  ({group.commonAccompanimentCount}人, レアスコア: {group.rareScore.toFixed(2)})
                 </span>
               </div>
               <div
