@@ -1,7 +1,7 @@
 import { createRoute } from "honox/factory";
 import { readFile } from "fs/promises";
 import { join } from "path";
-import type { PairCooccurrence, Cluster } from "../lib/compute";
+import type { PairCooccurrence, Cluster, CrossBrandCluster } from "../lib/compute";
 import PMIFilter from "../islands/PMIFilter";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
 import { SITE_TITLE } from "../lib/constants";
@@ -12,6 +12,10 @@ interface PMIData {
 
 interface ClustersData {
   data: Cluster[];
+}
+
+interface CrossBrandClustersData {
+  data: CrossBrandCluster[];
 }
 
 interface MetadataData {
@@ -40,28 +44,45 @@ function buildPairToClusterMap(clusters: Cluster[]): Record<string, ClusterInfo>
   return map;
 }
 
+function buildCrossBrandPairToClusterMap(
+  clusters: CrossBrandCluster[]
+): Record<string, ClusterInfo> {
+  const map: Record<string, ClusterInfo> = {};
+  clusters.forEach((cluster, clusterIndex) => {
+    for (const edge of cluster.edges) {
+      const pairKey = makePairKey(edge.idolA.id, edge.idolB.id);
+      map[pairKey] = { clusterId: cluster.id, clusterIndex };
+    }
+  });
+  return map;
+}
+
 async function loadData(): Promise<{
   pmiPairs: PMIData;
   clusters: ClustersData;
+  crossBrandClusters: CrossBrandClustersData;
   metadata: MetadataData;
 }> {
   const dataDir = join(process.cwd(), "data/precomputed");
-  const [pmiRaw, clustersRaw, metadataRaw] = await Promise.all([
+  const [pmiRaw, clustersRaw, crossBrandClustersRaw, metadataRaw] = await Promise.all([
     readFile(join(dataDir, "pmi-pairs.json"), "utf-8"),
     readFile(join(dataDir, "clusters.json"), "utf-8"),
+    readFile(join(dataDir, "cross-brand-clusters.json"), "utf-8"),
     readFile(join(dataDir, "metadata.json"), "utf-8"),
   ]);
   return {
     pmiPairs: JSON.parse(pmiRaw),
     clusters: JSON.parse(clustersRaw),
+    crossBrandClusters: JSON.parse(crossBrandClustersRaw),
     metadata: JSON.parse(metadataRaw),
   };
 }
 
 export default createRoute(async (c) => {
-  const { pmiPairs, clusters, metadata } = await loadData();
+  const { pmiPairs, clusters, crossBrandClusters, metadata } = await loadData();
   const pairs = pmiPairs.data;
   const pairToCluster = buildPairToClusterMap(clusters.data);
+  const crossBrandPairToCluster = buildCrossBrandPairToClusterMap(crossBrandClusters.data);
 
   return c.render(
     <>
@@ -83,7 +104,11 @@ export default createRoute(async (c) => {
               とくにこの分析ではユニット等の文脈を全く参照していないので、ユニットメンバーや血縁関係などを反映しているように見える場合は、実際にプロデューサーたちの行動からそれが読み取れることを示しています。
             </p>
           </ExplanationBox>
-          <PMIFilter pairs={pairs} pairToCluster={pairToCluster} />
+          <PMIFilter
+            pairs={pairs}
+            pairToCluster={pairToCluster}
+            crossBrandPairToCluster={crossBrandPairToCluster}
+          />
         </div>
       </main>
       <PageFooter />

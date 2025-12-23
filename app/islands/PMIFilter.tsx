@@ -23,8 +23,10 @@ interface ClusterInfo {
 
 interface Props {
   pairs: PairCooccurrence[];
-  /** ペアID（"小さいID|大きいID"形式）からクラスタ情報へのマッピング */
+  /** ペアID（"小さいID|大きいID"形式）から随伴クラスタ情報へのマッピング */
   pairToCluster?: Record<string, ClusterInfo>;
+  /** ペアID（"小さいID|大きいID"形式）からブランド横断クラスタ情報へのマッピング */
+  crossBrandPairToCluster?: Record<string, ClusterInfo>;
 }
 
 function BrandDot({ brand }: { brand: Brand }) {
@@ -41,34 +43,66 @@ function makePairKey(idA: string, idB: string): string {
   return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
 }
 
-function ClusterLink({ clusterInfo }: { clusterInfo: ClusterInfo | undefined }) {
-  if (!clusterInfo) return <span style={{ color: "#999" }}>-</span>;
+function ClusterLink({
+  clusterInfo,
+  crossBrandClusterInfo,
+}: {
+  clusterInfo: ClusterInfo | undefined;
+  crossBrandClusterInfo: ClusterInfo | undefined;
+}) {
+  if (!clusterInfo && !crossBrandClusterInfo) return <span style={{ color: "#999" }}>-</span>;
 
   return (
-    <a
-      href={`/accompaniment-clusters#cluster-${clusterInfo.clusterIndex}`}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "4px",
-        padding: "2px 8px",
-        backgroundColor: "#e3f2fd",
-        color: "#1976d2",
-        borderRadius: "4px",
-        textDecoration: "none",
-        fontSize: "0.85em",
-        fontWeight: 500,
-      }}
-      title={`随伴クラスタ #${clusterInfo.clusterIndex + 1} に属する`}
-    >
-      <span style={{ fontSize: "0.9em" }}>🔗</span>#{clusterInfo.clusterIndex + 1}
-    </a>
+    <span style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+      {clusterInfo && (
+        <a
+          href={`/accompaniment-clusters#cluster-${clusterInfo.clusterIndex}`}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "4px",
+            padding: "2px 8px",
+            backgroundColor: "#e3f2fd",
+            color: "#1976d2",
+            borderRadius: "4px",
+            textDecoration: "none",
+            fontSize: "0.85em",
+            fontWeight: 500,
+          }}
+          title={`随伴クラスタ #${clusterInfo.clusterIndex + 1} に属する`}
+        >
+          <span style={{ fontSize: "0.9em" }}>🔗</span>#{clusterInfo.clusterIndex + 1}
+        </a>
+      )}
+      {crossBrandClusterInfo && (
+        <a
+          href={`/cross-brand-clusters#cluster-${crossBrandClusterInfo.clusterIndex}`}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "4px",
+            padding: "2px 8px",
+            backgroundColor: "#fff3e0",
+            color: "#e65100",
+            borderRadius: "4px",
+            textDecoration: "none",
+            fontSize: "0.85em",
+            fontWeight: 500,
+          }}
+          title={`ブランド横断クラスタ #${crossBrandClusterInfo.clusterIndex + 1} に属する`}
+        >
+          <span style={{ fontSize: "0.9em" }}>🌐</span>#{crossBrandClusterInfo.clusterIndex + 1}
+        </a>
+      )}
+    </span>
   );
 }
 
-export default function PMIFilter({ pairs, pairToCluster }: Props) {
+export default function PMIFilter({ pairs, pairToCluster, crossBrandPairToCluster }: Props) {
   const [crossBrandOnly, setCrossBrandOnly] = useState(false);
-  const hasClusterData = pairToCluster && Object.keys(pairToCluster).length > 0;
+  const hasClusterData =
+    (pairToCluster && Object.keys(pairToCluster).length > 0) ||
+    (crossBrandPairToCluster && Object.keys(crossBrandPairToCluster).length > 0);
 
   const filteredPairs = useMemo(() => {
     if (crossBrandOnly) {
@@ -116,12 +150,14 @@ export default function PMIFilter({ pairs, pairToCluster }: Props) {
           {filteredPairs.map((pair, index) => {
             const pairKey = makePairKey(pair.idolA.id, pair.idolB.id);
             const clusterInfo = pairToCluster?.[pairKey];
+            const crossBrandClusterInfo = crossBrandPairToCluster?.[pairKey];
+            const hasAnyCluster = clusterInfo || crossBrandClusterInfo;
 
             return (
               <tr
                 key={`${pair.idolA.id}-${pair.idolB.id}`}
                 className={pair.crossBrand ? "cross-brand" : ""}
-                style={clusterInfo ? { backgroundColor: "#f5faff" } : undefined}
+                style={hasAnyCluster ? { backgroundColor: "#f5faff" } : undefined}
               >
                 <td className="rank">{index + 1}</td>
                 <td>
@@ -166,7 +202,10 @@ export default function PMIFilter({ pairs, pairToCluster }: Props) {
                 <td className="cross-brand-indicator">{pair.crossBrand ? "✓" : ""}</td>
                 {hasClusterData && (
                   <td className="cluster-link">
-                    <ClusterLink clusterInfo={clusterInfo} />
+                    <ClusterLink
+                      clusterInfo={clusterInfo}
+                      crossBrandClusterInfo={crossBrandClusterInfo}
+                    />
                   </td>
                 )}
               </tr>
