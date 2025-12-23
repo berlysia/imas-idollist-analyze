@@ -840,6 +840,8 @@ export interface CrossBrandCluster {
     idolB: { id: string; name: string; brand: Brand[] };
     voterCount: number;
     pmi: number;
+    /** このペアを同時に共起として選出したアイドル */
+    voters: Array<{ id: string; name: string; brand: Brand[] }>;
   }>;
   /** 総投票者数（重複除去） */
   totalVoterCount: number;
@@ -1054,6 +1056,7 @@ export function detectCrossBrandClusters(
         idolB: e.idolB,
         voterCount: e.voterCount,
         pmi: e.pmi,
+        voters: e.voters,
       })),
       totalVoterCount: allVoters.size,
       avgPmi,

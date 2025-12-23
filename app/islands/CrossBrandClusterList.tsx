@@ -14,6 +14,7 @@ interface CrossBrandEdge {
   idolB: IdolInfo;
   voterCount: number;
   pmi: number;
+  voters: IdolInfo[];
 }
 
 interface CrossBrandCluster {
@@ -87,6 +88,123 @@ function MemberTag({
         <span style={{ textDecoration: isHidden ? "line-through" : "none" }}>{member.name}</span>
       </a>
     </span>
+  );
+}
+
+function EdgeVotersList({ edges }: { edges: CrossBrandEdge[] }) {
+  const [expandedEdge, setExpandedEdge] = useState<string | null>(null);
+
+  // PMI順でソート
+  const sortedEdges = useMemo(() => [...edges].sort((a, b) => b.pmi - a.pmi), [edges]);
+
+  return (
+    <div style={{ marginTop: "12px" }}>
+      <h4 style={{ margin: "0 0 8px 0", fontSize: "14px", color: "#666" }}>
+        ブランド横断ペア詳細（クリックで選出者を表示）
+      </h4>
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+        {sortedEdges.map((edge) => {
+          const edgeKey = `${edge.idolA.id}-${edge.idolB.id}`;
+          const isExpanded = expandedEdge === edgeKey;
+
+          return (
+            <div
+              key={edgeKey}
+              style={{
+                border: "1px solid #e0e0e0",
+                borderRadius: "4px",
+                background: isExpanded ? "#f9f0ff" : "#fafafa",
+              }}
+            >
+              <button
+                onClick={() => setExpandedEdge(isExpanded ? null : edgeKey)}
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  fontSize: "13px",
+                }}
+              >
+                <span style={{ color: "#8e44ad" }}>{isExpanded ? "▼" : "▶"}</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  {edge.idolA.brand.map((b) => (
+                    <BrandDot key={b} brand={b} />
+                  ))}
+                  <a
+                    href={`/idol/${edge.idolA.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ color: "inherit", textDecoration: "none" }}
+                  >
+                    {edge.idolA.name}
+                  </a>
+                </span>
+                <span style={{ color: "#999" }}>×</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  {edge.idolB.brand.map((b) => (
+                    <BrandDot key={b} brand={b} />
+                  ))}
+                  <a
+                    href={`/idol/${edge.idolB.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ color: "inherit", textDecoration: "none" }}
+                  >
+                    {edge.idolB.name}
+                  </a>
+                </span>
+                <span style={{ marginLeft: "auto", fontSize: "12px", color: "#666" }}>
+                  {edge.voterCount}人が選出 / PMI: {edge.pmi.toFixed(2)}
+                </span>
+              </button>
+
+              {isExpanded && (
+                <div
+                  style={{
+                    padding: "8px 12px 12px 28px",
+                    borderTop: "1px solid #e0e0e0",
+                    background: "#fff",
+                  }}
+                >
+                  <div style={{ fontSize: "12px", color: "#666", marginBottom: "6px" }}>
+                    このペアを同時に共起として選出したアイドル:
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                    {edge.voters.map((voter) => (
+                      <a
+                        key={voter.id}
+                        href={`/idol/${voter.id}`}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          padding: "4px 8px",
+                          background: "#f5f5f5",
+                          border: "1px solid #ddd",
+                          borderRadius: "4px",
+                          textDecoration: "none",
+                          color: "inherit",
+                          fontSize: "13px",
+                        }}
+                      >
+                        {voter.brand.map((b) => (
+                          <BrandDot key={b} brand={b} />
+                        ))}
+                        {voter.name}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -222,6 +340,20 @@ function ClusterCard({ cluster, rank }: { cluster: CrossBrandCluster; rank: numb
           />
         ))}
       </div>
+
+      <details style={{ marginTop: "12px" }}>
+        <summary
+          style={{
+            cursor: "pointer",
+            fontSize: "14px",
+            color: "#666",
+            padding: "8px 0",
+          }}
+        >
+          ペア詳細を表示（{cluster.edges.length}件）
+        </summary>
+        <EdgeVotersList edges={cluster.edges} />
+      </details>
     </div>
   );
 }
