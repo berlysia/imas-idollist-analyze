@@ -3,6 +3,7 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import NetworkGraph from "../islands/NetworkGraph";
 import type { Brand } from "@/types";
+import { PageHeader, NavigationTabs, PageFooter } from "../components/shared";
 
 interface MetadataData {
   scrapedAt: string;
@@ -32,109 +33,15 @@ export default createRoute(async (c) => {
 
   return c.render(
     <>
-      <header>
-        <h1>アイドルマスター 共起関係可視化</h1>
-        <p className="metadata">
-          データ取得日: {new Date(metadata.scrapedAt).toLocaleDateString("ja-JP")} /{" "}
-          {metadata.idolCount}人のアイドル
-        </p>
-      </header>
-
-      <nav className="tabs">
-        <a
-          href="/"
-          style={{
-            padding: "8px 16px",
-            background: "#e0e0e0",
-            borderRadius: "4px 4px 0 0",
-            textDecoration: "none",
-            color: "inherit",
-          }}
-        >
-          被共起数ランキング
-        </a>
-        <a
-          href="/pmi"
-          style={{
-            padding: "8px 16px",
-            background: "#e0e0e0",
-            borderRadius: "4px 4px 0 0",
-            textDecoration: "none",
-            color: "inherit",
-          }}
-        >
-          相思相愛ペア
-        </a>
-        <a
-          href="/bridges"
-          style={{
-            padding: "8px 16px",
-            background: "#e0e0e0",
-            borderRadius: "4px 4px 0 0",
-            textDecoration: "none",
-            color: "inherit",
-          }}
-        >
-          ブランド横断ペア
-        </a>
-        <a
-          href="/clusters"
-          style={{
-            padding: "8px 16px",
-            background: "#e0e0e0",
-            borderRadius: "4px 4px 0 0",
-            textDecoration: "none",
-            color: "inherit",
-          }}
-        >
-          クラスタ
-        </a>
-        <a
-          href="/cross-brand-clusters"
-          style={{
-            padding: "8px 16px",
-            background: "#e0e0e0",
-            borderRadius: "4px 4px 0 0",
-            textDecoration: "none",
-            color: "inherit",
-          }}
-        >
-          ブランド横断クラスタ
-        </a>
-        <a
-          href="/network"
-          className="active"
-          style={{
-            padding: "8px 16px",
-            background: "#333",
-            color: "#fff",
-            borderRadius: "4px 4px 0 0",
-            textDecoration: "none",
-          }}
-        >
-          ネットワーク
-        </a>
-      </nav>
-
+      <PageHeader metadata={metadata} />
+      <NavigationTabs activeTab="/network" />
       <main>
         <div className="chart-container">
           <h3>ネットワークグラフ</h3>
           <NetworkGraph data={network} initialMinConnections={5} />
         </div>
       </main>
-
-      <footer>
-        <p>
-          データ出典:{" "}
-          <a
-            href="https://idollist.idolmaster-official.jp/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            アイドルマスター公式 IDOL LIST
-          </a>
-        </p>
-      </footer>
+      <PageFooter />
     </>,
     { title: "ネットワーク - アイドルマスター 共起関係可視化" }
   );

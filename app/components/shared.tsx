@@ -2,6 +2,93 @@ import * as React from "react";
 import type { Brand } from "@/types";
 import { BRAND_COLORS, BRAND_NAMES } from "../lib/constants";
 
+interface MetadataData {
+  scrapedAt: string;
+  generatedAt: string;
+  idolCount: number;
+}
+
+/**
+ * 共通ヘッダー
+ */
+export function PageHeader({ metadata }: { metadata: MetadataData }) {
+  return (
+    <header>
+      <h1>アイドルマスター 共起関係可視化</h1>
+      <p className="metadata">
+        データ取得日: {new Date(metadata.scrapedAt).toLocaleDateString("ja-JP")} /{" "}
+        {metadata.idolCount}人のアイドル
+      </p>
+    </header>
+  );
+}
+
+const TAB_ITEMS = [
+  { href: "/", label: "被共起数ランキング" },
+  { href: "/pmi", label: "相思相愛ペア" },
+  { href: "/bridges", label: "ブランド横断ペア" },
+  { href: "/clusters", label: "クラスタ" },
+  { href: "/cross-brand-clusters", label: "ブランド横断クラスタ" },
+  { href: "/network", label: "ネットワーク" },
+] as const;
+
+/**
+ * ナビゲーションタブ
+ */
+export function NavigationTabs({
+  activeTab,
+  variant = "default",
+}: {
+  activeTab: string;
+  variant?: "default" | "crossbrand";
+}) {
+  const activeColor = variant === "crossbrand" ? "#8e44ad" : "#333";
+
+  return (
+    <nav className="tabs">
+      {TAB_ITEMS.map((item) => {
+        const isActive = item.href === activeTab;
+        return (
+          <a
+            key={item.href}
+            href={item.href}
+            className={isActive ? "active" : undefined}
+            style={{
+              padding: "8px 16px",
+              background: isActive ? activeColor : "#e0e0e0",
+              color: isActive ? "#fff" : "inherit",
+              borderRadius: "4px 4px 0 0",
+              textDecoration: "none",
+            }}
+          >
+            {item.label}
+          </a>
+        );
+      })}
+    </nav>
+  );
+}
+
+/**
+ * 共通フッター
+ */
+export function PageFooter() {
+  return (
+    <footer>
+      <p>
+        データ出典:{" "}
+        <a
+          href="https://idollist.idolmaster-official.jp/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          アイドルマスターOFFICIAL WEB アイドル名鑑
+        </a>
+      </p>
+    </footer>
+  );
+}
+
 /**
  * ブランドを示す小さなドットアイコン
  */
