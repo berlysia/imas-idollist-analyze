@@ -13,6 +13,8 @@ import type {
 } from "./graphExplorerTypes";
 export type { IdolListItem, ExplorerNode, ExplorerEdge } from "./graphExplorerTypes";
 
+type ExplorerMode = "topdown" | "bottomup";
+
 interface Props {
   idolList: IdolListItem[];
   accompaniments: Record<string, string[]>;
@@ -20,6 +22,7 @@ interface Props {
   idfMap: Record<string, number>;
   pmiMap: Record<string, number>;
   cooccurrenceCompanionPairs: CooccurrenceCompanionPairData[];
+  mode: ExplorerMode;
 }
 
 const BRAND_LIST: Brand[] = ["imas", "deremas", "milimas", "sidem", "shiny", "gakuen"];
@@ -184,6 +187,7 @@ export default function GraphExplorer({
   idfMap,
   pmiMap,
   cooccurrenceCompanionPairs,
+  mode,
 }: Props) {
   // 選択されたアイドルIDのセット（NodeSelectorと同期）
   const initialSelectedIds = useMemo(() => {
@@ -519,9 +523,6 @@ export default function GraphExplorer({
   const selectedNode = selectedNodeId ? nodes.get(selectedNodeId) : null;
   const [isPanelOpen, setIsPanelOpen] = useState(true);
 
-  // タブ: "graph"（グラフ表示）または "edit"（ノード編集）
-  const [activeTab, setActiveTab] = useState<"topdown" | "bottomup">("topdown");
-
   // コンテナサイズを監視
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
@@ -593,177 +594,121 @@ export default function GraphExplorer({
           maxWidth: "320px",
         }}
       >
-        {/* タブバー */}
-        <div
-          style={{
-            display: "flex",
-            marginBottom: "8px",
-            borderBottom: "2px solid #eee",
-          }}
-        >
-          <button
-            onClick={() => setActiveTab("topdown")}
-            style={{
-              flex: 1,
-              padding: "8px 12px",
-              fontSize: "12px",
-              fontWeight: activeTab === "topdown" ? "bold" : "normal",
-              background: "none",
-              border: "none",
-              borderBottom: activeTab === "topdown" ? "2px solid #1976d2" : "2px solid transparent",
-              marginBottom: "-2px",
-              cursor: "pointer",
-              color: activeTab === "topdown" ? "#1976d2" : "#666",
-            }}
-          >
-            トップダウン
-          </button>
-          <button
-            onClick={() => setActiveTab("bottomup")}
-            style={{
-              flex: 1,
-              padding: "8px 12px",
-              fontSize: "12px",
-              fontWeight: activeTab === "bottomup" ? "bold" : "normal",
-              background: "none",
-              border: "none",
-              borderBottom: activeTab === "bottomup" ? "2px solid #1976d2" : "2px solid transparent",
-              marginBottom: "-2px",
-              cursor: "pointer",
-              color: activeTab === "bottomup" ? "#1976d2" : "#666",
-            }}
-          >
-            ボトムアップ
-          </button>
-        </div>
+        {/* ノード選択 */}
+        <NodeSelector
+          idolList={idolList}
+          selectedIds={selectedIds}
+          onSelectionChange={handleSelectionChange}
+        />
 
-        {/* ノード編集タブ */}
-        {activeTab === "bottomup" && (
-          <NodeSelector
-            idolList={idolList}
-            selectedIds={selectedIds}
-            onSelectionChange={handleSelectionChange}
-          />
-        )}
-
-        {/* グラフタブ */}
-        {activeTab === "topdown" && (
-          <>
-            {/* 初期ノード構成の編集 */}
-            <NodeSelector
-              idolList={idolList}
-              selectedIds={selectedIds}
-              onSelectionChange={handleSelectionChange}
-            />
-
-            {/* エッジモード切り替え（セグメントコントロール） */}
-            <div style={{ marginTop: "12px", borderTop: "1px solid #eee", paddingTop: "12px" }}>
-              <div
+        {/* トップダウンモードのみ: エッジモード切り替え */}
+        {mode === "topdown" && (
+          <div style={{ marginTop: "12px", borderTop: "1px solid #eee", paddingTop: "12px" }}>
+            <div
+              style={{
+                display: "flex",
+                border: "1px solid #ccc",
+                borderRadius: "4px",
+                overflow: "hidden",
+              }}
+            >
+              <button
+                onClick={() => setEdgeMode("accompaniment")}
                 style={{
-                  display: "flex",
-                  border: "1px solid #ccc",
-                  borderRadius: "4px",
-                  overflow: "hidden",
+                  flex: 1,
+                  padding: "6px 8px",
+                  fontSize: "11px",
+                  background: edgeMode === "accompaniment" ? "#1976d2" : "#fff",
+                  color: edgeMode === "accompaniment" ? "#fff" : "#666",
+                  border: "none",
+                  borderRight: "1px solid #ccc",
+                  cursor: "pointer",
+                  fontWeight: edgeMode === "accompaniment" ? "bold" : "normal",
                 }}
               >
-                <button
-                  onClick={() => setEdgeMode("accompaniment")}
-                  style={{
-                    flex: 1,
-                    padding: "6px 8px",
-                    fontSize: "11px",
-                    background: edgeMode === "accompaniment" ? "#1976d2" : "#fff",
-                    color: edgeMode === "accompaniment" ? "#fff" : "#666",
-                    border: "none",
-                    borderRight: "1px solid #ccc",
-                    cursor: "pointer",
-                    fontWeight: edgeMode === "accompaniment" ? "bold" : "normal",
-                  }}
-                >
-                  随伴関係
-                </button>
-                <button
-                  onClick={() => setEdgeMode("cooccurrenceCompanion")}
-                  style={{
-                    flex: 1,
-                    padding: "6px 8px",
-                    fontSize: "11px",
-                    background: edgeMode === "cooccurrenceCompanion" ? "#8e44ad" : "#fff",
-                    color: edgeMode === "cooccurrenceCompanion" ? "#fff" : "#666",
-                    border: "none",
-                    cursor: "pointer",
-                    fontWeight: edgeMode === "cooccurrenceCompanion" ? "bold" : "normal",
-                  }}
-                >
-                  共起随伴ペア
-                </button>
-              </div>
-
-              {/* 共起随伴ペアモード時のフィルタ */}
-              {edgeMode === "cooccurrenceCompanion" && (
-                <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
-                  <div style={{ marginBottom: "4px" }}>
-                    <label style={{ display: "block", marginBottom: "2px" }}>
-                      最小PMI: {minPmi.toFixed(1)}
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="10"
-                      step="0.5"
-                      value={minPmi}
-                      onChange={(e) => setMinPmi(Number(e.target.value))}
-                      style={{ width: "100%" }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: "block", marginBottom: "2px" }}>
-                      最小共起元数: {minCooccurrenceSourceCount}
-                    </label>
-                    <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      step="1"
-                      value={minCooccurrenceSourceCount}
-                      onChange={(e) => setMinCooccurrenceSourceCount(Number(e.target.value))}
-                      style={{ width: "100%" }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* 随伴関係モード時のフィルタ */}
-              {edgeMode === "accompaniment" && (
-                <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
-                  <div style={{ marginBottom: "4px" }}>
-                    <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <input
-                        type="checkbox"
-                        checked={mutualOnly}
-                        onChange={(e) => setMutualOnly(e.target.checked)}
-                      />
-                      相互随伴のみ表示
-                    </label>
-                  </div>
-                  <div>
-                    <label style={{ display: "block", marginBottom: "2px" }}>
-                      最小IDF: {minIdf.toFixed(1)}
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="10"
-                      step="0.5"
-                      value={minIdf}
-                      onChange={(e) => setMinIdf(Number(e.target.value))}
-                      style={{ width: "100%" }}
-                    />
-                  </div>
-                </div>
-              )}
+                随伴関係
+              </button>
+              <button
+                onClick={() => setEdgeMode("cooccurrenceCompanion")}
+                style={{
+                  flex: 1,
+                  padding: "6px 8px",
+                  fontSize: "11px",
+                  background: edgeMode === "cooccurrenceCompanion" ? "#8e44ad" : "#fff",
+                  color: edgeMode === "cooccurrenceCompanion" ? "#fff" : "#666",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: edgeMode === "cooccurrenceCompanion" ? "bold" : "normal",
+                }}
+              >
+                共起随伴ペア
+              </button>
             </div>
-          </>
+
+            {/* 共起随伴ペアモード時のフィルタ */}
+            {edgeMode === "cooccurrenceCompanion" && (
+              <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
+                <div style={{ marginBottom: "4px" }}>
+                  <label style={{ display: "block", marginBottom: "2px" }}>
+                    最小PMI: {minPmi.toFixed(1)}
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="10"
+                    step="0.5"
+                    value={minPmi}
+                    onChange={(e) => setMinPmi(Number(e.target.value))}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", marginBottom: "2px" }}>
+                    最小共起元数: {minCooccurrenceSourceCount}
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    step="1"
+                    value={minCooccurrenceSourceCount}
+                    onChange={(e) => setMinCooccurrenceSourceCount(Number(e.target.value))}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* 随伴関係モード時のフィルタ */}
+            {edgeMode === "accompaniment" && (
+              <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
+                <div style={{ marginBottom: "4px" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <input
+                      type="checkbox"
+                      checked={mutualOnly}
+                      onChange={(e) => setMutualOnly(e.target.checked)}
+                    />
+                    相互随伴のみ表示
+                  </label>
+                </div>
+                <div>
+                  <label style={{ display: "block", marginBottom: "2px" }}>
+                    最小IDF: {minIdf.toFixed(1)}
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="10"
+                    step="0.5"
+                    value={minIdf}
+                    onChange={(e) => setMinIdf(Number(e.target.value))}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -865,79 +810,83 @@ export default function GraphExplorer({
         </div>
       )}
 
-      {/* フローティングパネルトグルボタン（右上） */}
-      <button
-        onClick={() => setIsPanelOpen(!isPanelOpen)}
-        style={{
-          position: "absolute",
-          top: "16px",
-          right: isPanelOpen ? "336px" : "16px",
-          zIndex: 11,
-          background: "#fff",
-          border: "1px solid #ddd",
-          borderRadius: "4px",
-          padding: "8px 12px",
-          cursor: "pointer",
-          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-          fontSize: "12px",
-          transition: "right 0.2s ease",
-        }}
-      >
-        {isPanelOpen ? "パネルを閉じる ▶" : "◀ パネルを開く"}
-      </button>
-
-      {/* フローティングAccompanimentPanel（右側） */}
-      <div
-        style={{
-          position: "absolute",
-          top: "16px",
-          right: isPanelOpen ? "16px" : "-320px",
-          bottom: "16px",
-          width: "300px",
-          zIndex: 10,
-          transition: "right 0.2s ease",
-          overflow: "hidden",
-        }}
-      >
-        <div
+      {/* フローティングパネルトグルボタン（右上）- ボトムアップモードのみ */}
+      {mode === "bottomup" && (
+        <button
+          onClick={() => setIsPanelOpen(!isPanelOpen)}
           style={{
-            height: "100%",
-            overflowY: "auto",
-            background: "rgba(255, 255, 255, 0.98)",
-            borderRadius: "8px",
-            boxShadow: "0 2px 12px rgba(0, 0, 0, 0.15)",
+            position: "absolute",
+            top: "16px",
+            right: isPanelOpen ? "336px" : "16px",
+            zIndex: 11,
+            background: "#fff",
+            border: "1px solid #ddd",
+            borderRadius: "4px",
+            padding: "8px 12px",
+            cursor: "pointer",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+            fontSize: "12px",
+            transition: "right 0.2s ease",
           }}
         >
-          {selectedNode ? (
-            <AccompanimentPanel
-              selectedNode={selectedNode}
-              accompaniments={accompaniments}
-              idols={idols}
-              existingNodeIds={nodes}
-              onAddIdol={addAccompanyingIdol}
-              onDeleteNode={deleteNode}
-              idfMap={idfMap}
-              pmiMap={pmiMap}
-            />
-          ) : (
-            <div
-              style={{
-                padding: "24px 16px",
-                textAlign: "center",
-                color: "#666",
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {nodesArray.length > 0
-                ? "ノードをクリックして随伴アイドルを表示"
-                : "アイドルを検索してグラフにアイドルを追加してください"}
-            </div>
-          )}
+          {isPanelOpen ? "パネルを閉じる ▶" : "◀ パネルを開く"}
+        </button>
+      )}
+
+      {/* フローティングAccompanimentPanel（右側）- ボトムアップモードのみ */}
+      {mode === "bottomup" && (
+        <div
+          style={{
+            position: "absolute",
+            top: "16px",
+            right: isPanelOpen ? "16px" : "-320px",
+            bottom: "16px",
+            width: "300px",
+            zIndex: 10,
+            transition: "right 0.2s ease",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              overflowY: "auto",
+              background: "rgba(255, 255, 255, 0.98)",
+              borderRadius: "8px",
+              boxShadow: "0 2px 12px rgba(0, 0, 0, 0.15)",
+            }}
+          >
+            {selectedNode ? (
+              <AccompanimentPanel
+                selectedNode={selectedNode}
+                accompaniments={accompaniments}
+                idols={idols}
+                existingNodeIds={nodes}
+                onAddIdol={addAccompanyingIdol}
+                onDeleteNode={deleteNode}
+                idfMap={idfMap}
+                pmiMap={pmiMap}
+              />
+            ) : (
+              <div
+                style={{
+                  padding: "24px 16px",
+                  textAlign: "center",
+                  color: "#666",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {nodesArray.length > 0
+                  ? "ノードをクリックして随伴アイドルを表示"
+                  : "アイドルを検索してグラフにアイドルを追加してください"}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
