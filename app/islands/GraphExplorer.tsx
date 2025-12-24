@@ -21,6 +21,22 @@ function getInitialNodesFromUrl(
   if (typeof window === "undefined") return new Map();
 
   const params = new URLSearchParams(window.location.search);
+
+  // preset=all: 全アイドルを初期表示
+  const presetParam = params.get("preset");
+  if (presetParam === "all") {
+    const nodeMap = new Map<string, ExplorerNode>();
+    for (const [id, idol] of Object.entries(idols)) {
+      nodeMap.set(id, {
+        id,
+        name: idol.name,
+        brand: idol.brand,
+      });
+    }
+    return nodeMap;
+  }
+
+  // ids: 個別指定
   const idsParam = params.get("ids");
   if (!idsParam) return new Map();
 
@@ -100,16 +116,23 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
 
     const ids = Array.from(nodes.keys());
     const params = new URLSearchParams(window.location.search);
+    const totalIdolCount = Object.keys(idols).length;
 
-    if (ids.length > 0) {
+    // 全アイドルが表示されている場合は preset=all を使用
+    if (ids.length === totalIdolCount && ids.length > 0) {
+      params.delete("ids");
+      params.set("preset", "all");
+    } else if (ids.length > 0) {
+      params.delete("preset");
       params.set("ids", ids.join(","));
     } else {
       params.delete("ids");
+      params.delete("preset");
     }
 
-    const newUrl = ids.length > 0 ? `?${params.toString()}` : window.location.pathname;
+    const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
     window.history.replaceState({}, "", newUrl);
-  }, [nodes]);
+  }, [nodes, idols]);
 
   // Ref to access current nodes without stale closure
   const nodesRef = useRef(nodes);
@@ -235,6 +258,28 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
     [selectedNodeId]
   );
 
+  const addAllIdols = useCallback(() => {
+    const allNodes = new Map<string, ExplorerNode>();
+    for (const [id, idol] of Object.entries(idols)) {
+      allNodes.set(id, {
+        id,
+        name: idol.name,
+        brand: idol.brand,
+      });
+    }
+    nodesRef.current = allNodes;
+    setNodes(allNodes);
+    setEdges(calculateEdgesForNodes(allNodes, accompaniments));
+    setSelectedNodeId(null);
+  }, [idols, accompaniments]);
+
+  const clearAllNodes = useCallback(() => {
+    nodesRef.current = new Map();
+    setNodes(new Map());
+    setEdges(new Map());
+    setSelectedNodeId(null);
+  }, []);
+
   const handleNodeClick = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId);
   }, []);
@@ -313,6 +358,39 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
         }}
       >
         <IdolSearchBox idolList={idolList} onSelect={addNode} existingNodeIds={nodes} />
+        <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+          <button
+            onClick={addAllIdols}
+            style={{
+              flex: 1,
+              padding: "6px 12px",
+              fontSize: "12px",
+              background: "#1976d2",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            全アイドルを追加
+          </button>
+          {nodesArray.length > 0 && (
+            <button
+              onClick={clearAllNodes}
+              style={{
+                padding: "6px 12px",
+                fontSize: "12px",
+                background: "#f44336",
+                color: "#fff",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              全削除
+            </button>
+          )}
+        </div>
       </div>
 
       {/* フローティング凡例（左下） */}
