@@ -375,11 +375,19 @@ export default function GraphExplorerGraph({
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
+      const rect = svg.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
       const scaleFactor = e.deltaY > 0 ? 0.9 : 1.1;
-      setTransform((prev) => ({
-        ...prev,
-        scale: Math.max(0.3, Math.min(3, prev.scale * scaleFactor)),
-      }));
+
+      setTransform((prev) => {
+        const newScale = Math.max(0.3, Math.min(3, prev.scale * scaleFactor));
+        const actualFactor = newScale / prev.scale;
+        // マウス位置を中心にズーム
+        const newX = mouseX - (mouseX - prev.x) * actualFactor;
+        const newY = mouseY - (mouseY - prev.y) * actualFactor;
+        return { x: newX, y: newY, scale: newScale };
+      });
     };
 
     svg.addEventListener("wheel", handleWheel, { passive: false });
