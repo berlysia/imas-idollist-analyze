@@ -10,11 +10,13 @@ export type { IdolListItem, ExplorerNode, ExplorerEdge } from "./graphExplorerTy
 interface Props {
   idolList: IdolListItem[];
   accompaniments: Record<string, string[]>;
-  idols: Record<string, { name: string; brand: Brand[]; kana?: string }>;
+  idols: Record<string, { name: string; brand: Brand[]; kana: string }>;
+  idfMap: Record<string, number>;
+  pmiMap: Record<string, number>;
 }
 
 function getInitialNodesFromUrl(
-  idols: Record<string, { name: string; brand: Brand[]; kana?: string }>
+  idols: Record<string, { name: string; brand: Brand[]; kana: string }>
 ): Map<string, ExplorerNode> {
   if (typeof window === "undefined") return new Map();
 
@@ -78,7 +80,7 @@ function calculateEdgesForNodes(
   return edgeMap;
 }
 
-export default function GraphExplorer({ idolList, accompaniments, idols }: Props) {
+export default function GraphExplorer({ idolList, accompaniments, idols, idfMap, pmiMap }: Props) {
   const [nodes, setNodes] = useState<Map<string, ExplorerNode>>(() =>
     getInitialNodesFromUrl(idols)
   );
@@ -117,12 +119,12 @@ export default function GraphExplorer({ idolList, accompaniments, idols }: Props
   const edgesArray = useMemo(() => Array.from(edges.values()), [edges]);
 
   const addNode = useCallback(
-    (idol: IdolListItem) => {
-      const currentNodes = nodesRef.current;
-
-      // Already exists, just select it
-      if (currentNodes.has(idol.id)) {
-        setSelectedNodeId(idol.id);
+    (idol: IdolListItem, options?: { keepSelection?: boolean }) => {
+      // Already exists, optionally select it
+      if (nodesRef.current.has(idol.id)) {
+        if (!options?.keepSelection) {
+          setSelectedNodeId(idol.id);
+        }
         return;
       }
 
@@ -132,11 +134,18 @@ export default function GraphExplorer({ idolList, accompaniments, idols }: Props
         brand: idol.brand,
       };
 
-      // Calculate new edges
+      // Immediately update nodesRef for subsequent calls in same event
+      const updatedNodes = new Map(nodesRef.current);
+      updatedNodes.set(idol.id, newNode);
+      nodesRef.current = updatedNodes;
+
+      // Calculate new edges against all existing nodes
       const newEdges = new Map<string, ExplorerEdge>();
       const idolAccompaniments = accompaniments[idol.id] ?? [];
 
-      currentNodes.forEach((existingNode) => {
+      updatedNodes.forEach((existingNode) => {
+        if (existingNode.id === idol.id) return; // Skip self
+
         const existingAccompaniments = accompaniments[existingNode.id] ?? [];
 
         const newToExisting = idolAccompaniments.includes(existingNode.id);
@@ -161,12 +170,8 @@ export default function GraphExplorer({ idolList, accompaniments, idols }: Props
         }
       });
 
-      // Batch state updates
-      setNodes((prev) => {
-        const next = new Map(prev);
-        next.set(idol.id, newNode);
-        return next;
-      });
+      // Update state
+      setNodes(updatedNodes);
 
       if (newEdges.size > 0) {
         setEdges((prev) => {
@@ -176,7 +181,10 @@ export default function GraphExplorer({ idolList, accompaniments, idols }: Props
         });
       }
 
-      setSelectedNodeId(idol.id);
+      // Only change selection if not keeping current selection
+      if (!options?.keepSelection) {
+        setSelectedNodeId(idol.id);
+      }
     },
     [accompaniments]
   );
@@ -190,12 +198,14 @@ export default function GraphExplorer({ idolList, accompaniments, idols }: Props
         id: toId,
         name: toIdol.name,
         brand: toIdol.brand,
+        kana: toIdol.kana,
       };
       if (toIdol.kana) {
         idol.kana = toIdol.kana;
       }
 
-      addNode(idol);
+      // AccompanimentPanelからの追加時は選択を保持
+      addNode(idol, { keepSelection: true });
     },
     [idols, addNode]
   );
@@ -314,6 +324,8 @@ export default function GraphExplorer({ idolList, accompaniments, idols }: Props
               existingNodeIds={nodes}
               onAddIdol={addAccompanyingIdol}
               onDeleteNode={deleteNode}
+              idfMap={idfMap}
+              pmiMap={pmiMap}
             />
           ) : (
             <div

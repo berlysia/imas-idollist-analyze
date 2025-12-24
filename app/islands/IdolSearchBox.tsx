@@ -20,8 +20,8 @@ export default function IdolSearchBox({ idolList, onSelect, existingNodeIds }: P
     const q = query.trim().toLowerCase();
     return idolList
       .filter((idol) => {
-        const matchesName = idol.name.toLowerCase().includes(q);
-        const matchesKana = idol.kana?.toLowerCase().includes(q) ?? false;
+        const matchesName = idol.name.replaceAll(/\s/g, "").toLowerCase().includes(q);
+        const matchesKana = idol.kana.replaceAll(/\s/g, "").toLowerCase().includes(q);
         return matchesName || matchesKana;
       })
       .slice(0, 20);

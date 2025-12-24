@@ -4,7 +4,7 @@ export interface IdolListItem {
   id: string;
   name: string;
   brand: Brand[];
-  kana?: string;
+  kana: string;
 }
 
 export interface ExplorerNode {

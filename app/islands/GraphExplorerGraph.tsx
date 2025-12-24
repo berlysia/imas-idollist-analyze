@@ -87,8 +87,8 @@ export default function GraphExplorerGraph({
   // Force simulation
   useEffect(() => {
     const k = 120;
-    const gravity = 0.1;
-    const damping = 0.85;
+    const gravity = 0.02; // 弱めの重力
+    const damping = 0.9;
     const centerX = width / 2;
     const centerY = height / 2;
     let running = true;
@@ -105,11 +105,12 @@ export default function GraphExplorerGraph({
       }
 
       const alpha = alphaRef.current;
-      if (alpha < 0.001) {
+      if (alpha < 0.005) {
+        // 収束したら停止
         animationRef.current = requestAnimationFrame(simulate);
         return;
       }
-      alphaRef.current *= 0.99;
+      alphaRef.current *= 0.95; // 早めに収束
 
       const nodeMap = new Map(simNodes.map((n) => [n.id, n]));
 
