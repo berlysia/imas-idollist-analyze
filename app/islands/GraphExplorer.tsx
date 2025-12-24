@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import type { Brand } from "@/types";
 import { GraphSection, EmptyMessage } from "../components/shared";
 import IdolSearchBox from "./IdolSearchBox";
@@ -13,10 +13,101 @@ interface Props {
   idols: Record<string, { name: string; brand: Brand[]; kana?: string }>;
 }
 
+function getInitialNodesFromUrl(
+  idols: Record<string, { name: string; brand: Brand[]; kana?: string }>
+): Map<string, ExplorerNode> {
+  if (typeof window === "undefined") return new Map();
+
+  const params = new URLSearchParams(window.location.search);
+  const idsParam = params.get("ids");
+  if (!idsParam) return new Map();
+
+  const nodeMap = new Map<string, ExplorerNode>();
+  const ids = idsParam.split(",").filter((id) => id && idols[id]);
+
+  for (const id of ids) {
+    const idol = idols[id];
+    if (idol) {
+      nodeMap.set(id, {
+        id,
+        name: idol.name,
+        brand: idol.brand,
+      });
+    }
+  }
+
+  return nodeMap;
+}
+
+function calculateEdgesForNodes(
+  nodes: Map<string, ExplorerNode>,
+  accompaniments: Record<string, string[]>
+): Map<string, ExplorerEdge> {
+  const edgeMap = new Map<string, ExplorerEdge>();
+  const nodeIds = Array.from(nodes.keys());
+
+  for (let i = 0; i < nodeIds.length; i++) {
+    const idA = nodeIds[i];
+    if (!idA) continue;
+    const accompA = accompaniments[idA] ?? [];
+
+    for (let j = i + 1; j < nodeIds.length; j++) {
+      const idB = nodeIds[j];
+      if (!idB) continue;
+      const accompB = accompaniments[idB] ?? [];
+
+      const aToB = accompA.includes(idB);
+      const bToA = accompB.includes(idA);
+
+      if (aToB || bToA) {
+        const edgeKey = idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
+        const isMutual = aToB && bToA;
+        const source = aToB ? idA : idB;
+        const target = aToB ? idB : idA;
+
+        edgeMap.set(edgeKey, {
+          source,
+          target,
+          isMutual,
+          weight: isMutual ? 1 : 0.5,
+        });
+      }
+    }
+  }
+
+  return edgeMap;
+}
+
 export default function GraphExplorer({ idolList, accompaniments, idols }: Props) {
-  const [nodes, setNodes] = useState<Map<string, ExplorerNode>>(new Map());
-  const [edges, setEdges] = useState<Map<string, ExplorerEdge>>(new Map());
+  const [nodes, setNodes] = useState<Map<string, ExplorerNode>>(() =>
+    getInitialNodesFromUrl(idols)
+  );
+  const [edges, setEdges] = useState<Map<string, ExplorerEdge>>(() =>
+    calculateEdgesForNodes(getInitialNodesFromUrl(idols), accompaniments)
+  );
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const isInitializedRef = useRef(false);
+
+  // Sync nodes to URL query params
+  useEffect(() => {
+    // Skip the first render to avoid overwriting URL on SSR hydration
+    if (!isInitializedRef.current) {
+      isInitializedRef.current = true;
+      return;
+    }
+
+    const ids = Array.from(nodes.keys());
+    const params = new URLSearchParams(window.location.search);
+
+    if (ids.length > 0) {
+      params.set("ids", ids.join(","));
+    } else {
+      params.delete("ids");
+    }
+
+    const newUrl = ids.length > 0 ? `?${params.toString()}` : window.location.pathname;
+    window.history.replaceState({}, "", newUrl);
+  }, [nodes]);
 
   // Ref to access current nodes without stale closure
   const nodesRef = useRef(nodes);
