@@ -322,7 +322,7 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
                     marginRight: "4px",
                   }}
                 />
-                固定 (ダブルクリック)
+                固定 (ドラッグ/ダブルクリックで解除)
               </span>
               <span>ノード数: {nodesArray.length}</span>
             </div>

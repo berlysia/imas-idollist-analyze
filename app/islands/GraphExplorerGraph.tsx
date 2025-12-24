@@ -44,7 +44,6 @@ export default function GraphExplorerGraph({
   const alphaRef = useRef(1);
   const [isDragging, setIsDragging] = useState(false);
   const [dragNodeId, setDragNodeId] = useState<string | null>(null);
-  const wasPinnedBeforeDragRef = useRef(false);
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
 
   // Keep edges ref in sync
@@ -227,9 +226,6 @@ export default function GraphExplorerGraph({
 
   const handleMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
-    // Remember if node was pinned before drag
-    const node = simNodesRef.current.find((n) => n.id === nodeId);
-    wasPinnedBeforeDragRef.current = node?.fx !== null && node?.fy !== null;
     setIsDragging(true);
     setDragNodeId(nodeId);
   }, []);
@@ -257,20 +253,9 @@ export default function GraphExplorerGraph({
   );
 
   const handleMouseUp = useCallback(() => {
-    // Clear fixed position if node wasn't pinned before drag
-    if (dragNodeId && !wasPinnedBeforeDragRef.current) {
-      const node = simNodesRef.current.find((n) => n.id === dragNodeId);
-      if (node) {
-        node.fx = null;
-        node.fy = null;
-        setRenderNodes(simNodesRef.current.map((n) => ({ ...n })));
-        // Restart simulation to let physics take over
-        alphaRef.current = Math.max(alphaRef.current, 0.5);
-      }
-    }
     setIsDragging(false);
     setDragNodeId(null);
-  }, [dragNodeId]);
+  }, []);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
