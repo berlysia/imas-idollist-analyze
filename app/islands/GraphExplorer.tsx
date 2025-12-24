@@ -423,6 +423,15 @@ export default function GraphExplorer({
   const nodesArray = useMemo(() => Array.from(nodes.values()), [nodes]);
   const edgesArray = useMemo(() => Array.from(edges.values()), [edges]);
   const displayedNodeIds = useMemo(() => new Set(nodes.keys()), [nodes]);
+  // エッジに接続されているノードのIDセット（孤立ノード判定用）
+  const connectedNodeIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const edge of edges.values()) {
+      ids.add(edge.source);
+      ids.add(edge.target);
+    }
+    return ids;
+  }, [edges]);
 
   const addNode = useCallback(
     (idol: IdolListItem, options?: { keepSelection?: boolean }) => {
@@ -638,6 +647,7 @@ export default function GraphExplorer({
           displayedNodeIds={displayedNodeIds}
           focusedNodeId={selectedNodeId}
           onFocusNode={handleNodeClick}
+          connectedNodeIds={mode === "bottomup" ? connectedNodeIds : undefined}
         />
 
         <div style={{ marginTop: "12px", borderTop: "1px solid #eee", paddingTop: "12px" }}>
@@ -970,7 +980,7 @@ export default function GraphExplorer({
                 existingNodeIds={nodes}
                 onAddIdol={addAccompanyingIdol}
                 onDeleteNode={deleteNode}
-                onFocusNode={id => setSelectedNodeId(id)}
+                onFocusNode={(id) => setSelectedNodeId(id)}
                 idfMap={idfMap}
                 pmiMap={pmiMap}
                 cooccurrenceCompanionPairs={cooccurrenceCompanionPairs}

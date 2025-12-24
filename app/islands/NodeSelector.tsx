@@ -24,6 +24,8 @@ interface Props {
   displayedNodeIds?: Set<string>;
   focusedNodeId?: string | null;
   onFocusNode?: (nodeId: string) => void;
+  /** エッジに接続されているノードのID（ボトムアップモードでの孤立ノード判定用） */
+  connectedNodeIds?: Set<string> | undefined;
 }
 
 type BrandState = "all" | "none" | "partial";
@@ -211,6 +213,7 @@ export default function NodeSelector({
   displayedNodeIds,
   focusedNodeId,
   onFocusNode,
+  connectedNodeIds,
 }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedBrands, setExpandedBrands] = useState<Set<ExtendedBrand>>(new Set());
@@ -298,6 +301,30 @@ export default function NodeSelector({
     onSelectionChange(new Set());
   }, [onSelectionChange]);
 
+  // 孤立ノード（エッジに接続されていないノード）を選択解除
+  const handleClearIsolatedNodes = useCallback(() => {
+    if (!connectedNodeIds) return;
+    const newSelectedIds = new Set<string>();
+    for (const id of selectedIds) {
+      if (connectedNodeIds.has(id)) {
+        newSelectedIds.add(id);
+      }
+    }
+    onSelectionChange(newSelectedIds);
+  }, [selectedIds, connectedNodeIds, onSelectionChange]);
+
+  // 孤立ノードの数を計算
+  const isolatedNodeCount = useMemo(() => {
+    if (!connectedNodeIds) return 0;
+    let count = 0;
+    for (const id of selectedIds) {
+      if (!connectedNodeIds.has(id)) {
+        count++;
+      }
+    }
+    return count;
+  }, [selectedIds, connectedNodeIds]);
+
   return (
     <div style={{ fontSize: "12px" }}>
       {/* Search input */}
@@ -320,7 +347,7 @@ export default function NodeSelector({
       />
 
       {/* Quick actions */}
-      <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
+      <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
         <button
           onClick={handleSelectAll}
           style={{
@@ -351,6 +378,25 @@ export default function NodeSelector({
         >
           全解除
         </button>
+        {connectedNodeIds && (
+          <button
+            onClick={handleClearIsolatedNodes}
+            disabled={isolatedNodeCount === 0}
+            style={{
+              flex: 1,
+              padding: "4px 8px",
+              fontSize: "11px",
+              background: isolatedNodeCount > 0 ? "#fff3e0" : "#f5f5f5",
+              color: isolatedNodeCount > 0 ? "#e65100" : "#999",
+              border: isolatedNodeCount > 0 ? "1px solid #ffb74d" : "1px solid #ddd",
+              borderRadius: "4px",
+              cursor: isolatedNodeCount > 0 ? "pointer" : "default",
+            }}
+            title={`${isolatedNodeCount}件の孤立ノードを選択解除`}
+          >
+            孤立解除 ({isolatedNodeCount})
+          </button>
+        )}
       </div>
 
       {/* Selection count */}
