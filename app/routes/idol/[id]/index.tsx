@@ -35,7 +35,6 @@ async function loadMetadata(): Promise<{
   return JSON.parse(raw);
 }
 
-
 export default createRoute(
   ssgParams(async () => {
     const ids = await loadIdolIds();
@@ -181,10 +180,7 @@ export default createRoute(
               </p>
               <p className="section-description">
                 このアイドルを選ぶことの珍しさ{" "}
-                <ScoreBadge
-                  metric="idf"
-                  value={detail.selectedBy[0]?.score.idf ?? 0}
-                />
+                <ScoreBadge metric="idf" value={detail.selectedBy[0]?.score.idf ?? 0} />
               </p>
 
               {Object.values(detail.incomingByBrand).some((count) => count > 0) && (
@@ -214,10 +210,7 @@ export default createRoute(
                         <ScoreBadge metric="rank" value={idol.score.rank} suffix="/6位" />
                       )}
                       {idol.score.idfDeviation !== undefined && (
-                        <ScoreBadge
-                          metric="idf-deviation"
-                          value={idol.score.idfDeviation}
-                        />
+                        <ScoreBadge metric="idf-deviation" value={idol.score.idfDeviation} />
                       )}
                     </li>
                   ))}
@@ -268,9 +261,9 @@ export default createRoute(
               </div>
             )}
 
-            {detail.similarIdolGroups && detail.similarIdolGroups.length > 0 && (
+            {(detail.similarIdolGroups?.length ?? 0) > 0 && (
               <SimilarIdolsFilter
-                groups={detail.similarIdolGroups}
+                groups={detail.similarIdolGroups ?? []}
                 selectedIdols={detail.selectedIdols}
               />
             )}
