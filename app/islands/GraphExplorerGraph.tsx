@@ -134,9 +134,9 @@ export default function GraphExplorerGraph({
 
   // Force simulation - runs once and uses refs for dynamic values
   useEffect(() => {
-    const k = 120;
-    const gravity = 0.02; // 弱めの重力
     const damping = 0.9;
+    const boundaryMargin = 50;
+    const boundaryStrength = 0.5;
     let running = true;
 
     function simulate() {
@@ -155,24 +155,45 @@ export default function GraphExplorerGraph({
 
       const alpha = alphaRef.current;
       if (alpha < 0.005) {
-        // 収束したら停止
         animationRef.current = requestAnimationFrame(simulate);
         return;
       }
-      alphaRef.current *= 0.95; // 早めに収束
+      alphaRef.current *= 0.95;
 
       const nodeMap = new Map(simNodes.map((n) => [n.id, n]));
+      const nodeCount = simNodes.length;
+
+      // ノード数に応じてパラメータを調整
+      const k = Math.max(60, Math.min(120, 200 / Math.sqrt(nodeCount + 1)));
+      // ノード数が多いほど中心への引力を強くする
+      const gravity = 0.02 + Math.min(0.08, nodeCount * 0.0005);
 
       // Apply forces (mutate simulation nodes directly)
       for (const node of simNodes) {
         if (node.fx !== null && node.fy !== null) continue;
         node.vx *= damping;
         node.vy *= damping;
-        node.vx += (centerX - node.x) * gravity * 0.01;
-        node.vy += (centerY - node.y) * gravity * 0.01;
+
+        // 中心への引力（距離に比例）
+        const distFromCenter = Math.sqrt((node.x - centerX) ** 2 + (node.y - centerY) ** 2);
+        const gravityForce = gravity * (distFromCenter / 100);
+        node.vx += (centerX - node.x) * gravityForce * 0.01;
+        node.vy += (centerY - node.y) * gravityForce * 0.01;
+
+        // ソフトな境界反発力
+        if (node.x < boundaryMargin) {
+          node.vx += (boundaryMargin - node.x) * boundaryStrength;
+        } else if (node.x > currentWidth - boundaryMargin) {
+          node.vx -= (node.x - (currentWidth - boundaryMargin)) * boundaryStrength;
+        }
+        if (node.y < boundaryMargin) {
+          node.vy += (boundaryMargin - node.y) * boundaryStrength;
+        } else if (node.y > currentHeight - boundaryMargin) {
+          node.vy -= (node.y - (currentHeight - boundaryMargin)) * boundaryStrength;
+        }
       }
 
-      // Repulsion
+      // Repulsion（反発力を距離に応じて減衰）
       for (let i = 0; i < simNodes.length; i++) {
         const nodeI = simNodes[i];
         if (!nodeI) continue;
@@ -182,7 +203,9 @@ export default function GraphExplorerGraph({
           const dx = nodeJ.x - nodeI.x;
           const dy = nodeJ.y - nodeI.y;
           const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const force = ((k * k) / (dist * dist)) * alpha;
+          // 距離が遠いノード間の反発力を減衰
+          const effectiveDist = Math.max(dist, k * 0.5);
+          const force = ((k * k) / (effectiveDist * effectiveDist)) * alpha;
           const fx = (dx / dist) * force;
           const fy = (dy / dist) * force;
           if (nodeI.fx === null) {
@@ -218,7 +241,7 @@ export default function GraphExplorerGraph({
         }
       }
 
-      // Update positions
+      // Update positions（ソフト境界なのでハードクランプは緩めに）
       for (const node of simNodes) {
         if (node.fx !== null) {
           node.x = node.fx;
@@ -230,9 +253,9 @@ export default function GraphExplorerGraph({
         } else {
           node.y += node.vy;
         }
-        // Use current size for boundary clamping
-        node.x = Math.max(30, Math.min(currentWidth - 30, node.x));
-        node.y = Math.max(30, Math.min(currentHeight - 30, node.y));
+        // 完全に外に出ないようにする緩いクランプ
+        node.x = Math.max(-50, Math.min(currentWidth + 50, node.x));
+        node.y = Math.max(-50, Math.min(currentHeight + 50, node.y));
       }
 
       // Copy to render state (new objects for React)
