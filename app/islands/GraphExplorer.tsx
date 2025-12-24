@@ -529,6 +529,37 @@ export default function GraphExplorer({
     setSelectedNodeId(null);
   }, [cooccurrenceCompanionPairs, minPmi, minCooccurrenceSourceCount, idols]);
 
+  // 現在のフィルター条件を満たすエッジに接続されているノードだけを残す
+  const setNodesFromAccompanimentEdges = useCallback(() => {
+    // 現在のフィルター条件でエッジを計算
+    const filteredEdges = calculateEdgesForNodes(nodes, accompaniments, {
+      mutualOnly,
+      minIdf,
+      idfMap,
+    });
+
+    // エッジに接続されているノードIDを収集
+    const connectedNodeIds = new Set<string>();
+    for (const edge of filteredEdges.values()) {
+      connectedNodeIds.add(edge.source);
+      connectedNodeIds.add(edge.target);
+    }
+
+    // 接続されているノードだけを残す
+    const newNodes = new Map<string, ExplorerNode>();
+    for (const id of connectedNodeIds) {
+      const existing = nodes.get(id);
+      if (existing) {
+        newNodes.set(id, existing);
+      }
+    }
+
+    nodesRef.current = newNodes;
+    setNodes(newNodes);
+    setEdges(filteredEdges);
+    setSelectedNodeId(null);
+  }, [nodes, accompaniments, mutualOnly, minIdf, idfMap]);
+
   const handleNodeClick = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId);
   }, []);
@@ -746,7 +777,7 @@ export default function GraphExplorer({
                 cursor: "pointer",
               }}
             >
-              条件を満たすノードだけにする
+              エッジに繋がるノードだけにする
             </button>
           </div>
         )}
@@ -764,7 +795,7 @@ export default function GraphExplorer({
                 相互随伴のみ表示
               </label>
             </div>
-            <div style={{ marginBottom: "4px" }}>
+            <div style={{ marginBottom: "8px" }}>
               <label style={{ display: "block", marginBottom: "2px" }}>
                 最小IDF: {minIdf.toFixed(1)}
               </label>
@@ -778,6 +809,21 @@ export default function GraphExplorer({
                 style={{ width: "100%" }}
               />
             </div>
+            <button
+              onClick={setNodesFromAccompanimentEdges}
+              style={{
+                width: "100%",
+                padding: "6px 8px",
+                fontSize: "11px",
+                background: "#1976d2",
+                color: "#fff",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              エッジに繋がるノードだけにする
+            </button>
           </div>
         )}
       </div>
