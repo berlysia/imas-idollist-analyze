@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Brand } from "@/types";
-import { BrandDot } from "../components/shared";
+import { BrandDot, ScoreBadge } from "../components/shared";
 import { BRAND_NAMES } from "../lib/constants";
 import type { ExplorerNode } from "./graphExplorerTypes";
 import { computeSimilarIdolGroups } from "../lib/compute";
@@ -65,6 +65,23 @@ export default function AccompanimentPanel({
     return list;
   }, [selectedNode.id, accompaniments, idols, idfMap, pmiMap]);
 
+  // 選択中のアイドルを随伴しているアイドルのリスト
+  const incomingAccompaniments = useMemo(() => {
+    const list = Object.entries(accompaniments).flatMap(([idolId, accompIds]) => {
+      if (accompIds.includes(selectedNode.id)) {
+        return [{
+          id: idolId,
+          name: idols[idolId]?.name,
+          brand: idols[idolId]?.brand ?? [],
+          isMutual: accompaniments[selectedNode.id]?.includes(idolId) ?? false,
+          idf: idfMap[idolId] ?? 0,
+        }];
+      }
+      return [];
+    });
+    return list;
+  }, [selectedNode.id, accompaniments]);
+
   // Compute similar idols (same accompaniment choices)
   const similarIdolGroups = useMemo(() => {
     // Build NormalizedData from props
@@ -107,6 +124,9 @@ export default function AccompanimentPanel({
             <BrandDot key={b} brand={b} size="large" />
           ))}
           <span style={{ fontWeight: "bold", fontSize: "16px" }}>{selectedNode.name}</span>
+          <a href={`/idol/${selectedNode.id}`} target="_blank" rel="noreferrer">
+            🔗
+          </a>
         </div>
         <div style={{ fontSize: "12px", color: "#666" }}>
           {selectedNode.brand.map((b) => BRAND_NAMES[b]).join(" / ")}
@@ -186,16 +206,9 @@ export default function AccompanimentPanel({
                         marginTop: "2px",
                       }}
                     >
-                      <span title="IDF: このアイドルを選ぶことの珍しさ（高いほど珍しい選択）">
-                        IDF: {idol.idf.toFixed(2)}
-                      </span>
+                      <ScoreBadge metric="idf" value={idol.idf} />
                       {idol.pmi !== undefined && (
-                        <span
-                          title="PMI: このペアの意外性（高いほど予想外の関係）"
-                          style={{ marginLeft: "8px" }}
-                        >
-                          PMI: {idol.pmi.toFixed(2)}
-                        </span>
+                        <ScoreBadge metric="pmi" value={idol.pmi} />
                       )}
                     </div>
                   </div>
@@ -220,8 +233,92 @@ export default function AccompanimentPanel({
             })
           )}
 
+          <div
+            style={{
+              fontWeight: "bold",
+              fontSize: "13px",
+              padding: "4px 0",
+              marginBottom: "4px",
+              color: "#555",
+            }}
+          >
+            被随伴アイドル ({incomingAccompaniments.length})
+          </div>
+
+          {incomingAccompaniments.length === 0 ? (<div>随伴元アイドルは0名です</div>) : (
+            incomingAccompaniments.map((idol) => {
+              const isExisting = existingNodeIds.has(idol.id);
+              return (
+                <div
+                  key={idol.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "8px",
+                    borderBottom: "1px solid #eee",
+                    background: isExisting ? "#f9f9f9" : "#fff",
+                  }}
+                >
+                  <span style={{ display: "flex", gap: "2px" }}>
+                    {idol.brand.map((b) => (
+                      <BrandDot key={b} brand={b} size="small" />
+                    ))}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: idol.isMutual ? "bold" : "normal",
+                        color: idol.isMutual ? "#1976d2" : "#333",
+                      }}
+                    >
+                      {idol.name}
+                      {idol.isMutual && (
+                        <span
+                          style={{
+                            fontSize: "10px",
+                            marginLeft: "4px",
+                            color: "#1976d2",
+                          }}
+                        >
+                          ↔
+                        </span>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "10px",
+                        color: "#888",
+                        marginTop: "2px",
+                      }}
+                    >
+                      <ScoreBadge metric="idf" value={idol.idf} />
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onAddIdol(selectedNode.id, idol.id)}
+                    disabled={isExisting}
+                    style={{
+                      padding: "4px 8px",
+                      fontSize: "11px",
+                      background: isExisting ? "#e0e0e0" : "#1976d2",
+                      color: isExisting ? "#999" : "#fff",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: isExisting ? "default" : "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {isExisting ? "追加済" : "+追加"}
+                  </button>
+                </div>
+              );
+            })
+          )}
+
           {/* Similar Idols Section */}
-          {similarIdolGroups.length > 0 && (
+          {similarIdolGroups.length > 0 ? (
             <>
               <div
                 style={{
@@ -253,6 +350,7 @@ export default function AccompanimentPanel({
                   const isExisting = existingNodeIds.has(idol.id);
                   const isExpanded = expandedSimilarIdol === idol.id;
                   const similarAccompaniments = accompaniments[idol.id] ?? [];
+                  const similarIdolIdf = idfMap[idol.id] ?? 0;
 
                   return (
                     <div
@@ -286,9 +384,13 @@ export default function AccompanimentPanel({
                           ))}
                         </span>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: "12px" }}>{idol.name}</div>
+                          <div style={{ fontSize: "12px" }}>
+                            {idol.name}
+                            <ScoreBadge metric="idf" value={similarIdolIdf} />
+                          </div>
                           <div style={{ fontSize: "9px", color: "#888" }}>
                             共通: {group.commonAccompaniments.map((a) => a.name).join(", ")}
+                            <ScoreBadge metric="idf-geometric-mean" value={similarIdolIdf} />
                           </div>
                         </div>
                         <button
@@ -352,9 +454,7 @@ export default function AccompanimentPanel({
                                   ))}
                                 </span>
                                 <span style={{ flex: 1 }}>{accompIdol?.name ?? accompId}</span>
-                                <span style={{ fontSize: "9px", color: "#888" }}>
-                                  IDF:{accompIdf.toFixed(1)}
-                                </span>
+                                <ScoreBadge metric="idf" value={accompIdf} />
                                 <button
                                   onClick={() => onAddIdol(idol.id, accompId)}
                                   disabled={accompIsExisting}
@@ -380,9 +480,15 @@ export default function AccompanimentPanel({
                 })
               )}
             </>
+          ) : (
+            <div>類似アイドルは0名です</div>
           )}
+
+          
         </div>
       </div>
+
+
 
       {/* Delete Button */}
       <div

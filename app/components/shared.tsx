@@ -488,3 +488,53 @@ export function GraphSection({ children }: { children: (width: number) => React.
     </div>
   );
 }
+
+export const METRIC_DESCRIPTIONS = {
+  pmi: {
+    label: "PMI",
+    description:
+      "Pointwise Mutual Information: 二者が一緒に現れる頻度が、独立な場合と比べてどれだけ高いかを示す指標。値が高いほど強い関連性を持つ。",
+  },
+  idf: {
+    label: "IDF",
+    description:
+      "Inverse Document Frequency: そのアイドルを選ぶことの珍しさを示す指標。多くの人に選ばれているアイドルほど値が低く、珍しい選択ほど値が高い。",
+  },
+  "idf-deviation": {
+    label: "IDF偏差",
+    description:
+      "選択リスト内での珍しさの偏差。選んだ6人の中でこのアイドルの珍しさが平均からどれだけ離れているかを示す。正の値は平均より珍しい選択。",
+  },
+  rank: {
+    label: "順位",
+    description:
+      "選択リスト内での珍しさ順位。選んだ6人の中でIDF値が高い順に並べた時の順位。1位が最も珍しい選択。",
+  },
+  "idf-geometric-mean": {
+    label: "IDF幾何平均",
+    description:
+      "選択リスト全体の珍しさを示す指標。選んだ6人のIDF値の幾何平均を計算したもの。値が高いほど、全体として珍しい選択。",
+  },
+} as const satisfies Record<string, { label: string; description: string }>;
+
+export type MetricType = keyof typeof METRIC_DESCRIPTIONS;
+
+export function ScoreBadge({
+  metric, value, suffix,
+}: {
+  metric: MetricType;
+  value: number;
+  suffix?: string;
+}) {
+  const { label, description } = METRIC_DESCRIPTIONS[metric];
+  const altValue = ["idf", "idf-geometric-mean"].includes(metric) && value === 0 ? "-" : value.toFixed(2);
+  return (
+    <span className="score-badge-wrapper">
+      <span className="score-badge">
+        {label}: {altValue}
+        {suffix ?? ""}
+      </span>
+      <span className="score-badge-tooltip">{description}</span>
+    </span>
+  );
+}

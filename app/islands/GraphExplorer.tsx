@@ -258,10 +258,7 @@ export default function GraphExplorer({
     return idf ? Number(idf) : 0;
   });
 
-  // 常にisolateモード: nodesFromSelectionをベースにエッジに繋がるノードだけを表示
-
   // Recalculate edges when mode or filter changes
-  // 常にnodesFromSelectionをベースにフィルタリング
   useEffect(() => {
     if (nodesFromSelection.size === 0) {
       nodesRef.current = new Map();
@@ -271,12 +268,20 @@ export default function GraphExplorer({
     }
 
     if (edgeMode === "accompaniment") {
-      // nodesFromSelectionからエッジを計算し、接続されているノードだけを表示
+      // トップダウンモード: エッジに接続されているノードだけを表示
       const filteredEdges = calculateEdgesForNodes(nodesFromSelection, accompaniments, {
         mutualOnly,
         minIdf,
         idfMap,
       });
+
+      if (mode === "bottomup") {
+        // ボトムアップモード: 選択されたノードをそのまま表示、エッジは存在する場合のみ描画
+        nodesRef.current = nodesFromSelection;
+        setNodes(nodesFromSelection);
+        setEdges(filteredEdges);
+        return;
+      }
 
       const connectedNodeIds = new Set<string>();
       for (const edge of filteredEdges.values()) {
@@ -296,13 +301,21 @@ export default function GraphExplorer({
       setNodes(filteredNodes);
       setEdges(filteredEdges);
     } else {
-      // 共起随伴ペアモード
+      // トップダウンモード
       const filteredEdges = calculateCooccurrenceEdgesForNodes(
         nodesFromSelection,
         cooccurrenceCompanionPairs,
         minPmi,
         minCooccurrenceSourceCount
       );
+
+      if (mode === "bottomup") {
+        // ボトムアップモード: 選択されたノードをそのまま表示、エッジは存在する場合のみ描画
+        nodesRef.current = nodesFromSelection;
+        setNodes(nodesFromSelection);
+        setEdges(filteredEdges);
+        return;
+      }
 
       const connectedNodeIds = new Set<string>();
       for (const edge of filteredEdges.values()) {
@@ -323,6 +336,7 @@ export default function GraphExplorer({
       setEdges(filteredEdges);
     }
   }, [
+    mode,
     edgeMode,
     minPmi,
     minCooccurrenceSourceCount,
@@ -466,6 +480,8 @@ export default function GraphExplorer({
       if (!options?.keepSelection) {
         setSelectedNodeId(idol.id);
       }
+
+      setSelectedIds((prev) => new Set(prev).add(idol.id));
     },
     [accompaniments]
   );
@@ -565,7 +581,11 @@ export default function GraphExplorer({
             height: "100%",
           }}
         >
-          <EmptyMessage message="アイドルを検索して追加してください" />
+          {nodesFromSelection.size > 0 ? (
+            <EmptyMessage message="表示できるアイドルがいません" />
+          ) : (
+            <EmptyMessage message="アイドルを検索して追加してください" />
+          )}
         </div>
       ) : (
         <GraphExplorerGraph
@@ -644,7 +664,10 @@ export default function GraphExplorer({
                 共起随伴ペア
               </button>
             </div>
+          </div>
+        )}
 
+          <div style={{ marginTop: "12px", borderTop: "1px solid #eee", paddingTop: "12px" }}>
             {/* 共起随伴ペアモード時のフィルタ */}
             {edgeMode === "cooccurrenceCompanion" && (
               <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
@@ -709,7 +732,6 @@ export default function GraphExplorer({
               </div>
             )}
           </div>
-        )}
       </div>
 
       {/* フローティング凡例（左下） */}
