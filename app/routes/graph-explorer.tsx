@@ -5,6 +5,7 @@ import GraphExplorer from "../islands/GraphExplorer";
 import type { Brand } from "@/types";
 import { SITE_TITLE } from "../lib/constants";
 import { buildIdfMap, computePMIRanking, type NormalizedData } from "../lib/compute";
+import type { CooccurrenceCompanionPairData } from "../islands/graphExplorerTypes";
 
 interface MetadataData {
   scrapedAt: string;
@@ -25,15 +26,18 @@ async function loadData(): Promise<{
   normalized: NormalizedData;
   idfMap: Record<string, number>;
   pmiMap: Record<string, number>;
+  cooccurrenceCompanionPairs: CooccurrenceCompanionPairData[];
 }> {
   const dataDir = join(process.cwd(), "data/precomputed");
-  const [metadataRaw, idolListRaw, normalizedRaw] = await Promise.all([
+  const [metadataRaw, idolListRaw, normalizedRaw, cooccurrenceCompanionRaw] = await Promise.all([
     readFile(join(dataDir, "metadata.json"), "utf-8"),
     readFile(join(dataDir, "idol-list.json"), "utf-8"),
     readFile(join(process.cwd(), "data/normalized.json"), "utf-8"),
+    readFile(join(dataDir, "cooccurrence-companion.json"), "utf-8"),
   ]);
   const idolListData = JSON.parse(idolListRaw);
   const normalized: NormalizedData = JSON.parse(normalizedRaw);
+  const cooccurrenceCompanionData = JSON.parse(cooccurrenceCompanionRaw);
 
   // IDF計算: 各アイドルを選ぶことの珍しさ
   const idfMapInternal = buildIdfMap(normalized);
@@ -60,11 +64,12 @@ async function loadData(): Promise<{
     normalized,
     idfMap,
     pmiMap,
+    cooccurrenceCompanionPairs: cooccurrenceCompanionData.data,
   };
 }
 
 export default createRoute(async (c) => {
-  const { idolList, normalized, idfMap, pmiMap } = await loadData();
+  const { idolList, normalized, idfMap, pmiMap, cooccurrenceCompanionPairs } = await loadData();
 
   return c.render(
     <div
@@ -115,6 +120,7 @@ export default createRoute(async (c) => {
           idols={normalized.idols}
           idfMap={idfMap}
           pmiMap={pmiMap}
+          cooccurrenceCompanionPairs={cooccurrenceCompanionPairs}
         />
       </main>
     </div>,

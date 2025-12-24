@@ -4,7 +4,13 @@ import { EmptyMessage } from "../components/shared";
 import IdolSearchBox from "./IdolSearchBox";
 import GraphExplorerGraph from "./GraphExplorerGraph";
 import AccompanimentPanel from "./AccompanimentPanel";
-import type { IdolListItem, ExplorerNode, ExplorerEdge } from "./graphExplorerTypes";
+import type {
+  IdolListItem,
+  ExplorerNode,
+  ExplorerEdge,
+  EdgeMode,
+  CooccurrenceCompanionPairData,
+} from "./graphExplorerTypes";
 export type { IdolListItem, ExplorerNode, ExplorerEdge } from "./graphExplorerTypes";
 
 interface Props {
@@ -13,6 +19,7 @@ interface Props {
   idols: Record<string, { name: string; brand: Brand[]; kana: string }>;
   idfMap: Record<string, number>;
   pmiMap: Record<string, number>;
+  cooccurrenceCompanionPairs: CooccurrenceCompanionPairData[];
 }
 
 const BRAND_LIST: Brand[] = ["imas", "deremas", "milimas", "sidem", "shiny", "gakuen"];
@@ -129,7 +136,46 @@ function calculateEdgesForNodes(
   return edgeMap;
 }
 
-export default function GraphExplorer({ idolList, accompaniments, idols, idfMap, pmiMap }: Props) {
+function calculateCooccurrenceEdgesForNodes(
+  nodes: Map<string, ExplorerNode>,
+  cooccurrenceCompanionPairs: CooccurrenceCompanionPairData[],
+  minPmi: number,
+  minCooccurrenceSourceCount: number
+): Map<string, ExplorerEdge> {
+  const edgeMap = new Map<string, ExplorerEdge>();
+  const nodeIds = new Set(nodes.keys());
+
+  for (const pair of cooccurrenceCompanionPairs) {
+    if (!nodeIds.has(pair.idolA.id) || !nodeIds.has(pair.idolB.id)) continue;
+    if (pair.pmi < minPmi) continue;
+    if (pair.cooccurrenceSourceCount < minCooccurrenceSourceCount) continue;
+
+    const edgeKey =
+      pair.idolA.id < pair.idolB.id
+        ? `${pair.idolA.id}|${pair.idolB.id}`
+        : `${pair.idolB.id}|${pair.idolA.id}`;
+
+    edgeMap.set(edgeKey, {
+      source: pair.idolA.id,
+      target: pair.idolB.id,
+      isMutual: true,
+      weight: pair.cooccurrenceSourceCount / 10,
+      pmi: pair.pmi,
+      cooccurrenceSourceCount: pair.cooccurrenceSourceCount,
+    });
+  }
+
+  return edgeMap;
+}
+
+export default function GraphExplorer({
+  idolList,
+  accompaniments,
+  idols,
+  idfMap,
+  pmiMap,
+  cooccurrenceCompanionPairs,
+}: Props) {
   const [nodes, setNodes] = useState<Map<string, ExplorerNode>>(() =>
     getInitialNodesFromUrl(idols)
   );
@@ -138,6 +184,34 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
   );
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const isInitializedRef = useRef(false);
+
+  // Edge mode state
+  const [edgeMode, setEdgeMode] = useState<EdgeMode>("accompaniment");
+  const [minPmi, setMinPmi] = useState(0);
+  const [minCooccurrenceSourceCount, setMinCooccurrenceSourceCount] = useState(2);
+
+  // Recalculate edges when mode or filter changes
+  useEffect(() => {
+    if (edgeMode === "accompaniment") {
+      setEdges(calculateEdgesForNodes(nodes, accompaniments));
+    } else {
+      setEdges(
+        calculateCooccurrenceEdgesForNodes(
+          nodes,
+          cooccurrenceCompanionPairs,
+          minPmi,
+          minCooccurrenceSourceCount
+        )
+      );
+    }
+  }, [
+    edgeMode,
+    minPmi,
+    minCooccurrenceSourceCount,
+    nodes,
+    accompaniments,
+    cooccurrenceCompanionPairs,
+  ]);
 
   // Sync nodes to URL query params
   useEffect(() => {
@@ -342,6 +416,27 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
     setSelectedNodeId(null);
   }, []);
 
+  const removeIsolatedNodes = useCallback(() => {
+    const connectedNodeIds = new Set<string>();
+    for (const edge of edges.values()) {
+      connectedNodeIds.add(edge.source);
+      connectedNodeIds.add(edge.target);
+    }
+
+    const newNodes = new Map<string, ExplorerNode>();
+    for (const [id, node] of nodes) {
+      if (connectedNodeIds.has(id)) {
+        newNodes.set(id, node);
+      }
+    }
+
+    nodesRef.current = newNodes;
+    setNodes(newNodes);
+    if (selectedNodeId && !connectedNodeIds.has(selectedNodeId)) {
+      setSelectedNodeId(null);
+    }
+  }, [nodes, edges, selectedNodeId]);
+
   const handleNodeClick = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId);
   }, []);
@@ -402,6 +497,7 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
           selectedNodeId={selectedNodeId}
           onNodeClick={handleNodeClick}
           setNodes={setNodes}
+          edgeMode={edgeMode}
         />
       )}
 
@@ -470,6 +566,91 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
             </button>
           )}
         </div>
+
+        {/* エッジモード切り替え */}
+        <div style={{ display: "flex", gap: "4px", marginTop: "8px" }}>
+          <button
+            onClick={() => setEdgeMode("accompaniment")}
+            style={{
+              flex: 1,
+              padding: "6px 8px",
+              fontSize: "11px",
+              background: edgeMode === "accompaniment" ? "#1976d2" : "#fff",
+              color: edgeMode === "accompaniment" ? "#fff" : "#333",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            随伴
+          </button>
+          <button
+            onClick={() => setEdgeMode("cooccurrenceCompanion")}
+            style={{
+              flex: 1,
+              padding: "6px 8px",
+              fontSize: "11px",
+              background: edgeMode === "cooccurrenceCompanion" ? "#8e44ad" : "#fff",
+              color: edgeMode === "cooccurrenceCompanion" ? "#fff" : "#333",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            共起随伴ペア
+          </button>
+        </div>
+
+        {/* 共起随伴ペアモード時のフィルタ */}
+        {edgeMode === "cooccurrenceCompanion" && (
+          <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
+            <div style={{ marginBottom: "4px" }}>
+              <label style={{ display: "block", marginBottom: "2px" }}>
+                最小PMI: {minPmi.toFixed(1)}
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="10"
+                step="0.5"
+                value={minPmi}
+                onChange={(e) => setMinPmi(Number(e.target.value))}
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div style={{ marginBottom: "8px" }}>
+              <label style={{ display: "block", marginBottom: "2px" }}>
+                最小共起元数: {minCooccurrenceSourceCount}
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                step="1"
+                value={minCooccurrenceSourceCount}
+                onChange={(e) => setMinCooccurrenceSourceCount(Number(e.target.value))}
+                style={{ width: "100%" }}
+              />
+            </div>
+            {nodesArray.length > edgesArray.length && edgesArray.length > 0 && (
+              <button
+                onClick={removeIsolatedNodes}
+                style={{
+                  width: "100%",
+                  padding: "6px 8px",
+                  fontSize: "11px",
+                  background: "#ff9800",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                孤立ノードを削除
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* フローティング凡例（左下） */}
@@ -488,32 +669,68 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
             color: "#666",
           }}
         >
-          <div style={{ marginBottom: "6px" }}>
-            <span
-              style={{
-                display: "inline-block",
-                width: "20px",
-                height: "2px",
-                background: "#1976d2",
-                verticalAlign: "middle",
-                marginRight: "6px",
-              }}
-            />
-            相互随伴
-          </div>
-          <div style={{ marginBottom: "6px" }}>
-            <span
-              style={{
-                display: "inline-block",
-                width: "20px",
-                height: "1px",
-                background: "#999",
-                verticalAlign: "middle",
-                marginRight: "6px",
-              }}
-            />
-            一方向
-          </div>
+          {edgeMode === "accompaniment" ? (
+            <>
+              <div style={{ marginBottom: "6px" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: "20px",
+                    height: "2px",
+                    background: "#1976d2",
+                    verticalAlign: "middle",
+                    marginRight: "6px",
+                  }}
+                />
+                相互随伴
+              </div>
+              <div style={{ marginBottom: "6px" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: "20px",
+                    height: "1px",
+                    background: "#999",
+                    verticalAlign: "middle",
+                    marginRight: "6px",
+                  }}
+                />
+                一方向
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ marginBottom: "6px" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: "20px",
+                    height: "3px",
+                    background: "#d4a017",
+                    verticalAlign: "middle",
+                    marginRight: "6px",
+                  }}
+                />
+                高PMI (≥3.0)
+              </div>
+              <div style={{ marginBottom: "6px" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: "20px",
+                    height: "2px",
+                    background: "#8e44ad",
+                    verticalAlign: "middle",
+                    marginRight: "6px",
+                  }}
+                />
+                通常
+              </div>
+              <div style={{ marginBottom: "6px", color: "#999", fontSize: "10px" }}>
+                太さ = 共起元数
+              </div>
+            </>
+          )}
           <div style={{ marginBottom: "6px" }}>
             <span
               style={{
@@ -528,7 +745,9 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
             />
             固定
           </div>
-          <div style={{ color: "#999", fontSize: "10px" }}>ノード: {nodesArray.length}</div>
+          <div style={{ color: "#999", fontSize: "10px" }}>
+            ノード: {nodesArray.length} / エッジ: {edgesArray.length}
+          </div>
         </div>
       )}
 

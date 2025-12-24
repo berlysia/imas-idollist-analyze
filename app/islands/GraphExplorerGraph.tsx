@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { Brand } from "@/types";
 import { BRAND_COLORS } from "../lib/constants";
-import type { ExplorerNode, ExplorerEdge } from "./graphExplorerTypes";
+import type { ExplorerNode, ExplorerEdge, EdgeMode } from "./graphExplorerTypes";
 
 interface GraphNode {
   id: string;
@@ -23,6 +23,7 @@ interface Props {
   selectedNodeId: string | null;
   onNodeClick: (nodeId: string) => void;
   setNodes: React.Dispatch<React.SetStateAction<Map<string, ExplorerNode>>>;
+  edgeMode: EdgeMode;
 }
 
 export default function GraphExplorerGraph({
@@ -33,6 +34,7 @@ export default function GraphExplorerGraph({
   selectedNodeId,
   onNodeClick,
   setNodes,
+  edgeMode,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const animationRef = useRef<number>(0);
@@ -447,6 +449,30 @@ export default function GraphExplorerGraph({
           >
             <path d="M10,-5L0,0L10,5" fill="#1976d2" />
           </marker>
+          {/* 共起随伴ペア用マーカー（高PMI） */}
+          <marker
+            id="explorer-arrow-highpmi"
+            viewBox="0 -5 10 10"
+            refX={25}
+            refY={0}
+            markerWidth={6}
+            markerHeight={6}
+            orient="auto"
+          >
+            <path d="M0,-5L10,0L0,5" fill="#d4a017" />
+          </marker>
+          {/* 共起随伴ペア用マーカー（通常） */}
+          <marker
+            id="explorer-arrow-cooccurrence"
+            viewBox="0 -5 10 10"
+            refX={25}
+            refY={0}
+            markerWidth={6}
+            markerHeight={6}
+            orient="auto"
+          >
+            <path d="M0,-5L10,0L0,5" fill="#8e44ad" />
+          </marker>
         </defs>
 
         <g transform={`translate(${transform.x},${transform.y}) scale(${transform.scale})`}>
@@ -455,6 +481,29 @@ export default function GraphExplorerGraph({
             const source = nodeMap.get(edge.source);
             const target = nodeMap.get(edge.target);
             if (!source || !target) return null;
+
+            if (edgeMode === "cooccurrenceCompanion") {
+              const isHighPmi = (edge.pmi ?? 0) >= 3.0;
+              const strokeColor = isHighPmi ? "#d4a017" : "#8e44ad";
+              const strokeWidth = 1 + (edge.cooccurrenceSourceCount ?? 1) * 2;
+              const markerEnd = isHighPmi
+                ? "url(#explorer-arrow-highpmi)"
+                : "url(#explorer-arrow-cooccurrence)";
+
+              return (
+                <line
+                  key={`${edge.source}-${edge.target}`}
+                  x1={source.x}
+                  y1={source.y}
+                  x2={target.x}
+                  y2={target.y}
+                  stroke={strokeColor}
+                  strokeOpacity={isHighPmi ? 0.9 : 0.6}
+                  strokeWidth={strokeWidth}
+                  markerEnd={markerEnd}
+                />
+              );
+            }
 
             return (
               <line

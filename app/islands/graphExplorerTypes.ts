@@ -23,4 +23,15 @@ export interface ExplorerEdge {
   isMutual: boolean;
   weight: number;
   pmi?: number;
+  cooccurrenceSourceCount?: number;
+}
+
+export type EdgeMode = "accompaniment" | "cooccurrenceCompanion";
+
+export interface CooccurrenceCompanionPairData {
+  idolA: { id: string; name: string; brand: Brand[] };
+  idolB: { id: string; name: string; brand: Brand[] };
+  cooccurrenceSourceCount: number;
+  cooccurrenceSources: Array<{ id: string; name: string; brand: Brand[] }>;
+  pmi: number;
 }
