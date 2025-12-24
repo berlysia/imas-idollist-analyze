@@ -8,8 +8,8 @@ import type {
   IdolListItem,
   ExplorerNode,
   ExplorerEdge,
-  EdgeMode,
   CooccurrenceCompanionPairData,
+  EdgeVisibility,
 } from "./graphExplorerTypes";
 export type { IdolListItem, ExplorerNode, ExplorerEdge } from "./graphExplorerTypes";
 
@@ -131,7 +131,7 @@ function calculateEdgesForNodes(
           if (edgeIdf < minIdf) continue;
         }
 
-        const edgeKey = idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
+        const edgeKey = idA < idB ? `accomp:${idA}|${idB}` : `accomp:${idB}|${idA}`;
         const source = aToB ? idA : idB;
         const target = aToB ? idB : idA;
 
@@ -140,6 +140,7 @@ function calculateEdgesForNodes(
           target,
           isMutual,
           weight: isMutual ? 1 : 0.5,
+          edgeType: "accompaniment",
         });
       }
     }
@@ -164,8 +165,8 @@ function calculateCooccurrenceEdgesForNodes(
 
     const edgeKey =
       pair.idolA.id < pair.idolB.id
-        ? `${pair.idolA.id}|${pair.idolB.id}`
-        : `${pair.idolB.id}|${pair.idolA.id}`;
+        ? `cooc:${pair.idolA.id}|${pair.idolB.id}`
+        : `cooc:${pair.idolB.id}|${pair.idolA.id}`;
 
     edgeMap.set(edgeKey, {
       source: pair.idolA.id,
@@ -174,6 +175,7 @@ function calculateCooccurrenceEdgesForNodes(
       weight: pair.cooccurrenceSourceCount / 10,
       pmi: pair.pmi,
       cooccurrenceSourceCount: pair.cooccurrenceSourceCount,
+      edgeType: "cooccurrenceCompanion",
     });
   }
 
@@ -225,12 +227,13 @@ export default function GraphExplorer({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const isInitializedRef = useRef(false);
 
-  // Edge mode state - initialize from URL params
-  const [edgeMode, setEdgeMode] = useState<EdgeMode>(() => {
-    if (typeof window === "undefined") return "accompaniment";
+  // Edge visibility state - initialize from URL params
+  const [edgeVisibility, setEdgeVisibility] = useState<EdgeVisibility>(() => {
+    if (typeof window === "undefined") return { accompaniment: true, cooccurrenceCompanion: true };
     const params = new URLSearchParams(window.location.search);
-    const mode = params.get("edgeMode");
-    return mode === "cooccurrenceCompanion" ? "cooccurrenceCompanion" : "accompaniment";
+    const showAccompaniment = params.get("showAccompaniment") !== "false";
+    const showCooccurrence = params.get("showCooccurrence") !== "false";
+    return { accompaniment: showAccompaniment, cooccurrenceCompanion: showCooccurrence };
   });
   const [minPmi, setMinPmi] = useState(() => {
     if (typeof window === "undefined") return 2;
@@ -258,7 +261,7 @@ export default function GraphExplorer({
     return idf ? Number(idf) : 0;
   });
 
-  // Recalculate edges when mode or filter changes
+  // Recalculate edges when visibility or filter changes
   useEffect(() => {
     if (nodesFromSelection.size === 0) {
       nodesRef.current = new Map();
@@ -267,32 +270,43 @@ export default function GraphExplorer({
       return;
     }
 
-    // エッジモードに応じてエッジを計算
-    const filteredEdges =
-      edgeMode === "accompaniment"
-        ? calculateEdgesForNodes(nodesFromSelection, accompaniments, {
-            mutualOnly,
-            minIdf,
-            idfMap,
-          })
-        : calculateCooccurrenceEdgesForNodes(
-            nodesFromSelection,
-            cooccurrenceCompanionPairs,
-            minPmi,
-            minCooccurrenceSourceCount
-          );
+    // 両方のエッジを計算してマージ
+    const allEdges = new Map<string, ExplorerEdge>();
+
+    if (edgeVisibility.accompaniment) {
+      const accompEdges = calculateEdgesForNodes(nodesFromSelection, accompaniments, {
+        mutualOnly,
+        minIdf,
+        idfMap,
+      });
+      for (const [key, edge] of accompEdges) {
+        allEdges.set(key, edge);
+      }
+    }
+
+    if (edgeVisibility.cooccurrenceCompanion) {
+      const coocEdges = calculateCooccurrenceEdgesForNodes(
+        nodesFromSelection,
+        cooccurrenceCompanionPairs,
+        minPmi,
+        minCooccurrenceSourceCount
+      );
+      for (const [key, edge] of coocEdges) {
+        allEdges.set(key, edge);
+      }
+    }
 
     // ボトムアップモード: 選択されたノードをそのまま表示
     if (mode === "bottomup") {
       nodesRef.current = nodesFromSelection;
       setNodes(nodesFromSelection);
-      setEdges(filteredEdges);
+      setEdges(allEdges);
       return;
     }
 
     // トップダウンモード: エッジに接続されているノードだけを表示
     const connectedNodeIds = new Set<string>();
-    for (const edge of filteredEdges.values()) {
+    for (const edge of allEdges.values()) {
       connectedNodeIds.add(edge.source);
       connectedNodeIds.add(edge.target);
     }
@@ -307,10 +321,10 @@ export default function GraphExplorer({
 
     nodesRef.current = filteredNodes;
     setNodes(filteredNodes);
-    setEdges(filteredEdges);
+    setEdges(allEdges);
   }, [
     mode,
-    edgeMode,
+    edgeVisibility,
     minPmi,
     minCooccurrenceSourceCount,
     mutualOnly,
@@ -345,33 +359,56 @@ export default function GraphExplorer({
       params.set("ids", selectionParams.ids);
     }
 
-    // Sync edge mode and filter params
-    if (edgeMode === "cooccurrenceCompanion") {
-      params.set("edgeMode", edgeMode);
-      params.set("minPmi", String(minPmi));
-      params.set("minCooccurrenceSourceCount", String(minCooccurrenceSourceCount));
-      params.delete("mutualOnly");
-      params.delete("minIdf");
+    // Sync edge visibility and filter params
+    params.delete("edgeMode"); // 古いパラメータを削除
+
+    if (!edgeVisibility.accompaniment) {
+      params.set("showAccompaniment", "false");
     } else {
-      params.delete("edgeMode");
+      params.delete("showAccompaniment");
+    }
+
+    if (!edgeVisibility.cooccurrenceCompanion) {
+      params.set("showCooccurrence", "false");
+    } else {
+      params.delete("showCooccurrence");
+    }
+
+    // 随伴関係フィルターパラメータ
+    if (mutualOnly) {
+      params.set("mutualOnly", "true");
+    } else {
+      params.delete("mutualOnly");
+    }
+    if (minIdf > 0) {
+      params.set("minIdf", String(minIdf));
+    } else {
+      params.delete("minIdf");
+    }
+
+    // 共起随伴ペアフィルターパラメータ
+    if (minPmi !== 2) {
+      params.set("minPmi", String(minPmi));
+    } else {
       params.delete("minPmi");
+    }
+    if (minCooccurrenceSourceCount !== 2) {
+      params.set("minCooccurrenceSourceCount", String(minCooccurrenceSourceCount));
+    } else {
       params.delete("minCooccurrenceSourceCount");
-      // 随伴関係モードのフィルターパラメータ
-      if (mutualOnly) {
-        params.set("mutualOnly", "true");
-      } else {
-        params.delete("mutualOnly");
-      }
-      if (minIdf > 0) {
-        params.set("minIdf", String(minIdf));
-      } else {
-        params.delete("minIdf");
-      }
     }
 
     const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
     window.history.replaceState({}, "", newUrl);
-  }, [selectedIds, idolList, edgeMode, minPmi, minCooccurrenceSourceCount, mutualOnly, minIdf]);
+  }, [
+    selectedIds,
+    idolList,
+    edgeVisibility,
+    minPmi,
+    minCooccurrenceSourceCount,
+    mutualOnly,
+    minIdf,
+  ]);
 
   // Ref to access current nodes without stale closure
   const nodesRef = useRef(nodes);
@@ -423,8 +460,8 @@ export default function GraphExplorer({
         if (newToExisting || existingToNew) {
           const edgeKey =
             idol.id < existingNode.id
-              ? `${idol.id}|${existingNode.id}`
-              : `${existingNode.id}|${idol.id}`;
+              ? `accomp:${idol.id}|${existingNode.id}`
+              : `accomp:${existingNode.id}|${idol.id}`;
 
           const isMutual = newToExisting && existingToNew;
           const source = newToExisting ? idol.id : existingNode.id;
@@ -435,6 +472,7 @@ export default function GraphExplorer({
             target,
             isMutual,
             weight: isMutual ? 1 : 0.5,
+            edgeType: "accompaniment",
           });
         }
       });
@@ -575,7 +613,6 @@ export default function GraphExplorer({
           onBackgroundClick={handleBackgroundClick}
           onNodeClick={handleNodeClick}
           setNodes={setNodes}
-          edgeMode={edgeMode}
         />
       )}
 
@@ -604,110 +641,146 @@ export default function GraphExplorer({
         />
 
         <div style={{ marginTop: "12px", borderTop: "1px solid #eee", paddingTop: "12px" }}>
-          <div
-            style={{
-              display: "flex",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              overflow: "hidden",
-            }}
-          >
-            <button
-              onClick={() => setEdgeMode("accompaniment")}
+          <div style={{ fontSize: "11px", color: "#333", marginBottom: "8px" }}>表示するエッジ</div>
+
+          {/* 随伴関係トグル */}
+          <div style={{ marginBottom: "8px" }}>
+            <label
               style={{
-                flex: 1,
-                padding: "6px 8px",
-                fontSize: "11px",
-                background: edgeMode === "accompaniment" ? "#1976d2" : "#fff",
-                color: edgeMode === "accompaniment" ? "#fff" : "#666",
-                border: "none",
-                borderRight: "1px solid #ccc",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
                 cursor: "pointer",
-                fontWeight: edgeMode === "accompaniment" ? "bold" : "normal",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                background: edgeVisibility.accompaniment ? "#e3f2fd" : "#f5f5f5",
+                border: edgeVisibility.accompaniment ? "1px solid #1976d2" : "1px solid #ddd",
               }}
             >
-              随伴関係
-            </button>
-            <button
-              onClick={() => setEdgeMode("cooccurrenceCompanion")}
-              style={{
-                flex: 1,
-                padding: "6px 8px",
-                fontSize: "11px",
-                background: edgeMode === "cooccurrenceCompanion" ? "#8e44ad" : "#fff",
-                color: edgeMode === "cooccurrenceCompanion" ? "#fff" : "#666",
-                border: "none",
-                cursor: "pointer",
-                fontWeight: edgeMode === "cooccurrenceCompanion" ? "bold" : "normal",
-              }}
-            >
-              共起随伴ペア
-            </button>
+              <input
+                type="checkbox"
+                checked={edgeVisibility.accompaniment}
+                onChange={(e) =>
+                  setEdgeVisibility((prev) => ({ ...prev, accompaniment: e.target.checked }))
+                }
+                style={{ margin: 0 }}
+              />
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: edgeVisibility.accompaniment ? "#1976d2" : "#666",
+                  fontWeight: edgeVisibility.accompaniment ? "bold" : "normal",
+                }}
+              >
+                随伴関係
+              </span>
+            </label>
+
+            {edgeVisibility.accompaniment && (
+              <div
+                style={{ marginTop: "6px", marginLeft: "24px", fontSize: "10px", color: "#666" }}
+              >
+                <div style={{ marginBottom: "4px" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <input
+                      type="checkbox"
+                      checked={mutualOnly}
+                      onChange={(e) => setMutualOnly(e.target.checked)}
+                    />
+                    相互随伴のみ表示
+                  </label>
+                </div>
+                <div>
+                  <label style={{ display: "block", marginBottom: "2px" }}>
+                    最小IDF: {minIdf.toFixed(1)}
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="10"
+                    step="0.5"
+                    value={minIdf}
+                    onChange={(e) => setMinIdf(Number(e.target.value))}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* 共起随伴ペアモード時のフィルタ */}
-          {edgeMode === "cooccurrenceCompanion" && (
-            <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
-              <div style={{ marginBottom: "4px" }}>
-                <label style={{ display: "block", marginBottom: "2px" }}>
-                  最小PMI: {minPmi.toFixed(1)}
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="10"
-                  step="0.5"
-                  value={minPmi}
-                  onChange={(e) => setMinPmi(Number(e.target.value))}
-                  style={{ width: "100%" }}
-                />
-              </div>
-              <div>
-                <label style={{ display: "block", marginBottom: "2px" }}>
-                  最小共起元数: {minCooccurrenceSourceCount}
-                </label>
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  step="1"
-                  value={minCooccurrenceSourceCount}
-                  onChange={(e) => setMinCooccurrenceSourceCount(Number(e.target.value))}
-                  style={{ width: "100%" }}
-                />
-              </div>
-            </div>
-          )}
+          {/* 共起随伴ペアトグル */}
+          <div>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                cursor: "pointer",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                background: edgeVisibility.cooccurrenceCompanion ? "#f3e5f5" : "#f5f5f5",
+                border: edgeVisibility.cooccurrenceCompanion
+                  ? "1px solid #8e44ad"
+                  : "1px solid #ddd",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={edgeVisibility.cooccurrenceCompanion}
+                onChange={(e) =>
+                  setEdgeVisibility((prev) => ({
+                    ...prev,
+                    cooccurrenceCompanion: e.target.checked,
+                  }))
+                }
+                style={{ margin: 0 }}
+              />
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: edgeVisibility.cooccurrenceCompanion ? "#8e44ad" : "#666",
+                  fontWeight: edgeVisibility.cooccurrenceCompanion ? "bold" : "normal",
+                }}
+              >
+                共起随伴ペア
+              </span>
+            </label>
 
-          {/* 随伴関係モード時のフィルタ */}
-          {edgeMode === "accompaniment" && (
-            <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
-              <div style={{ marginBottom: "4px" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            {edgeVisibility.cooccurrenceCompanion && (
+              <div
+                style={{ marginTop: "6px", marginLeft: "24px", fontSize: "10px", color: "#666" }}
+              >
+                <div style={{ marginBottom: "4px" }}>
+                  <label style={{ display: "block", marginBottom: "2px" }}>
+                    最小PMI: {minPmi.toFixed(1)}
+                  </label>
                   <input
-                    type="checkbox"
-                    checked={mutualOnly}
-                    onChange={(e) => setMutualOnly(e.target.checked)}
+                    type="range"
+                    min="0"
+                    max="10"
+                    step="0.5"
+                    value={minPmi}
+                    onChange={(e) => setMinPmi(Number(e.target.value))}
+                    style={{ width: "100%" }}
                   />
-                  相互随伴のみ表示
-                </label>
+                </div>
+                <div>
+                  <label style={{ display: "block", marginBottom: "2px" }}>
+                    最小共起元数: {minCooccurrenceSourceCount}
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    step="1"
+                    value={minCooccurrenceSourceCount}
+                    onChange={(e) => setMinCooccurrenceSourceCount(Number(e.target.value))}
+                    style={{ width: "100%" }}
+                  />
+                </div>
               </div>
-              <div>
-                <label style={{ display: "block", marginBottom: "2px" }}>
-                  最小IDF: {minIdf.toFixed(1)}
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="10"
-                  step="0.5"
-                  value={minIdf}
-                  onChange={(e) => setMinIdf(Number(e.target.value))}
-                  style={{ width: "100%" }}
-                />
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
@@ -727,9 +800,20 @@ export default function GraphExplorer({
             color: "#666",
           }}
         >
-          {edgeMode === "accompaniment" ? (
+          {/* 随伴関係の凡例 */}
+          {edgeVisibility.accompaniment && (
             <>
-              <div style={{ marginBottom: "6px" }}>
+              <div
+                style={{
+                  marginBottom: "4px",
+                  fontWeight: "bold",
+                  fontSize: "10px",
+                  color: "#1976d2",
+                }}
+              >
+                随伴関係
+              </div>
+              <div style={{ marginBottom: "4px" }}>
                 <span
                   style={{
                     display: "inline-block",
@@ -756,9 +840,22 @@ export default function GraphExplorer({
                 一方向
               </div>
             </>
-          ) : (
+          )}
+
+          {/* 共起随伴ペアの凡例 */}
+          {edgeVisibility.cooccurrenceCompanion && (
             <>
-              <div style={{ marginBottom: "6px" }}>
+              <div
+                style={{
+                  marginBottom: "4px",
+                  fontWeight: "bold",
+                  fontSize: "10px",
+                  color: "#8e44ad",
+                }}
+              >
+                共起随伴ペア
+              </div>
+              <div style={{ marginBottom: "4px" }}>
                 <span
                   style={{
                     display: "inline-block",
@@ -771,7 +868,7 @@ export default function GraphExplorer({
                 />
                 高PMI (≥3.0)
               </div>
-              <div style={{ marginBottom: "6px" }}>
+              <div style={{ marginBottom: "4px" }}>
                 <span
                   style={{
                     display: "inline-block",
@@ -789,7 +886,17 @@ export default function GraphExplorer({
               </div>
             </>
           )}
-          <div style={{ marginBottom: "6px" }}>
+
+          <div
+            style={{
+              marginBottom: "6px",
+              borderTop:
+                edgeVisibility.accompaniment || edgeVisibility.cooccurrenceCompanion
+                  ? "1px solid #eee"
+                  : "none",
+              paddingTop: "4px",
+            }}
+          >
             <span
               style={{
                 display: "inline-block",
@@ -865,7 +972,6 @@ export default function GraphExplorer({
                 onDeleteNode={deleteNode}
                 idfMap={idfMap}
                 pmiMap={pmiMap}
-                edgeMode={edgeMode}
                 cooccurrenceCompanionPairs={cooccurrenceCompanionPairs}
               />
             ) : (

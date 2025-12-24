@@ -24,9 +24,15 @@ export interface ExplorerEdge {
   weight: number;
   pmi?: number;
   cooccurrenceSourceCount?: number;
+  edgeType: EdgeType;
 }
 
-export type EdgeMode = "accompaniment" | "cooccurrenceCompanion";
+export type EdgeType = "accompaniment" | "cooccurrenceCompanion";
+
+export interface EdgeVisibility {
+  accompaniment: boolean;
+  cooccurrenceCompanion: boolean;
+}
 
 export interface CooccurrenceCompanionPairData {
   idolA: { id: string; name: string; brand: Brand[] };

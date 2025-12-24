@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { Brand } from "@/types";
 import { BrandDot, ScoreBadge } from "../components/shared";
 import { BRAND_NAMES } from "../lib/constants";
-import type { ExplorerNode, EdgeMode, CooccurrenceCompanionPairData } from "./graphExplorerTypes";
+import type { ExplorerNode, CooccurrenceCompanionPairData } from "./graphExplorerTypes";
 import { computeSimilarIdolGroups } from "../lib/compute";
 
 interface Props {
@@ -14,7 +14,6 @@ interface Props {
   onDeleteNode: (nodeId: string) => void;
   idfMap: Record<string, number>;
   pmiMap: Record<string, number>;
-  edgeMode?: EdgeMode;
   cooccurrenceCompanionPairs?: CooccurrenceCompanionPairData[];
 }
 
@@ -27,7 +26,6 @@ export default function AccompanimentPanel({
   onDeleteNode,
   idfMap,
   pmiMap,
-  edgeMode,
   cooccurrenceCompanionPairs,
 }: Props) {
   const [expandedSimilarIdol, setExpandedSimilarIdol] = useState<string | null>(null);
@@ -108,9 +106,9 @@ export default function AccompanimentPanel({
     return computeSimilarIdolGroups(normalizedData, selectedNode.id, idfMapAsMap, 5);
   }, [selectedNode.id, idols, accompaniments, idfMap]);
 
-  // 共起随伴ペアモード時: 選択アイドルとペアを形成している相手アイドル一覧
+  // 選択アイドルとペアを形成している相手アイドル一覧
   const cooccurrencePartners = useMemo(() => {
-    if (edgeMode !== "cooccurrenceCompanion" || !cooccurrenceCompanionPairs) {
+    if (!cooccurrenceCompanionPairs) {
       return [];
     }
 
@@ -123,7 +121,7 @@ export default function AccompanimentPanel({
         cooccurrenceSources: pair.cooccurrenceSources,
       }))
       .sort((a, b) => b.pmi - a.pmi);
-  }, [selectedNode.id, edgeMode, cooccurrenceCompanionPairs]);
+  }, [selectedNode.id, cooccurrenceCompanionPairs]);
 
   return (
     <div

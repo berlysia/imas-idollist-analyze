@@ -354,42 +354,44 @@ export default function NodeSelector({
       </div>
 
       {/* Selection count */}
-      <div style={{ marginBottom: "8px", color: "#666", fontSize: "11px" }}>
-        {selectedIds.size} / {idolList.length} 選択中
-      </div>
+      <details>
+        <summary style={{ color: "#666", fontSize: "11px" }}>
+          {selectedIds.size} / {idolList.length} 選択中
+        </summary>
 
-      {/* Brand list */}
-      <div
-        style={{
-          maxHeight: "300px",
-          overflowY: "auto",
-          border: "1px solid #eee",
-          borderRadius: "4px",
-        }}
-      >
-        {filteredIdolsByBrand.map(({ brand, idols }) => (
-          <BrandRow
-            key={brand}
-            brand={brand}
-            idols={idols}
-            originalIdols={idolsByBrand.find((b) => b.brand === brand)?.idols ?? idols}
-            selectedIds={selectedIds}
-            displayedNodeIds={displayedNodeIds}
-            focusedNodeId={focusedNodeId}
-            isExpanded={expandedBrands.has(brand)}
-            onToggle={() => toggleBrand(brand)}
-            onBrandCheckChange={handleBrandCheckChange}
-            onIdolCheckChange={handleIdolCheckChange}
-            onFocusNode={onFocusNode}
-          />
-        ))}
+        {/* Brand list */}
+        <div
+          style={{
+            maxHeight: "300px",
+            overflowY: "auto",
+            border: "1px solid #eee",
+            borderRadius: "4px",
+          }}
+        >
+          {filteredIdolsByBrand.map(({ brand, idols }) => (
+            <BrandRow
+              key={brand}
+              brand={brand}
+              idols={idols}
+              originalIdols={idolsByBrand.find((b) => b.brand === brand)?.idols ?? idols}
+              selectedIds={selectedIds}
+              displayedNodeIds={displayedNodeIds}
+              focusedNodeId={focusedNodeId}
+              isExpanded={expandedBrands.has(brand)}
+              onToggle={() => toggleBrand(brand)}
+              onBrandCheckChange={handleBrandCheckChange}
+              onIdolCheckChange={handleIdolCheckChange}
+              onFocusNode={onFocusNode}
+            />
+          ))}
 
-        {filteredIdolsByBrand.length === 0 && searchQuery.trim() && (
-          <div style={{ padding: "16px", textAlign: "center", color: "#999" }}>
-            該当するアイドルが見つかりません
-          </div>
-        )}
-      </div>
+          {filteredIdolsByBrand.length === 0 && searchQuery.trim() && (
+            <div style={{ padding: "16px", textAlign: "center", color: "#999" }}>
+              該当するアイドルが見つかりません
+            </div>
+          )}
+        </div>
+      </details>
     </div>
   );
 }

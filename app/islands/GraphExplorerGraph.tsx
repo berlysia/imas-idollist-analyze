@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { Brand } from "@/types";
 import { BRAND_COLORS } from "../lib/constants";
-import type { ExplorerNode, ExplorerEdge, EdgeMode } from "./graphExplorerTypes";
+import type { ExplorerNode, ExplorerEdge } from "./graphExplorerTypes";
 
 interface GraphNode {
   id: string;
@@ -24,7 +24,6 @@ interface Props {
   onNodeClick: (nodeId: string) => void;
   onBackgroundClick?: () => void;
   setNodes: React.Dispatch<React.SetStateAction<Map<string, ExplorerNode>>>;
-  edgeMode: EdgeMode;
 }
 
 export default function GraphExplorerGraph({
@@ -36,7 +35,6 @@ export default function GraphExplorerGraph({
   onBackgroundClick,
   onNodeClick,
   setNodes,
-  edgeMode,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const animationRef = useRef<number>(0);
@@ -458,19 +456,22 @@ export default function GraphExplorerGraph({
 
         <g transform={`translate(${transform.x},${transform.y}) scale(${transform.scale})`}>
           {/* Edges */}
-          {edges.map((edge) => {
+          {edges.map((edge, idx) => {
             const source = nodeMap.get(edge.source);
             const target = nodeMap.get(edge.target);
             if (!source || !target) return null;
 
-            if (edgeMode === "cooccurrenceCompanion") {
+            const edgeKey = `${edge.edgeType}-${edge.source}-${edge.target}-${idx}`;
+
+            // 共起随伴ペア
+            if (edge.edgeType === "cooccurrenceCompanion") {
               const isHighPmi = (edge.pmi ?? 0) >= 3.0;
               const strokeColor = isHighPmi ? "#d4a017" : "#8e44ad";
               const strokeWidth = 1 + (edge.cooccurrenceSourceCount ?? 1) * 2;
 
               return (
                 <line
-                  key={`${edge.source}-${edge.target}`}
+                  key={edgeKey}
                   x1={source.x}
                   y1={source.y}
                   x2={target.x}
@@ -482,12 +483,13 @@ export default function GraphExplorerGraph({
               );
             }
 
+            // 随伴関係
             if (edge.isMutual) {
               // 相互随伴: 矢印なし、中央に丸
               const midX = (source.x + target.x) / 2;
               const midY = (source.y + target.y) / 2;
               return (
-                <g key={`${edge.source}-${edge.target}`}>
+                <g key={edgeKey}>
                   <line
                     x1={source.x}
                     y1={source.y}
@@ -505,7 +507,7 @@ export default function GraphExplorerGraph({
             // 片方向随伴: 矢印あり
             return (
               <line
-                key={`${edge.source}-${edge.target}`}
+                key={edgeKey}
                 x1={source.x}
                 y1={source.y}
                 x2={target.x}
