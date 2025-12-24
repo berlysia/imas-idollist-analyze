@@ -194,12 +194,12 @@ export default function GraphExplorer({
   pmiMap,
   cooccurrenceCompanionPairs,
 }: Props) {
-  const [nodes, setNodes] = useState<Map<string, ExplorerNode>>(() =>
-    getInitialNodesFromUrl(idols)
-  );
-  const [edges, setEdges] = useState<Map<string, ExplorerEdge>>(() =>
-    calculateEdgesForNodes(getInitialNodesFromUrl(idols), accompaniments)
-  );
+  // 初期ノードを取得
+  const initialNodes = useMemo(() => getInitialNodesFromUrl(idols), [idols]);
+
+  const [nodes, setNodes] = useState<Map<string, ExplorerNode>>(() => initialNodes);
+  // エッジは後でuseEffectで計算される（フィルター適用のため）
+  const [edges, setEdges] = useState<Map<string, ExplorerEdge>>(() => new Map());
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const isInitializedRef = useRef(false);
 
@@ -237,8 +237,11 @@ export default function GraphExplorer({
   });
 
   // Isolateモード: エッジに繋がるノードだけを動的にフィルタリングする
-  const [isIsolateMode, setIsIsolateMode] = useState(false);
-  const [baseNodes, setBaseNodes] = useState<Map<string, ExplorerNode> | null>(null);
+  // 初期値はtrue（初期ノードがある場合）
+  const [isIsolateMode, setIsIsolateMode] = useState(() => initialNodes.size > 0);
+  const [baseNodes, setBaseNodes] = useState<Map<string, ExplorerNode> | null>(() =>
+    initialNodes.size > 0 ? initialNodes : null
+  );
 
   // Recalculate edges when mode or filter changes
   // Isolateモードの場合はbaseNodesからフィルタリング
@@ -790,6 +793,50 @@ export default function GraphExplorer({
           >
             共起随伴ペア
           </button>
+        </div>
+
+        {/* Isolateモード表示・切り替え */}
+        <div
+          style={{
+            marginTop: "8px",
+            padding: "6px 8px",
+            background: isIsolateMode ? "#e3f2fd" : "#f5f5f5",
+            borderRadius: "4px",
+            fontSize: "11px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <span style={{ color: isIsolateMode ? "#1976d2" : "#666" }}>
+              {isIsolateMode ? "🔒 全体から再計算" : "📝 現在のノードを編集"}
+            </span>
+            {isIsolateMode && (
+              <button
+                onClick={disableIsolateMode}
+                style={{
+                  padding: "2px 6px",
+                  fontSize: "10px",
+                  background: "#fff",
+                  color: "#666",
+                  border: "1px solid #ccc",
+                  borderRadius: "3px",
+                  cursor: "pointer",
+                }}
+              >
+                解除
+              </button>
+            )}
+          </div>
+          {isIsolateMode && baseNodes && (
+            <div style={{ marginTop: "4px", color: "#999", fontSize: "10px" }}>
+              ベース: {baseNodes.size}ノード
+            </div>
+          )}
         </div>
 
         {/* 共起随伴ペアモード時のフィルタ */}
