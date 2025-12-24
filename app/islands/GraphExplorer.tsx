@@ -444,7 +444,7 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
             defaultValue=""
           >
             <option value="" disabled>
-              プリセットで追加...
+              プリセットを適用...
             </option>
             <option value="all">全アイドル</option>
             {BRAND_LIST.map((brand) => (
