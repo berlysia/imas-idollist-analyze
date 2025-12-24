@@ -304,12 +304,33 @@ function ClusterCard({
     [cluster.memberRoles]
   );
 
+  const graphExplorerUrl = useMemo(() => {
+    const ids = cluster.members.join(",");
+    return `/graph-explorer/bottomup?ids=${encodeURIComponent(ids)}`;
+  }, [cluster.members]);
+
   return (
     <ClusterCardContainer id={`cluster-${originalIndex}`}>
       <ClusterCardHeader>
         <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
           <RankBadge rank={rank} variant="cooccurrence" />
           {cluster.memberDetails.length}人 / {cluster.brandCount}ブランド
+          <a
+            href={graphExplorerUrl}
+            style={{
+              fontSize: "12px",
+              fontWeight: "normal",
+              color: "#8e44ad",
+              textDecoration: "none",
+              padding: "2px 8px",
+              background: "#f3e5f5",
+              borderRadius: "4px",
+              marginLeft: "4px",
+            }}
+            title="このクラスタのメンバーをボトムアップグラフ探索で開く"
+          >
+            グラフ探索 →
+          </a>
         </h3>
         <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
           <StatLabel label="同時選出" value={`${cluster.totalCooccurrenceSourceCount}件`} />

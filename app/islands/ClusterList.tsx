@@ -150,12 +150,33 @@ function ClusterCard({
 
   const displayMembers = cluster.memberRoles;
 
+  const graphExplorerUrl = useMemo(() => {
+    const ids = cluster.members.join(",");
+    return `/graph-explorer/bottomup?ids=${encodeURIComponent(ids)}`;
+  }, [cluster.members]);
+
   return (
     <ClusterCardContainer id={`cluster-${originalIndex}`}>
       <ClusterCardHeader>
         <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
           <RankBadge rank={rank} />
           {cluster.memberRoles.length}人のクラスタ
+          <a
+            href={graphExplorerUrl}
+            style={{
+              fontSize: "12px",
+              fontWeight: "normal",
+              color: "#1976d2",
+              textDecoration: "none",
+              padding: "2px 8px",
+              background: "#e3f2fd",
+              borderRadius: "4px",
+              marginLeft: "4px",
+            }}
+            title="このクラスタのメンバーをボトムアップグラフ探索で開く"
+          >
+            グラフ探索 →
+          </a>
         </h3>
         <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
           <StatLabel label="密度" value={`${(cluster.density * 100).toFixed(0)}%`} />
