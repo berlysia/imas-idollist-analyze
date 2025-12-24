@@ -22,6 +22,7 @@ interface Props {
   height: number;
   selectedNodeId: string | null;
   onNodeClick: (nodeId: string) => void;
+  onBackgroundClick?: () => void;
   setNodes: React.Dispatch<React.SetStateAction<Map<string, ExplorerNode>>>;
   edgeMode: EdgeMode;
 }
@@ -32,6 +33,7 @@ export default function GraphExplorerGraph({
   width,
   height,
   selectedNodeId,
+  onBackgroundClick,
   onNodeClick,
   setNodes,
   edgeMode,
@@ -404,6 +406,7 @@ export default function GraphExplorerGraph({
         ref={svgRef}
         width={width}
         height={height}
+        onClick={onBackgroundClick}
         onMouseDown={handleBackgroundMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
