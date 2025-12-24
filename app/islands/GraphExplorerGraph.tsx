@@ -554,7 +554,7 @@ export default function GraphExplorerGraph({
                 )}
                 <circle
                   r={20}
-                  fill={BRAND_COLORS[node.brand[0] ?? "imas"]}
+                  fill={BRAND_COLORS[node.brand[0] ?? "other"]}
                   stroke={isSelected ? "#ff9800" : isPinned ? "#4caf50" : "#fff"}
                   strokeWidth={isSelected ? 4 : isPinned ? 3 : 2}
                 />

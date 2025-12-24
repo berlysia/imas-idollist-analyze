@@ -8,7 +8,8 @@ export type Brand =
   | "milimas" // ミリオンライブ
   | "sidem" // SideM
   | "shiny" // シャイニーカラーズ
-  | "gakuen"; // 学園アイドルマスター
+  | "gakuen" // 学園アイドルマスター
+  | "other"; // その他
 
 /**
  * アイドルの基本情報

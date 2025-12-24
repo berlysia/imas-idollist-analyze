@@ -9,6 +9,7 @@ export const BRAND_COLORS: Record<Brand, string> = {
   sidem: "#0fbe94",
   shiny: "#8dbbff",
   gakuen: "#f39800",
+  other: "#666666",
 };
 
 export const BRAND_NAMES: Record<Brand, string> = {
@@ -18,6 +19,7 @@ export const BRAND_NAMES: Record<Brand, string> = {
   sidem: "SideM",
   shiny: "シャニマス",
   gakuen: "学マス",
+  other: "その他",
 };
 
-export const ALL_BRANDS: Brand[] = ["imas", "deremas", "milimas", "sidem", "shiny", "gakuen"];
+export const ALL_BRANDS: Brand[] = ["imas", "deremas", "milimas", "sidem", "shiny", "gakuen", "other"];
