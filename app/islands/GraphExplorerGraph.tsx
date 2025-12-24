@@ -460,6 +460,12 @@ export default function GraphExplorerGraph({
           >
             <path d="M0,-5L10,0L0,5" fill="#8e44ad" />
           </marker>
+          {/* ノード画像用クリップパス */}
+          {renderNodes.map((node) => (
+            <clipPath key={`clip-${node.id}`} id={`clip-${node.id}`}>
+              <circle r={20} />
+            </clipPath>
+          ))}
         </defs>
 
         <g transform={`translate(${transform.x},${transform.y}) scale(${transform.scale})`}>
@@ -584,12 +590,6 @@ export default function GraphExplorerGraph({
                     strokeDasharray="4,2"
                   />
                 )}
-                {/* Clip path for circular image */}
-                <defs>
-                  <clipPath id={`clip-${node.id}`}>
-                    <circle r={nodeRadius} />
-                  </clipPath>
-                </defs>
                 {/* Background circle (fallback color) */}
                 <circle r={nodeRadius} fill={brandColor} />
                 {/* Idol image */}
