@@ -163,10 +163,10 @@ export default function GraphExplorerGraph({
       const nodeMap = new Map(simNodes.map((n) => [n.id, n]));
       const nodeCount = simNodes.length;
 
-      // ノード数に応じてパラメータを調整
-      const k = Math.max(60, Math.min(120, 200 / Math.sqrt(nodeCount + 1)));
-      // ノード数が多いほど中心への引力を強くする
-      const gravity = 0.02 + Math.min(0.08, nodeCount * 0.0005);
+      // ノード数に応じてパラメータを調整（より広がるように）
+      const k = Math.max(80, Math.min(150, 300 / Math.sqrt(nodeCount + 1)));
+      // 中心への引力は控えめに（端に溜まらない程度）
+      const gravity = 0.01 + Math.min(0.03, nodeCount * 0.0002);
 
       // Apply forces (mutate simulation nodes directly)
       for (const node of simNodes) {
@@ -174,11 +174,15 @@ export default function GraphExplorerGraph({
         node.vx *= damping;
         node.vy *= damping;
 
-        // 中心への引力（距離に比例）
+        // 中心への引力（境界から離れるほど弱く、中心近くでは働かない）
         const distFromCenter = Math.sqrt((node.x - centerX) ** 2 + (node.y - centerY) ** 2);
-        const gravityForce = gravity * (distFromCenter / 100);
-        node.vx += (centerX - node.x) * gravityForce * 0.01;
-        node.vy += (centerY - node.y) * gravityForce * 0.01;
+        const maxDist = Math.min(currentWidth, currentHeight) / 2;
+        // 中心から一定距離以上離れた場合のみ引力を適用
+        if (distFromCenter > maxDist * 0.6) {
+          const gravityForce = gravity * ((distFromCenter - maxDist * 0.6) / maxDist);
+          node.vx += (centerX - node.x) * gravityForce * 0.01;
+          node.vy += (centerY - node.y) * gravityForce * 0.01;
+        }
 
         // ソフトな境界反発力
         if (node.x < boundaryMargin) {
@@ -193,7 +197,7 @@ export default function GraphExplorerGraph({
         }
       }
 
-      // Repulsion（反発力を距離に応じて減衰）
+      // Repulsion（ノード間の反発力）
       for (let i = 0; i < simNodes.length; i++) {
         const nodeI = simNodes[i];
         if (!nodeI) continue;
@@ -203,9 +207,8 @@ export default function GraphExplorerGraph({
           const dx = nodeJ.x - nodeI.x;
           const dy = nodeJ.y - nodeI.y;
           const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          // 距離が遠いノード間の反発力を減衰
-          const effectiveDist = Math.max(dist, k * 0.5);
-          const force = ((k * k) / (effectiveDist * effectiveDist)) * alpha;
+          // 近距離では強い反発、遠距離では弱い反発
+          const force = ((k * k) / (dist * dist + 100)) * alpha * 1.5;
           const fx = (dx / dist) * force;
           const fy = (dy / dist) * force;
           if (nodeI.fx === null) {
