@@ -1,9 +1,9 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import type { Brand } from "@/types";
 import { EmptyMessage } from "../components/shared";
-import IdolSearchBox from "./IdolSearchBox";
 import GraphExplorerGraph from "./GraphExplorerGraph";
 import AccompanimentPanel from "./AccompanimentPanel";
+import NodeSelector, { getSelectionUrlParams, parseSelectionFromUrl } from "./NodeSelector";
 import type {
   IdolListItem,
   ExplorerNode,
@@ -23,15 +23,6 @@ interface Props {
 }
 
 const BRAND_LIST: Brand[] = ["imas", "deremas", "milimas", "sidem", "shiny", "gakuen"];
-
-const BRAND_LABELS: Record<Brand, string> = {
-  imas: "765PRO",
-  deremas: "シンデレラ",
-  milimas: "ミリオン",
-  sidem: "SideM",
-  shiny: "シャイニー",
-  gakuen: "学マス",
-};
 
 function getIdolsByBrand(
   idols: Record<string, { name: string; brand: Brand[]; kana: string }>,
@@ -194,10 +185,37 @@ export default function GraphExplorer({
   pmiMap,
   cooccurrenceCompanionPairs,
 }: Props) {
-  // 初期ノードを取得
+  // 選択されたアイドルIDのセット（NodeSelectorと同期）
+  const initialSelectedIds = useMemo(() => {
+    if (typeof window === "undefined") return new Set<string>();
+    const params = new URLSearchParams(window.location.search);
+    return parseSelectionFromUrl(params, idolList);
+  }, [idolList]);
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => initialSelectedIds);
+
+  // 選択IDからノードマップを生成
+  const nodesFromSelection = useMemo(() => {
+    const nodeMap = new Map<string, ExplorerNode>();
+    for (const id of selectedIds) {
+      const idol = idols[id];
+      if (idol) {
+        nodeMap.set(id, {
+          id,
+          name: idol.name,
+          brand: idol.brand,
+        });
+      }
+    }
+    return nodeMap;
+  }, [selectedIds, idols]);
+
+  // 初期ノードを取得（後方互換性のため残す）
   const initialNodes = useMemo(() => getInitialNodesFromUrl(idols), [idols]);
 
-  const [nodes, setNodes] = useState<Map<string, ExplorerNode>>(() => initialNodes);
+  const [nodes, setNodes] = useState<Map<string, ExplorerNode>>(() =>
+    nodesFromSelection.size > 0 ? nodesFromSelection : initialNodes
+  );
   // エッジは後でuseEffectで計算される（フィルター適用のため）
   const [edges, setEdges] = useState<Map<string, ExplorerEdge>>(() => new Map());
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -237,10 +255,11 @@ export default function GraphExplorer({
   });
 
   // Isolateモード: エッジに繋がるノードだけを動的にフィルタリングする
-  // 初期値はtrue（初期ノードがある場合）
-  const [isIsolateMode, setIsIsolateMode] = useState(() => initialNodes.size > 0);
+  // 初期値はtrue（選択があればtrue）
+  const hasInitialSelection = nodesFromSelection.size > 0 || initialNodes.size > 0;
+  const [isIsolateMode, setIsIsolateMode] = useState(() => hasInitialSelection);
   const [baseNodes, setBaseNodes] = useState<Map<string, ExplorerNode> | null>(() =>
-    initialNodes.size > 0 ? initialNodes : null
+    hasInitialSelection ? (nodesFromSelection.size > 0 ? nodesFromSelection : initialNodes) : null
   );
 
   // Recalculate edges when mode or filter changes
@@ -361,7 +380,7 @@ export default function GraphExplorer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, isIsolateMode]);
 
-  // Sync nodes to URL query params
+  // Sync selection to URL query params
   useEffect(() => {
     // Skip the first render to avoid overwriting URL on SSR hydration
     if (!isInitializedRef.current) {
@@ -369,38 +388,20 @@ export default function GraphExplorer({
       return;
     }
 
-    const ids = Array.from(nodes.keys());
     const params = new URLSearchParams(window.location.search);
-    const totalIdolCount = Object.keys(idols).length;
 
-    // 全アイドルが表示されている場合は preset=all を使用
-    if (ids.length === totalIdolCount && ids.length > 0) {
-      params.delete("ids");
-      params.set("preset", "all");
-    } else if (ids.length > 0) {
-      // ブランド別プリセットかチェック
-      let matchedBrand: Brand | null = null;
-      for (const brand of BRAND_LIST) {
-        const brandIdols = getIdolsByBrand(idols, brand);
-        if (brandIdols.size === ids.length) {
-          const allMatch = ids.every((id) => brandIdols.has(id));
-          if (allMatch) {
-            matchedBrand = brand;
-            break;
-          }
-        }
-      }
+    // 古い形式のパラメータを削除
+    params.delete("preset");
+    params.delete("ids");
+    params.delete("brands");
 
-      if (matchedBrand) {
-        params.delete("ids");
-        params.set("preset", matchedBrand);
-      } else {
-        params.delete("preset");
-        params.set("ids", ids.join(","));
-      }
-    } else {
-      params.delete("ids");
-      params.delete("preset");
+    // 新しい形式でパラメータを設定
+    const selectionParams = getSelectionUrlParams(selectedIds, idolList);
+    if (selectionParams.brands) {
+      params.set("brands", selectionParams.brands);
+    }
+    if (selectionParams.ids) {
+      params.set("ids", selectionParams.ids);
     }
 
     // Sync edge mode and filter params
@@ -429,11 +430,45 @@ export default function GraphExplorer({
 
     const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
     window.history.replaceState({}, "", newUrl);
-  }, [nodes, idols, edgeMode, minPmi, minCooccurrenceSourceCount, mutualOnly, minIdf]);
+  }, [selectedIds, idolList, edgeMode, minPmi, minCooccurrenceSourceCount, mutualOnly, minIdf]);
 
   // Ref to access current nodes without stale closure
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
+
+  // 選択が変更されたらノードを更新
+  const handleSelectionChange = useCallback(
+    (newSelectedIds: Set<string>) => {
+      setSelectedIds(newSelectedIds);
+
+      // ノードマップを更新
+      const newNodes = new Map<string, ExplorerNode>();
+      for (const id of newSelectedIds) {
+        const idol = idols[id];
+        if (idol) {
+          // 既存のノード位置を保持
+          const existingNode = nodesRef.current.get(id);
+          newNodes.set(id, {
+            id,
+            name: idol.name,
+            brand: idol.brand,
+            x: existingNode?.x,
+            y: existingNode?.y,
+            fx: existingNode?.fx,
+            fy: existingNode?.fy,
+          });
+        }
+      }
+
+      nodesRef.current = newNodes;
+      setNodes(newNodes);
+
+      // baseNodesも更新（Isolateモード用）
+      setBaseNodes(newNodes.size > 0 ? newNodes : null);
+      setIsIsolateMode(newNodes.size > 0);
+    },
+    [idols]
+  );
 
   const nodesArray = useMemo(() => Array.from(nodes.values()), [nodes]);
   const edgesArray = useMemo(() => Array.from(edges.values()), [edges]);
@@ -568,50 +603,6 @@ export default function GraphExplorer({
     },
     [selectedNodeId]
   );
-
-  const addAllIdols = useCallback(() => {
-    disableIsolateMode();
-    const allNodes = new Map<string, ExplorerNode>();
-    for (const [id, idol] of Object.entries(idols)) {
-      allNodes.set(id, {
-        id,
-        name: idol.name,
-        brand: idol.brand,
-      });
-    }
-    nodesRef.current = allNodes;
-    setNodes(allNodes);
-    // エッジはuseEffectで再計算されるが、即座に反映するためにここでも計算
-    if (edgeMode === "accompaniment") {
-      setEdges(calculateEdgesForNodes(allNodes, accompaniments, { mutualOnly, minIdf, idfMap }));
-    }
-    setSelectedNodeId(null);
-  }, [idols, accompaniments, edgeMode, mutualOnly, minIdf, idfMap, disableIsolateMode]);
-
-  const addIdolsByBrand = useCallback(
-    (brand: Brand) => {
-      disableIsolateMode();
-      const brandNodes = getIdolsByBrand(idols, brand);
-      nodesRef.current = brandNodes;
-      setNodes(brandNodes);
-      // エッジはuseEffectで再計算されるが、即座に反映するためにここでも計算
-      if (edgeMode === "accompaniment") {
-        setEdges(
-          calculateEdgesForNodes(brandNodes, accompaniments, { mutualOnly, minIdf, idfMap })
-        );
-      }
-      setSelectedNodeId(null);
-    },
-    [idols, accompaniments, edgeMode, mutualOnly, minIdf, idfMap, disableIsolateMode]
-  );
-
-  const clearAllNodes = useCallback(() => {
-    disableIsolateMode();
-    nodesRef.current = new Map();
-    setNodes(new Map());
-    setEdges(new Map());
-    setSelectedNodeId(null);
-  }, [disableIsolateMode]);
 
   const setNodesFromCooccurrencePairs = useCallback(() => {
     enableIsolateMode();
@@ -749,246 +740,204 @@ export default function GraphExplorer({
 
         {/* ノード編集タブ */}
         {activeTab === "edit" && (
-          <>
-            <IdolSearchBox idolList={idolList} onSelect={addNode} existingNodeIds={nodes} />
-            <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-              <select
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === "all") {
-                    addAllIdols();
-                  } else if (value) {
-                    addIdolsByBrand(value as Brand);
-                  }
-                  e.target.value = "";
-                }}
-                style={{
-                  flex: 1,
-                  padding: "6px 12px",
-                  fontSize: "12px",
-                  background: "#fff",
-                  color: "#333",
-                  border: "1px solid #ccc",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                }}
-                defaultValue=""
-              >
-                <option value="" disabled>
-                  プリセットを適用...
-                </option>
-                <option value="all">全アイドル</option>
-                {BRAND_LIST.map((brand) => (
-                  <option key={brand} value={brand}>
-                    {BRAND_LABELS[brand]}
-                  </option>
-                ))}
-              </select>
-              {nodesArray.length > 0 && (
-                <button
-                  onClick={clearAllNodes}
-                  style={{
-                    padding: "6px 12px",
-                    fontSize: "12px",
-                    background: "#f44336",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                >
-                  全削除
-                </button>
-              )}
-            </div>
-            <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
-              現在 {nodesArray.length} ノード表示中
-            </div>
-          </>
+          <NodeSelector
+            idolList={idolList}
+            selectedIds={selectedIds}
+            onSelectionChange={handleSelectionChange}
+          />
         )}
 
         {/* グラフタブ */}
         {activeTab === "graph" && (
           <>
-            {/* エッジモード切り替え（セグメントコントロール） */}
-            <div
-              style={{
-                display: "flex",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-                overflow: "hidden",
-              }}
-            >
-              <button
-                onClick={() => setEdgeMode("accompaniment")}
-                style={{
-                  flex: 1,
-                  padding: "6px 8px",
-                  fontSize: "11px",
-                  background: edgeMode === "accompaniment" ? "#1976d2" : "#fff",
-                  color: edgeMode === "accompaniment" ? "#fff" : "#666",
-                  border: "none",
-                  borderRight: "1px solid #ccc",
-                  cursor: "pointer",
-                  fontWeight: edgeMode === "accompaniment" ? "bold" : "normal",
-                }}
-              >
-                随伴関係
-              </button>
-              <button
-                onClick={() => setEdgeMode("cooccurrenceCompanion")}
-                style={{
-                  flex: 1,
-                  padding: "6px 8px",
-                  fontSize: "11px",
-                  background: edgeMode === "cooccurrenceCompanion" ? "#8e44ad" : "#fff",
-                  color: edgeMode === "cooccurrenceCompanion" ? "#fff" : "#666",
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: edgeMode === "cooccurrenceCompanion" ? "bold" : "normal",
-                }}
-              >
-                共起随伴ペア
-              </button>
-            </div>
+            {/* 初期ノード構成の編集 */}
+            <NodeSelector
+              idolList={idolList}
+              selectedIds={selectedIds}
+              onSelectionChange={handleSelectionChange}
+            />
 
-            {/* Isolateモード表示・切り替え */}
-            <div
-              style={{
-                marginTop: "8px",
-                padding: "6px 8px",
-                background: isIsolateMode ? "#e3f2fd" : "#f5f5f5",
-                borderRadius: "4px",
-                fontSize: "11px",
-              }}
-            >
+            {/* エッジモード切り替え（セグメントコントロール） */}
+            <div style={{ marginTop: "12px", borderTop: "1px solid #eee", paddingTop: "12px" }}>
               <div
                 style={{
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
+                  border: "1px solid #ccc",
+                  borderRadius: "4px",
+                  overflow: "hidden",
                 }}
               >
-                <span style={{ color: isIsolateMode ? "#1976d2" : "#666" }}>
-                  {isIsolateMode ? "🔒 全体から再計算" : "📝 現在のノードを編集"}
-                </span>
-                {isIsolateMode && (
+                <button
+                  onClick={() => setEdgeMode("accompaniment")}
+                  style={{
+                    flex: 1,
+                    padding: "6px 8px",
+                    fontSize: "11px",
+                    background: edgeMode === "accompaniment" ? "#1976d2" : "#fff",
+                    color: edgeMode === "accompaniment" ? "#fff" : "#666",
+                    border: "none",
+                    borderRight: "1px solid #ccc",
+                    cursor: "pointer",
+                    fontWeight: edgeMode === "accompaniment" ? "bold" : "normal",
+                  }}
+                >
+                  随伴関係
+                </button>
+                <button
+                  onClick={() => setEdgeMode("cooccurrenceCompanion")}
+                  style={{
+                    flex: 1,
+                    padding: "6px 8px",
+                    fontSize: "11px",
+                    background: edgeMode === "cooccurrenceCompanion" ? "#8e44ad" : "#fff",
+                    color: edgeMode === "cooccurrenceCompanion" ? "#fff" : "#666",
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: edgeMode === "cooccurrenceCompanion" ? "bold" : "normal",
+                  }}
+                >
+                  共起随伴ペア
+                </button>
+              </div>
+
+              {/* Isolateモード表示・切り替え */}
+              <div
+                style={{
+                  marginTop: "8px",
+                  padding: "6px 8px",
+                  background: isIsolateMode ? "#e3f2fd" : "#f5f5f5",
+                  borderRadius: "4px",
+                  fontSize: "11px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <span style={{ color: isIsolateMode ? "#1976d2" : "#666" }}>
+                    {isIsolateMode ? "🔒 全体から再計算" : "📝 現在のノードを編集"}
+                  </span>
+                  {isIsolateMode && (
+                    <button
+                      onClick={disableIsolateMode}
+                      style={{
+                        padding: "2px 6px",
+                        fontSize: "10px",
+                        background: "#fff",
+                        color: "#666",
+                        border: "1px solid #ccc",
+                        borderRadius: "3px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      解除
+                    </button>
+                  )}
+                </div>
+                {isIsolateMode && baseNodes && (
+                  <div style={{ marginTop: "4px", color: "#999", fontSize: "10px" }}>
+                    ベース: {baseNodes.size}ノード
+                  </div>
+                )}
+              </div>
+
+              {/* 共起随伴ペアモード時のフィルタ */}
+              {edgeMode === "cooccurrenceCompanion" && (
+                <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
+                  <div style={{ marginBottom: "4px" }}>
+                    <label style={{ display: "block", marginBottom: "2px" }}>
+                      最小PMI: {minPmi.toFixed(1)}
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="10"
+                      step="0.5"
+                      value={minPmi}
+                      onChange={(e) => setMinPmi(Number(e.target.value))}
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                  <div style={{ marginBottom: "8px" }}>
+                    <label style={{ display: "block", marginBottom: "2px" }}>
+                      最小共起元数: {minCooccurrenceSourceCount}
+                    </label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      step="1"
+                      value={minCooccurrenceSourceCount}
+                      onChange={(e) => setMinCooccurrenceSourceCount(Number(e.target.value))}
+                      style={{ width: "100%" }}
+                    />
+                  </div>
                   <button
-                    onClick={disableIsolateMode}
+                    onClick={setNodesFromCooccurrencePairs}
                     style={{
-                      padding: "2px 6px",
-                      fontSize: "10px",
-                      background: "#fff",
-                      color: "#666",
-                      border: "1px solid #ccc",
-                      borderRadius: "3px",
+                      width: "100%",
+                      padding: "6px 8px",
+                      fontSize: "11px",
+                      background: "#8e44ad",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "4px",
                       cursor: "pointer",
                     }}
                   >
-                    解除
+                    エッジに繋がるノードだけにする
                   </button>
-                )}
-              </div>
-              {isIsolateMode && baseNodes && (
-                <div style={{ marginTop: "4px", color: "#999", fontSize: "10px" }}>
-                  ベース: {baseNodes.size}ノード
+                </div>
+              )}
+
+              {/* 随伴関係モード時のフィルタ */}
+              {edgeMode === "accompaniment" && (
+                <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
+                  <div style={{ marginBottom: "4px" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <input
+                        type="checkbox"
+                        checked={mutualOnly}
+                        onChange={(e) => setMutualOnly(e.target.checked)}
+                      />
+                      相互随伴のみ表示
+                    </label>
+                  </div>
+                  <div style={{ marginBottom: "8px" }}>
+                    <label style={{ display: "block", marginBottom: "2px" }}>
+                      最小IDF: {minIdf.toFixed(1)}
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="10"
+                      step="0.5"
+                      value={minIdf}
+                      onChange={(e) => setMinIdf(Number(e.target.value))}
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                  <button
+                    onClick={setNodesFromAccompanimentEdges}
+                    style={{
+                      width: "100%",
+                      padding: "6px 8px",
+                      fontSize: "11px",
+                      background: "#1976d2",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    エッジに繋がるノードだけにする
+                  </button>
                 </div>
               )}
             </div>
-
-            {/* 共起随伴ペアモード時のフィルタ */}
-            {edgeMode === "cooccurrenceCompanion" && (
-              <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
-                <div style={{ marginBottom: "4px" }}>
-                  <label style={{ display: "block", marginBottom: "2px" }}>
-                    最小PMI: {minPmi.toFixed(1)}
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="10"
-                    step="0.5"
-                    value={minPmi}
-                    onChange={(e) => setMinPmi(Number(e.target.value))}
-                    style={{ width: "100%" }}
-                  />
-                </div>
-                <div style={{ marginBottom: "8px" }}>
-                  <label style={{ display: "block", marginBottom: "2px" }}>
-                    最小共起元数: {minCooccurrenceSourceCount}
-                  </label>
-                  <input
-                    type="range"
-                    min="1"
-                    max="10"
-                    step="1"
-                    value={minCooccurrenceSourceCount}
-                    onChange={(e) => setMinCooccurrenceSourceCount(Number(e.target.value))}
-                    style={{ width: "100%" }}
-                  />
-                </div>
-                <button
-                  onClick={setNodesFromCooccurrencePairs}
-                  style={{
-                    width: "100%",
-                    padding: "6px 8px",
-                    fontSize: "11px",
-                    background: "#8e44ad",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                >
-                  エッジに繋がるノードだけにする
-                </button>
-              </div>
-            )}
-
-            {/* 随伴関係モード時のフィルタ */}
-            {edgeMode === "accompaniment" && (
-              <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
-                <div style={{ marginBottom: "4px" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <input
-                      type="checkbox"
-                      checked={mutualOnly}
-                      onChange={(e) => setMutualOnly(e.target.checked)}
-                    />
-                    相互随伴のみ表示
-                  </label>
-                </div>
-                <div style={{ marginBottom: "8px" }}>
-                  <label style={{ display: "block", marginBottom: "2px" }}>
-                    最小IDF: {minIdf.toFixed(1)}
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="10"
-                    step="0.5"
-                    value={minIdf}
-                    onChange={(e) => setMinIdf(Number(e.target.value))}
-                    style={{ width: "100%" }}
-                  />
-                </div>
-                <button
-                  onClick={setNodesFromAccompanimentEdges}
-                  style={{
-                    width: "100%",
-                    padding: "6px 8px",
-                    fontSize: "11px",
-                    background: "#1976d2",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                >
-                  エッジに繋がるノードだけにする
-                </button>
-              </div>
-            )}
           </>
         )}
       </div>
