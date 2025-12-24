@@ -236,37 +236,127 @@ export default function GraphExplorer({
     return idf ? Number(idf) : 0;
   });
 
+  // Isolateモード: エッジに繋がるノードだけを動的にフィルタリングする
+  const [isIsolateMode, setIsIsolateMode] = useState(false);
+  const [baseNodes, setBaseNodes] = useState<Map<string, ExplorerNode> | null>(null);
+
   // Recalculate edges when mode or filter changes
+  // Isolateモードの場合はbaseNodesからフィルタリング
   useEffect(() => {
     if (edgeMode === "accompaniment") {
-      setEdges(
-        calculateEdgesForNodes(nodes, accompaniments, {
+      if (isIsolateMode && baseNodes) {
+        // Isolateモード: baseNodesからエッジを計算し、接続されているノードだけを表示
+        const filteredEdges = calculateEdgesForNodes(baseNodes, accompaniments, {
           mutualOnly,
           minIdf,
           idfMap,
-        })
-      );
+        });
+
+        const connectedNodeIds = new Set<string>();
+        for (const edge of filteredEdges.values()) {
+          connectedNodeIds.add(edge.source);
+          connectedNodeIds.add(edge.target);
+        }
+
+        const filteredNodes = new Map<string, ExplorerNode>();
+        for (const id of connectedNodeIds) {
+          const node = baseNodes.get(id);
+          if (node) {
+            filteredNodes.set(id, node);
+          }
+        }
+
+        nodesRef.current = filteredNodes;
+        setNodes(filteredNodes);
+        setEdges(filteredEdges);
+      } else {
+        // 通常モード: 現在のノードに対してエッジを計算
+        setEdges(
+          calculateEdgesForNodes(nodes, accompaniments, {
+            mutualOnly,
+            minIdf,
+            idfMap,
+          })
+        );
+      }
     } else {
-      setEdges(
-        calculateCooccurrenceEdgesForNodes(
-          nodes,
+      if (isIsolateMode && baseNodes) {
+        // 共起随伴ペアモードのIsolate
+        const filteredEdges = calculateCooccurrenceEdgesForNodes(
+          baseNodes,
           cooccurrenceCompanionPairs,
           minPmi,
           minCooccurrenceSourceCount
-        )
-      );
+        );
+
+        const connectedNodeIds = new Set<string>();
+        for (const edge of filteredEdges.values()) {
+          connectedNodeIds.add(edge.source);
+          connectedNodeIds.add(edge.target);
+        }
+
+        const filteredNodes = new Map<string, ExplorerNode>();
+        for (const id of connectedNodeIds) {
+          const node = baseNodes.get(id);
+          if (node) {
+            filteredNodes.set(id, node);
+          }
+        }
+
+        nodesRef.current = filteredNodes;
+        setNodes(filteredNodes);
+        setEdges(filteredEdges);
+      } else {
+        setEdges(
+          calculateCooccurrenceEdgesForNodes(
+            nodes,
+            cooccurrenceCompanionPairs,
+            minPmi,
+            minCooccurrenceSourceCount
+          )
+        );
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     edgeMode,
     minPmi,
     minCooccurrenceSourceCount,
     mutualOnly,
     minIdf,
-    nodes,
+    // nodesは除外（isolateモード時に無限ループになるため）
+    // 代わりにisIsolateModeとbaseNodesを監視
+    isIsolateMode,
+    baseNodes,
     accompaniments,
     cooccurrenceCompanionPairs,
     idfMap,
   ]);
+
+  // 通常モード（非isolate）時のノード変更を監視
+  useEffect(() => {
+    if (!isIsolateMode) {
+      if (edgeMode === "accompaniment") {
+        setEdges(
+          calculateEdgesForNodes(nodes, accompaniments, {
+            mutualOnly,
+            minIdf,
+            idfMap,
+          })
+        );
+      } else {
+        setEdges(
+          calculateCooccurrenceEdgesForNodes(
+            nodes,
+            cooccurrenceCompanionPairs,
+            minPmi,
+            minCooccurrenceSourceCount
+          )
+        );
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, isIsolateMode]);
 
   // Sync nodes to URL query params
   useEffect(() => {
@@ -344,6 +434,20 @@ export default function GraphExplorer({
 
   const nodesArray = useMemo(() => Array.from(nodes.values()), [nodes]);
   const edgesArray = useMemo(() => Array.from(edges.values()), [edges]);
+
+  // Isolateモードを解除
+  const disableIsolateMode = useCallback(() => {
+    setIsIsolateMode(false);
+    setBaseNodes(null);
+  }, []);
+
+  // Isolateモードを有効にして、エッジに繋がるノードだけを動的にフィルタリング
+  const enableIsolateMode = useCallback(() => {
+    // 現在のノードをbaseNodesとして保存
+    setBaseNodes(new Map(nodes));
+    setIsIsolateMode(true);
+    setSelectedNodeId(null);
+  }, [nodes]);
 
   const addNode = useCallback(
     (idol: IdolListItem, options?: { keepSelection?: boolean }) => {
@@ -463,6 +567,7 @@ export default function GraphExplorer({
   );
 
   const addAllIdols = useCallback(() => {
+    disableIsolateMode();
     const allNodes = new Map<string, ExplorerNode>();
     for (const [id, idol] of Object.entries(idols)) {
       allNodes.set(id, {
@@ -478,10 +583,11 @@ export default function GraphExplorer({
       setEdges(calculateEdgesForNodes(allNodes, accompaniments, { mutualOnly, minIdf, idfMap }));
     }
     setSelectedNodeId(null);
-  }, [idols, accompaniments, edgeMode, mutualOnly, minIdf, idfMap]);
+  }, [idols, accompaniments, edgeMode, mutualOnly, minIdf, idfMap, disableIsolateMode]);
 
   const addIdolsByBrand = useCallback(
     (brand: Brand) => {
+      disableIsolateMode();
       const brandNodes = getIdolsByBrand(idols, brand);
       nodesRef.current = brandNodes;
       setNodes(brandNodes);
@@ -493,72 +599,25 @@ export default function GraphExplorer({
       }
       setSelectedNodeId(null);
     },
-    [idols, accompaniments, edgeMode, mutualOnly, minIdf, idfMap]
+    [idols, accompaniments, edgeMode, mutualOnly, minIdf, idfMap, disableIsolateMode]
   );
 
   const clearAllNodes = useCallback(() => {
+    disableIsolateMode();
     nodesRef.current = new Map();
     setNodes(new Map());
     setEdges(new Map());
     setSelectedNodeId(null);
-  }, []);
+  }, [disableIsolateMode]);
 
   const setNodesFromCooccurrencePairs = useCallback(() => {
-    const nodeIds = new Set<string>();
-    for (const pair of cooccurrenceCompanionPairs) {
-      if (pair.pmi >= minPmi && pair.cooccurrenceSourceCount >= minCooccurrenceSourceCount) {
-        nodeIds.add(pair.idolA.id);
-        nodeIds.add(pair.idolB.id);
-      }
-    }
-
-    const newNodes = new Map<string, ExplorerNode>();
-    for (const id of nodeIds) {
-      const idol = idols[id];
-      if (idol) {
-        newNodes.set(id, {
-          id,
-          name: idol.name,
-          brand: idol.brand,
-        });
-      }
-    }
-
-    nodesRef.current = newNodes;
-    setNodes(newNodes);
-    setSelectedNodeId(null);
-  }, [cooccurrenceCompanionPairs, minPmi, minCooccurrenceSourceCount, idols]);
+    enableIsolateMode();
+  }, [enableIsolateMode]);
 
   // 現在のフィルター条件を満たすエッジに接続されているノードだけを残す
   const setNodesFromAccompanimentEdges = useCallback(() => {
-    // 現在のフィルター条件でエッジを計算
-    const filteredEdges = calculateEdgesForNodes(nodes, accompaniments, {
-      mutualOnly,
-      minIdf,
-      idfMap,
-    });
-
-    // エッジに接続されているノードIDを収集
-    const connectedNodeIds = new Set<string>();
-    for (const edge of filteredEdges.values()) {
-      connectedNodeIds.add(edge.source);
-      connectedNodeIds.add(edge.target);
-    }
-
-    // 接続されているノードだけを残す
-    const newNodes = new Map<string, ExplorerNode>();
-    for (const id of connectedNodeIds) {
-      const existing = nodes.get(id);
-      if (existing) {
-        newNodes.set(id, existing);
-      }
-    }
-
-    nodesRef.current = newNodes;
-    setNodes(newNodes);
-    setEdges(filteredEdges);
-    setSelectedNodeId(null);
-  }, [nodes, accompaniments, mutualOnly, minIdf, idfMap]);
+    enableIsolateMode();
+  }, [enableIsolateMode]);
 
   const handleNodeClick = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId);
