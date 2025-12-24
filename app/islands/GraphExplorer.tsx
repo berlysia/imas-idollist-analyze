@@ -629,6 +629,9 @@ export default function GraphExplorer({
   const selectedNode = selectedNodeId ? nodes.get(selectedNodeId) : null;
   const [isPanelOpen, setIsPanelOpen] = useState(true);
 
+  // タブ: "graph"（グラフ表示）または "edit"（ノード編集）
+  const [activeTab, setActiveTab] = useState<"graph" | "edit">("graph");
+
   // コンテナサイズを監視
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
@@ -686,7 +689,7 @@ export default function GraphExplorer({
         />
       )}
 
-      {/* フローティング検索ボックス（左上） */}
+      {/* フローティングコントロールパネル（左上） */}
       <div
         style={{
           position: "absolute",
@@ -700,237 +703,293 @@ export default function GraphExplorer({
           maxWidth: "320px",
         }}
       >
-        <IdolSearchBox idolList={idolList} onSelect={addNode} existingNodeIds={nodes} />
-        <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-          <select
-            onChange={(e) => {
-              const value = e.target.value;
-              if (value === "all") {
-                addAllIdols();
-              } else if (value) {
-                addIdolsByBrand(value as Brand);
-              }
-              e.target.value = "";
-            }}
-            style={{
-              flex: 1,
-              padding: "6px 12px",
-              fontSize: "12px",
-              background: "#fff",
-              color: "#333",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-            defaultValue=""
-          >
-            <option value="" disabled>
-              プリセットを適用...
-            </option>
-            <option value="all">全アイドル</option>
-            {BRAND_LIST.map((brand) => (
-              <option key={brand} value={brand}>
-                {BRAND_LABELS[brand]}
-              </option>
-            ))}
-          </select>
-          {nodesArray.length > 0 && (
-            <button
-              onClick={clearAllNodes}
-              style={{
-                padding: "6px 12px",
-                fontSize: "12px",
-                background: "#f44336",
-                color: "#fff",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}
-            >
-              全削除
-            </button>
-          )}
-        </div>
-
-        {/* エッジモード切り替え（セグメントコントロール） */}
+        {/* タブバー */}
         <div
           style={{
             display: "flex",
-            marginTop: "8px",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            overflow: "hidden",
+            marginBottom: "8px",
+            borderBottom: "2px solid #eee",
           }}
         >
           <button
-            onClick={() => setEdgeMode("accompaniment")}
+            onClick={() => setActiveTab("graph")}
             style={{
               flex: 1,
-              padding: "6px 8px",
-              fontSize: "11px",
-              background: edgeMode === "accompaniment" ? "#1976d2" : "#fff",
-              color: edgeMode === "accompaniment" ? "#fff" : "#666",
+              padding: "8px 12px",
+              fontSize: "12px",
+              fontWeight: activeTab === "graph" ? "bold" : "normal",
+              background: "none",
               border: "none",
-              borderRight: "1px solid #ccc",
+              borderBottom: activeTab === "graph" ? "2px solid #1976d2" : "2px solid transparent",
+              marginBottom: "-2px",
               cursor: "pointer",
-              fontWeight: edgeMode === "accompaniment" ? "bold" : "normal",
+              color: activeTab === "graph" ? "#1976d2" : "#666",
             }}
           >
-            随伴関係
+            グラフ
           </button>
           <button
-            onClick={() => setEdgeMode("cooccurrenceCompanion")}
+            onClick={() => setActiveTab("edit")}
             style={{
               flex: 1,
-              padding: "6px 8px",
-              fontSize: "11px",
-              background: edgeMode === "cooccurrenceCompanion" ? "#8e44ad" : "#fff",
-              color: edgeMode === "cooccurrenceCompanion" ? "#fff" : "#666",
+              padding: "8px 12px",
+              fontSize: "12px",
+              fontWeight: activeTab === "edit" ? "bold" : "normal",
+              background: "none",
               border: "none",
+              borderBottom: activeTab === "edit" ? "2px solid #1976d2" : "2px solid transparent",
+              marginBottom: "-2px",
               cursor: "pointer",
-              fontWeight: edgeMode === "cooccurrenceCompanion" ? "bold" : "normal",
+              color: activeTab === "edit" ? "#1976d2" : "#666",
             }}
           >
-            共起随伴ペア
+            ノード編集
           </button>
         </div>
 
-        {/* Isolateモード表示・切り替え */}
-        <div
-          style={{
-            marginTop: "8px",
-            padding: "6px 8px",
-            background: isIsolateMode ? "#e3f2fd" : "#f5f5f5",
-            borderRadius: "4px",
-            fontSize: "11px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <span style={{ color: isIsolateMode ? "#1976d2" : "#666" }}>
-              {isIsolateMode ? "🔒 全体から再計算" : "📝 現在のノードを編集"}
-            </span>
-            {isIsolateMode && (
-              <button
-                onClick={disableIsolateMode}
+        {/* ノード編集タブ */}
+        {activeTab === "edit" && (
+          <>
+            <IdolSearchBox idolList={idolList} onSelect={addNode} existingNodeIds={nodes} />
+            <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+              <select
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "all") {
+                    addAllIdols();
+                  } else if (value) {
+                    addIdolsByBrand(value as Brand);
+                  }
+                  e.target.value = "";
+                }}
                 style={{
-                  padding: "2px 6px",
-                  fontSize: "10px",
+                  flex: 1,
+                  padding: "6px 12px",
+                  fontSize: "12px",
                   background: "#fff",
-                  color: "#666",
+                  color: "#333",
                   border: "1px solid #ccc",
-                  borderRadius: "3px",
+                  borderRadius: "4px",
                   cursor: "pointer",
                 }}
+                defaultValue=""
               >
-                解除
-              </button>
-            )}
-          </div>
-          {isIsolateMode && baseNodes && (
-            <div style={{ marginTop: "4px", color: "#999", fontSize: "10px" }}>
-              ベース: {baseNodes.size}ノード
+                <option value="" disabled>
+                  プリセットを適用...
+                </option>
+                <option value="all">全アイドル</option>
+                {BRAND_LIST.map((brand) => (
+                  <option key={brand} value={brand}>
+                    {BRAND_LABELS[brand]}
+                  </option>
+                ))}
+              </select>
+              {nodesArray.length > 0 && (
+                <button
+                  onClick={clearAllNodes}
+                  style={{
+                    padding: "6px 12px",
+                    fontSize: "12px",
+                    background: "#f44336",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  全削除
+                </button>
+              )}
             </div>
-          )}
-        </div>
-
-        {/* 共起随伴ペアモード時のフィルタ */}
-        {edgeMode === "cooccurrenceCompanion" && (
-          <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
-            <div style={{ marginBottom: "4px" }}>
-              <label style={{ display: "block", marginBottom: "2px" }}>
-                最小PMI: {minPmi.toFixed(1)}
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="10"
-                step="0.5"
-                value={minPmi}
-                onChange={(e) => setMinPmi(Number(e.target.value))}
-                style={{ width: "100%" }}
-              />
+            <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
+              現在 {nodesArray.length} ノード表示中
             </div>
-            <div style={{ marginBottom: "8px" }}>
-              <label style={{ display: "block", marginBottom: "2px" }}>
-                最小共起元数: {minCooccurrenceSourceCount}
-              </label>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                step="1"
-                value={minCooccurrenceSourceCount}
-                onChange={(e) => setMinCooccurrenceSourceCount(Number(e.target.value))}
-                style={{ width: "100%" }}
-              />
-            </div>
-            <button
-              onClick={setNodesFromCooccurrencePairs}
-              style={{
-                width: "100%",
-                padding: "6px 8px",
-                fontSize: "11px",
-                background: "#8e44ad",
-                color: "#fff",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}
-            >
-              エッジに繋がるノードだけにする
-            </button>
-          </div>
+          </>
         )}
 
-        {/* 随伴関係モード時のフィルタ */}
-        {edgeMode === "accompaniment" && (
-          <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
-            <div style={{ marginBottom: "4px" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <input
-                  type="checkbox"
-                  checked={mutualOnly}
-                  onChange={(e) => setMutualOnly(e.target.checked)}
-                />
-                相互随伴のみ表示
-              </label>
-            </div>
-            <div style={{ marginBottom: "8px" }}>
-              <label style={{ display: "block", marginBottom: "2px" }}>
-                最小IDF: {minIdf.toFixed(1)}
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="10"
-                step="0.5"
-                value={minIdf}
-                onChange={(e) => setMinIdf(Number(e.target.value))}
-                style={{ width: "100%" }}
-              />
-            </div>
-            <button
-              onClick={setNodesFromAccompanimentEdges}
+        {/* グラフタブ */}
+        {activeTab === "graph" && (
+          <>
+            {/* エッジモード切り替え（セグメントコントロール） */}
+            <div
               style={{
-                width: "100%",
-                padding: "6px 8px",
-                fontSize: "11px",
-                background: "#1976d2",
-                color: "#fff",
-                border: "none",
+                display: "flex",
+                border: "1px solid #ccc",
                 borderRadius: "4px",
-                cursor: "pointer",
+                overflow: "hidden",
               }}
             >
-              エッジに繋がるノードだけにする
-            </button>
-          </div>
+              <button
+                onClick={() => setEdgeMode("accompaniment")}
+                style={{
+                  flex: 1,
+                  padding: "6px 8px",
+                  fontSize: "11px",
+                  background: edgeMode === "accompaniment" ? "#1976d2" : "#fff",
+                  color: edgeMode === "accompaniment" ? "#fff" : "#666",
+                  border: "none",
+                  borderRight: "1px solid #ccc",
+                  cursor: "pointer",
+                  fontWeight: edgeMode === "accompaniment" ? "bold" : "normal",
+                }}
+              >
+                随伴関係
+              </button>
+              <button
+                onClick={() => setEdgeMode("cooccurrenceCompanion")}
+                style={{
+                  flex: 1,
+                  padding: "6px 8px",
+                  fontSize: "11px",
+                  background: edgeMode === "cooccurrenceCompanion" ? "#8e44ad" : "#fff",
+                  color: edgeMode === "cooccurrenceCompanion" ? "#fff" : "#666",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: edgeMode === "cooccurrenceCompanion" ? "bold" : "normal",
+                }}
+              >
+                共起随伴ペア
+              </button>
+            </div>
+
+            {/* Isolateモード表示・切り替え */}
+            <div
+              style={{
+                marginTop: "8px",
+                padding: "6px 8px",
+                background: isIsolateMode ? "#e3f2fd" : "#f5f5f5",
+                borderRadius: "4px",
+                fontSize: "11px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span style={{ color: isIsolateMode ? "#1976d2" : "#666" }}>
+                  {isIsolateMode ? "🔒 全体から再計算" : "📝 現在のノードを編集"}
+                </span>
+                {isIsolateMode && (
+                  <button
+                    onClick={disableIsolateMode}
+                    style={{
+                      padding: "2px 6px",
+                      fontSize: "10px",
+                      background: "#fff",
+                      color: "#666",
+                      border: "1px solid #ccc",
+                      borderRadius: "3px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    解除
+                  </button>
+                )}
+              </div>
+              {isIsolateMode && baseNodes && (
+                <div style={{ marginTop: "4px", color: "#999", fontSize: "10px" }}>
+                  ベース: {baseNodes.size}ノード
+                </div>
+              )}
+            </div>
+
+            {/* 共起随伴ペアモード時のフィルタ */}
+            {edgeMode === "cooccurrenceCompanion" && (
+              <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
+                <div style={{ marginBottom: "4px" }}>
+                  <label style={{ display: "block", marginBottom: "2px" }}>
+                    最小PMI: {minPmi.toFixed(1)}
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="10"
+                    step="0.5"
+                    value={minPmi}
+                    onChange={(e) => setMinPmi(Number(e.target.value))}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <div style={{ marginBottom: "8px" }}>
+                  <label style={{ display: "block", marginBottom: "2px" }}>
+                    最小共起元数: {minCooccurrenceSourceCount}
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    step="1"
+                    value={minCooccurrenceSourceCount}
+                    onChange={(e) => setMinCooccurrenceSourceCount(Number(e.target.value))}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <button
+                  onClick={setNodesFromCooccurrencePairs}
+                  style={{
+                    width: "100%",
+                    padding: "6px 8px",
+                    fontSize: "11px",
+                    background: "#8e44ad",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  エッジに繋がるノードだけにする
+                </button>
+              </div>
+            )}
+
+            {/* 随伴関係モード時のフィルタ */}
+            {edgeMode === "accompaniment" && (
+              <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
+                <div style={{ marginBottom: "4px" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <input
+                      type="checkbox"
+                      checked={mutualOnly}
+                      onChange={(e) => setMutualOnly(e.target.checked)}
+                    />
+                    相互随伴のみ表示
+                  </label>
+                </div>
+                <div style={{ marginBottom: "8px" }}>
+                  <label style={{ display: "block", marginBottom: "2px" }}>
+                    最小IDF: {minIdf.toFixed(1)}
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="10"
+                    step="0.5"
+                    value={minIdf}
+                    onChange={(e) => setMinIdf(Number(e.target.value))}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <button
+                  onClick={setNodesFromAccompanimentEdges}
+                  style={{
+                    width: "100%",
+                    padding: "6px 8px",
+                    fontSize: "11px",
+                    background: "#1976d2",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  エッジに繋がるノードだけにする
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
