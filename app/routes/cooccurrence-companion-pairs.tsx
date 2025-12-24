@@ -84,6 +84,7 @@ export default createRoute(async (c) => {
               PMI（Pointwise Mutual
               Information）値は、このペアが出現する可能性がどれだけ珍しいか、意味を伴っているかを示します。値が高いほど、全体の傾向に対して特徴的な関係です。
             </p>
+            <p>ここで、同じ共起随伴ペアをもつ複数のアイドル同士の間には、<strong>共起随伴による類似</strong>の関係があると考えられます。似た構成のアイドルが一緒に「お気に入り」されているということは、直接お気に入りに現れなくとも、何らかの関連性があることを示唆しています。</p>
           </ExplanationBox>
           <BridgesTable bridges={bridgeList} pairToCluster={pairToCluster} />
         </div>
