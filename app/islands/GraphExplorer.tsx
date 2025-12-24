@@ -593,8 +593,16 @@ export default function GraphExplorer({
           )}
         </div>
 
-        {/* エッジモード切り替え */}
-        <div style={{ display: "flex", gap: "4px", marginTop: "8px" }}>
+        {/* エッジモード切り替え（セグメントコントロール） */}
+        <div
+          style={{
+            display: "flex",
+            marginTop: "8px",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            overflow: "hidden",
+          }}
+        >
           <button
             onClick={() => setEdgeMode("accompaniment")}
             style={{
@@ -602,13 +610,14 @@ export default function GraphExplorer({
               padding: "6px 8px",
               fontSize: "11px",
               background: edgeMode === "accompaniment" ? "#1976d2" : "#fff",
-              color: edgeMode === "accompaniment" ? "#fff" : "#333",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
+              color: edgeMode === "accompaniment" ? "#fff" : "#666",
+              border: "none",
+              borderRight: "1px solid #ccc",
               cursor: "pointer",
+              fontWeight: edgeMode === "accompaniment" ? "bold" : "normal",
             }}
           >
-            随伴
+            随伴関係
           </button>
           <button
             onClick={() => setEdgeMode("cooccurrenceCompanion")}
@@ -617,10 +626,10 @@ export default function GraphExplorer({
               padding: "6px 8px",
               fontSize: "11px",
               background: edgeMode === "cooccurrenceCompanion" ? "#8e44ad" : "#fff",
-              color: edgeMode === "cooccurrenceCompanion" ? "#fff" : "#333",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
+              color: edgeMode === "cooccurrenceCompanion" ? "#fff" : "#666",
+              border: "none",
               cursor: "pointer",
+              fontWeight: edgeMode === "cooccurrenceCompanion" ? "bold" : "normal",
             }}
           >
             共起随伴ペア
@@ -658,18 +667,19 @@ export default function GraphExplorer({
                 style={{ width: "100%" }}
               />
             </div>
-            {nodesArray.length > edgesArray.length && edgesArray.length > 0 && (
+            {nodesArray.length > 0 && (
               <button
                 onClick={removeIsolatedNodes}
+                disabled={edgesArray.length === 0}
                 style={{
                   width: "100%",
                   padding: "6px 8px",
                   fontSize: "11px",
-                  background: "#ff9800",
+                  background: edgesArray.length === 0 ? "#ccc" : "#ff9800",
                   color: "#fff",
                   border: "none",
                   borderRadius: "4px",
-                  cursor: "pointer",
+                  cursor: edgesArray.length === 0 ? "not-allowed" : "pointer",
                 }}
               >
                 孤立ノードを削除
