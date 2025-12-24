@@ -131,16 +131,16 @@ export default createRoute(
                             </a>
                             <ScoreBadge metric="idf" value={idol.score.idf} />
                             {crossBrandPmi !== undefined && (
-                              <span
-                                style={{
-                                  marginLeft: "8px",
-                                  fontSize: "12px",
-                                  color: isHighPmi ? "#b8860b" : "#8e44ad",
-                                  fontWeight: isHighPmi ? "bold" : "normal",
-                                }}
-                              >
-                                {isHighPmi && "★ "}共起随伴PMI: {crossBrandPmi}
-                              </span>
+                              <>
+                                {isHighPmi && (<span
+                                  style={{
+                                    color: "#b8860b"
+                                  }}
+                                >
+                                  ★
+                                </span>)}
+                                <ScoreBadge metric="pmi" value={crossBrandPmi} />
+                              </>
                             )}
                           </li>
                         );
