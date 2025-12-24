@@ -421,21 +421,38 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
       >
         <IdolSearchBox idolList={idolList} onSelect={addNode} existingNodeIds={nodes} />
         <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-          <button
-            onClick={addAllIdols}
+          <select
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === "all") {
+                addAllIdols();
+              } else if (value) {
+                addIdolsByBrand(value as Brand);
+              }
+              e.target.value = "";
+            }}
             style={{
               flex: 1,
               padding: "6px 12px",
               fontSize: "12px",
-              background: "#1976d2",
-              color: "#fff",
-              border: "none",
+              background: "#fff",
+              color: "#333",
+              border: "1px solid #ccc",
               borderRadius: "4px",
               cursor: "pointer",
             }}
+            defaultValue=""
           >
-            全アイドルを追加
-          </button>
+            <option value="" disabled>
+              プリセットで追加...
+            </option>
+            <option value="all">全アイドル</option>
+            {BRAND_LIST.map((brand) => (
+              <option key={brand} value={brand}>
+                {BRAND_LABELS[brand]}
+              </option>
+            ))}
+          </select>
           {nodesArray.length > 0 && (
             <button
               onClick={clearAllNodes}
@@ -453,35 +470,6 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
             </button>
           )}
         </div>
-        <select
-          onChange={(e) => {
-            if (e.target.value) {
-              addIdolsByBrand(e.target.value as Brand);
-              e.target.value = "";
-            }
-          }}
-          style={{
-            marginTop: "8px",
-            padding: "6px 12px",
-            fontSize: "12px",
-            background: "#fff",
-            color: "#333",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            cursor: "pointer",
-            width: "100%",
-          }}
-          defaultValue=""
-        >
-          <option value="" disabled>
-            ブランド別に追加...
-          </option>
-          {BRAND_LIST.map((brand) => (
-            <option key={brand} value={brand}>
-              {BRAND_LABELS[brand]}
-            </option>
-          ))}
-        </select>
       </div>
 
       {/* フローティング凡例（左下） */}
