@@ -558,6 +558,8 @@ export default function GraphExplorerGraph({
               const parts = node.name.split(" ");
               return parts.length > 1 ? (parts[parts.length - 1] ?? node.name) : node.name;
             })();
+            const brandColor = BRAND_COLORS[node.brand[0] ?? "other"];
+            const nodeRadius = 20;
 
             return (
               <g
@@ -575,19 +577,42 @@ export default function GraphExplorerGraph({
               >
                 {isSelected && (
                   <circle
-                    r={26}
+                    r={nodeRadius + 6}
                     fill="none"
                     stroke="#ff9800"
                     strokeWidth={2}
                     strokeDasharray="4,2"
                   />
                 )}
-                <circle
-                  r={20}
-                  fill={BRAND_COLORS[node.brand[0] ?? "other"]}
-                  stroke={isSelected ? "#ff9800" : isPinned ? "#4caf50" : "#fff"}
-                  strokeWidth={isSelected ? 4 : isPinned ? 3 : 2}
+                {/* Clip path for circular image */}
+                <defs>
+                  <clipPath id={`clip-${node.id}`}>
+                    <circle r={nodeRadius} />
+                  </clipPath>
+                </defs>
+                {/* Background circle (fallback color) */}
+                <circle r={nodeRadius} fill={brandColor} />
+                {/* Idol image */}
+                <image
+                  href={`/static/icons/${node.id}.jpg`}
+                  x={-nodeRadius}
+                  y={-nodeRadius}
+                  width={nodeRadius * 2}
+                  height={nodeRadius * 2}
+                  clipPath={`url(#clip-${node.id})`}
+                  preserveAspectRatio="xMidYMid slice"
                 />
+                {/* Border circle with brand color */}
+                <circle r={nodeRadius} fill="none" stroke={brandColor} strokeWidth={3} />
+                {/* Selection/Pin highlight */}
+                {(isSelected || isPinned) && (
+                  <circle
+                    r={nodeRadius + 2}
+                    fill="none"
+                    stroke={isSelected ? "#ff9800" : "#4caf50"}
+                    strokeWidth={isSelected ? 3 : 2}
+                  />
+                )}
                 {/* Pin indicator */}
                 {isPinned && (
                   <circle r={5} cx={14} cy={-14} fill="#4caf50" stroke="#fff" strokeWidth={1} />

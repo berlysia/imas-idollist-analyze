@@ -160,13 +160,41 @@ interface DownloadTask {
   name: string;
 }
 
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function main(): Promise<void> {
   console.log("[downloadImages] 開始");
 
-  // 入力データを読み込み
+  // 入力データのパス
   const imageJsonPath = path.join(DATA_DIR, "image.json");
   const idolsJsonPath = path.join(DATA_DIR, "idols.json");
 
+  // ファイル存在チェック
+  const [imageExists, idolsExists] = await Promise.all([
+    fileExists(imageJsonPath),
+    fileExists(idolsJsonPath),
+  ]);
+
+  if (!imageExists) {
+    console.warn("[downloadImages] image.json が見つかりません。スキップします。");
+    console.warn(`  期待されるパス: ${imageJsonPath}`);
+    return;
+  }
+
+  if (!idolsExists) {
+    console.warn("[downloadImages] idols.json が見つかりません。スキップします。");
+    console.warn(`  期待されるパス: ${idolsJsonPath}`);
+    return;
+  }
+
+  // 入力データを読み込み
   const [imageData, idolsData] = await Promise.all([
     fs.readFile(imageJsonPath, "utf-8").then((data) => JSON.parse(data) as ImageEntry[]),
     fs.readFile(idolsJsonPath, "utf-8").then((data) => JSON.parse(data) as ScrapeResult<Idol>),
