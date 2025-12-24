@@ -183,7 +183,7 @@ export default createRoute(
                 このアイドルを選ぶことの珍しさ{" "}
                 <ScoreBadge
                   metric="idf"
-                  value={detail.selectedBy[0]?.score.idf ?? "-"}
+                  value={detail.selectedBy[0]?.score.idf ?? 0}
                 />
               </p>
 
