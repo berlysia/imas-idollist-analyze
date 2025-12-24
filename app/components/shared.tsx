@@ -49,20 +49,7 @@ export function NavigationTabs({
   const activeColor = variant === "cooccurrence" ? "#8e44ad" : "#333";
 
   return (
-    <nav
-      style={{
-        position: "sticky",
-        top: 0,
-        background: "#fff",
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "4px 12px",
-        padding: "8px 0",
-        marginBottom: "4px",
-        fontSize: "0.85rem",
-        zIndex: 100,
-      }}
-    >
+    <nav className="main-nav">
       {TAB_ITEMS.map((item) => {
         const isActive = item.href === activeTab;
         return (
@@ -520,14 +507,17 @@ export const METRIC_DESCRIPTIONS = {
 export type MetricType = keyof typeof METRIC_DESCRIPTIONS;
 
 export function ScoreBadge({
-  metric, value, suffix,
+  metric,
+  value,
+  suffix,
 }: {
   metric: MetricType;
   value: number;
   suffix?: string;
 }) {
   const { label, description } = METRIC_DESCRIPTIONS[metric];
-  const altValue = ["idf", "idf-geometric-mean"].includes(metric) && value === 0 ? "-" : value.toFixed(2);
+  const altValue =
+    ["idf", "idf-geometric-mean"].includes(metric) && value === 0 ? "-" : value.toFixed(2);
   return (
     <span className="score-badge-wrapper">
       <span className="score-badge">

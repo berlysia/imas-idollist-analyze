@@ -1,3 +1,7 @@
+:root {
+  --nav-height: 40px;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -39,6 +43,20 @@ header h1 {
 header .metadata {
   color: #666;
   font-size: 0.9rem;
+}
+
+.main-nav {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 8px 0;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  z-index: 100;
+  min-height: var(--nav-height);
 }
 
 .tabs {
@@ -295,7 +313,7 @@ footer a:hover {
   background: #f8f8f8;
   font-weight: bold;
   position: sticky;
-  top: 0;
+  top: var(--nav-height);
 }
 
 .pmi-table tr:hover {
@@ -448,7 +466,7 @@ footer a:hover {
   background: #f8f8f8;
   font-weight: bold;
   position: sticky;
-  top: 0;
+  top: var(--nav-height);
   z-index: 1;
 }
 
