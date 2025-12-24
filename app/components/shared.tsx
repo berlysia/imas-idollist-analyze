@@ -13,11 +13,11 @@ interface MetadataData {
  */
 export function PageHeader({ metadata }: { metadata: MetadataData }) {
   return (
-    <header style={{ marginBottom: "24px" }}>
-      <h1>
+    <header style={{ marginBottom: "12px" }}>
+      <h1 style={{ margin: 0, fontSize: "1.5rem" }}>
         <a href="/">{SITE_TITLE}</a>
       </h1>
-      <p className="metadata">
+      <p className="metadata" style={{ margin: "4px 0 0", fontSize: "0.85rem" }}>
         データ取得日: {new Date(metadata.scrapedAt).toLocaleDateString("ja-JP")} /{" "}
         {metadata.idolCount}人のアイドル
       </p>
@@ -49,20 +49,30 @@ export function NavigationTabs({
   const activeColor = variant === "crossbrand" ? "#8e44ad" : "#333";
 
   return (
-    <nav className="tabs">
+    <nav
+      style={{
+        position: "sticky",
+        top: 0,
+        background: "#fff",
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "4px 12px",
+        padding: "8px 0",
+        marginBottom: "4px",
+        fontSize: "0.85rem",
+        zIndex: 100,
+      }}
+    >
       {TAB_ITEMS.map((item) => {
         const isActive = item.href === activeTab;
         return (
           <a
             key={item.href}
             href={item.href}
-            className={isActive ? "active" : undefined}
             style={{
-              padding: "8px 16px",
-              background: isActive ? activeColor : "#e0e0e0",
-              color: isActive ? "#fff" : "inherit",
-              borderRadius: "4px 4px 0 0",
+              color: isActive ? activeColor : "#666",
               textDecoration: "none",
+              fontWeight: isActive ? "bold" : "normal",
             }}
           >
             {item.label}
