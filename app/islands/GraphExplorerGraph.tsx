@@ -26,6 +26,14 @@ interface Props {
   setNodes: React.Dispatch<React.SetStateAction<Map<string, ExplorerNode>>>;
 }
 
+const DISPLAY_NAME_SPECIAL_CASES: Record<string, string> = {
+  "エミリー スチュアート": "エミリー",
+  "メアリー・コクラン": "メアリー",
+  "キャシー・グラハム": "キャシー",
+  "イヴ・サンタクロース": "イヴ",
+  "アスラン＝ベルゼビュート Ⅱ世": "アスラン",
+};
+
 export default function GraphExplorerGraph({
   nodes,
   edges,
@@ -544,6 +552,9 @@ export default function GraphExplorerGraph({
             const isSelected = node.id === selectedNodeId;
             const isPinned = node.fx !== null && node.fy !== null;
             const displayName = (() => {
+              if (node.name in DISPLAY_NAME_SPECIAL_CASES) {
+                return DISPLAY_NAME_SPECIAL_CASES[node.name];
+              }
               const parts = node.name.split(" ");
               return parts.length > 1 ? (parts[parts.length - 1] ?? node.name) : node.name;
             })();
