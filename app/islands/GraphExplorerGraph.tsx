@@ -427,28 +427,6 @@ export default function GraphExplorerGraph({
           >
             <path d="M0,-5L10,0L0,5" fill="#999" />
           </marker>
-          <marker
-            id="explorer-arrow-bi-end"
-            viewBox="0 -5 10 10"
-            refX={25}
-            refY={0}
-            markerWidth={6}
-            markerHeight={6}
-            orient="auto"
-          >
-            <path d="M0,-5L10,0L0,5" fill="#1976d2" />
-          </marker>
-          <marker
-            id="explorer-arrow-bi-start"
-            viewBox="0 -5 10 10"
-            refX={-15}
-            refY={0}
-            markerWidth={6}
-            markerHeight={6}
-            orient="auto"
-          >
-            <path d="M10,-5L0,0L10,5" fill="#1976d2" />
-          </marker>
           {/* 共起随伴ペア用マーカー（高PMI） */}
           <marker
             id="explorer-arrow-highpmi"
@@ -501,6 +479,27 @@ export default function GraphExplorerGraph({
               );
             }
 
+            if (edge.isMutual) {
+              // 相互随伴: 矢印なし、中央に丸
+              const midX = (source.x + target.x) / 2;
+              const midY = (source.y + target.y) / 2;
+              return (
+                <g key={`${edge.source}-${edge.target}`}>
+                  <line
+                    x1={source.x}
+                    y1={source.y}
+                    x2={target.x}
+                    y2={target.y}
+                    stroke="#1976d2"
+                    strokeOpacity={0.6}
+                    strokeWidth={1 + edge.weight * 3}
+                  />
+                  <circle cx={midX} cy={midY} r={4} fill="#1976d2" />
+                </g>
+              );
+            }
+
+            // 片方向随伴: 矢印あり
             return (
               <line
                 key={`${edge.source}-${edge.target}`}
@@ -508,13 +507,10 @@ export default function GraphExplorerGraph({
                 y1={source.y}
                 x2={target.x}
                 y2={target.y}
-                stroke={edge.isMutual ? "#1976d2" : "#999"}
+                stroke="#999"
                 strokeOpacity={0.6}
                 strokeWidth={1 + edge.weight * 3}
-                markerEnd={
-                  edge.isMutual ? "url(#explorer-arrow-bi-end)" : "url(#explorer-arrow-uni)"
-                }
-                markerStart={edge.isMutual ? "url(#explorer-arrow-bi-start)" : undefined}
+                markerEnd="url(#explorer-arrow-uni)"
               />
             );
           })}
