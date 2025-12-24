@@ -7,10 +7,10 @@ import { join } from "path";
 import {
   computeIncomingStats,
   computePMIRanking,
-  computeCrossBrandBridges,
+  computeCooccurrenceCompanionPairs,
   computeIdolDetail,
   detectClusters,
-  detectCrossBrandClusters,
+  detectCooccurrenceCompanionClusters,
   computeSimilarIdolGroups,
   buildIdfMap,
   type NormalizedData,
@@ -47,17 +47,21 @@ async function main() {
   console.log("🔗 Computing PMI pairs...");
   const pmiPairs = computePMIRanking(data, 2);
 
-  console.log("🌉 Computing cross-brand bridges...");
-  const crossBrandBridges = computeCrossBrandBridges(data, 2);
+  console.log("🌉 Computing cooccurrence companion pairs...");
+  const cooccurrenceCompanionPairs = computeCooccurrenceCompanionPairs(data, 2);
 
   console.log("🔍 Detecting clusters...");
   const clusters = detectClusters(data, { minSize: 3, minDensity: 0.3 });
 
-  console.log("🌐 Detecting cross-brand clusters...");
-  const crossBrandClusters = detectCrossBrandClusters(data, crossBrandBridges, {
-    minSize: 3,
-    minEdges: 2,
-  });
+  console.log("🌐 Detecting cooccurrence companion clusters...");
+  const cooccurrenceCompanionClusters = detectCooccurrenceCompanionClusters(
+    data,
+    cooccurrenceCompanionPairs,
+    {
+      minSize: 3,
+      minEdges: 2,
+    }
+  );
 
   // 4. メタデータ
   const metadata = {
@@ -73,19 +77,19 @@ async function main() {
   console.log("💾 Writing pmi-pairs.json...");
   await writeFile(join(OUTPUT_DIR, "pmi-pairs.json"), JSON.stringify({ data: pmiPairs }, null, 2));
 
-  console.log("💾 Writing cross-brand.json...");
+  console.log("💾 Writing cooccurrence-companion.json...");
   await writeFile(
-    join(OUTPUT_DIR, "cross-brand.json"),
-    JSON.stringify({ data: crossBrandBridges }, null, 2)
+    join(OUTPUT_DIR, "cooccurrence-companion.json"),
+    JSON.stringify({ data: cooccurrenceCompanionPairs }, null, 2)
   );
 
   console.log("💾 Writing clusters.json...");
   await writeFile(join(OUTPUT_DIR, "clusters.json"), JSON.stringify({ data: clusters }, null, 2));
 
-  console.log("💾 Writing cross-brand-clusters.json...");
+  console.log("💾 Writing cooccurrence-companion-clusters.json...");
   await writeFile(
-    join(OUTPUT_DIR, "cross-brand-clusters.json"),
-    JSON.stringify({ data: crossBrandClusters }, null, 2)
+    join(OUTPUT_DIR, "cooccurrence-companion-clusters.json"),
+    JSON.stringify({ data: cooccurrenceCompanionClusters }, null, 2)
   );
 
   console.log("💾 Writing metadata.json...");
@@ -125,7 +129,7 @@ async function main() {
 
   let count = 0;
   for (const idolId of idolIds) {
-    const detail = computeIdolDetail(data, idolId, pmiPairs, crossBrandBridges);
+    const detail = computeIdolDetail(data, idolId, pmiPairs, cooccurrenceCompanionPairs);
     if (detail) {
       // 類似アイドルグループを計算して追加
       detail.similarIdolGroups = computeSimilarIdolGroups(data, idolId, idfMap, 20);
@@ -140,9 +144,13 @@ async function main() {
   console.log(`✅ Precomputation complete!`);
   console.log(`   - ranking.json: ${ranking.length} entries`);
   console.log(`   - pmi-pairs.json: ${pmiPairs.length} pairs`);
-  console.log(`   - cross-brand.json: ${crossBrandBridges.length} bridges`);
+  console.log(
+    `   - cooccurrence-companion.json: ${cooccurrenceCompanionPairs.length} cooccurrence companion pairs`
+  );
   console.log(`   - clusters.json: ${clusters.length} clusters`);
-  console.log(`   - cross-brand-clusters.json: ${crossBrandClusters.length} cross-brand clusters`);
+  console.log(
+    `   - cooccurrence-companion-clusters.json: ${cooccurrenceCompanionClusters.length} cooccurrence companion clusters`
+  );
   console.log(`   - idols/: ${count} files`);
 }
 

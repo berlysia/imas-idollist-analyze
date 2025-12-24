@@ -1,7 +1,7 @@
 import { createRoute } from "honox/factory";
 import { readFile } from "fs/promises";
 import { join } from "path";
-import type { PairCooccurrence, Cluster, CrossBrandCluster } from "../lib/compute";
+import type { PairCooccurrence, Cluster, CooccurrenceCompanionCluster } from "../lib/compute";
 import PMIFilter from "../islands/PMIFilter";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
 import { SITE_TITLE } from "../lib/constants";
@@ -14,8 +14,8 @@ interface ClustersData {
   data: Cluster[];
 }
 
-interface CrossBrandClustersData {
-  data: CrossBrandCluster[];
+interface CooccurrenceCompanionClustersData {
+  data: CooccurrenceCompanionCluster[];
 }
 
 interface MetadataData {
@@ -45,7 +45,7 @@ function buildPairToClusterMap(clusters: Cluster[]): Record<string, ClusterInfo>
 }
 
 function buildCrossBrandPairToClusterMap(
-  clusters: CrossBrandCluster[]
+  clusters: CooccurrenceCompanionCluster[]
 ): Record<string, ClusterInfo> {
   const map: Record<string, ClusterInfo> = {};
   clusters.forEach((cluster, clusterIndex) => {
@@ -60,14 +60,14 @@ function buildCrossBrandPairToClusterMap(
 async function loadData(): Promise<{
   pmiPairs: PMIData;
   clusters: ClustersData;
-  crossBrandClusters: CrossBrandClustersData;
+  crossBrandClusters: CooccurrenceCompanionClustersData;
   metadata: MetadataData;
 }> {
   const dataDir = join(process.cwd(), "data/precomputed");
   const [pmiRaw, clustersRaw, crossBrandClustersRaw, metadataRaw] = await Promise.all([
     readFile(join(dataDir, "pmi-pairs.json"), "utf-8"),
     readFile(join(dataDir, "clusters.json"), "utf-8"),
-    readFile(join(dataDir, "cross-brand-clusters.json"), "utf-8"),
+    readFile(join(dataDir, "cooccurrence-companion-clusters.json"), "utf-8"),
     readFile(join(dataDir, "metadata.json"), "utf-8"),
   ]);
   return {

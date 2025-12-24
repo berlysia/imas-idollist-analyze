@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import type { Brand } from "@/types";
 import { BRAND_NAMES, ALL_BRANDS } from "../lib/constants";
-import CrossBrandClusterGraph from "./CrossBrandClusterGraph";
+import CooccurrenceCompanionClusterGraph from "./CooccurrenceCompanionClusterGraph";
 import {
   BrandDot,
   RankBadge,
@@ -22,7 +22,7 @@ interface IdolInfo {
   brand: Brand[];
 }
 
-interface CrossBrandClusterMember {
+interface CooccurrenceCompanionClusterMember {
   id: string;
   name: string;
   brand: Brand[];
@@ -34,7 +34,7 @@ interface CrossBrandClusterMember {
   role: "core" | "peripheral";
 }
 
-interface CrossBrandEdge {
+interface CooccurrenceCompanionEdge {
   idolA: IdolInfo;
   idolB: IdolInfo;
   /** 共起元の数（このペアを同時に随伴しているアイドルの数） */
@@ -44,15 +44,15 @@ interface CrossBrandEdge {
   cooccurrenceSources: IdolInfo[];
 }
 
-interface CrossBrandCluster {
+interface CooccurrenceCompanionCluster {
   id: number;
   members: string[];
   memberDetails: IdolInfo[];
-  memberRoles: CrossBrandClusterMember[];
+  memberRoles: CooccurrenceCompanionClusterMember[];
   coreMembers: string[];
   peripheralMembers: string[];
   coreDensity: number;
-  edges: CrossBrandEdge[];
+  edges: CooccurrenceCompanionEdge[];
   /** 総共起元数（重複除去） */
   totalCooccurrenceSourceCount: number;
   avgPmi: number;
@@ -61,7 +61,7 @@ interface CrossBrandCluster {
 }
 
 interface Props {
-  clusters: CrossBrandCluster[];
+  clusters: CooccurrenceCompanionCluster[];
 }
 
 function MemberTag({
@@ -69,7 +69,7 @@ function MemberTag({
   isHidden,
   onToggleHide,
 }: {
-  member: CrossBrandClusterMember;
+  member: CooccurrenceCompanionClusterMember;
   isHidden: boolean;
   onToggleHide: (id: string) => void;
 }) {
@@ -122,7 +122,7 @@ function MemberTag({
   );
 }
 
-function EdgeVotersList({ edges }: { edges: CrossBrandEdge[] }) {
+function EdgeVotersList({ edges }: { edges: CooccurrenceCompanionEdge[] }) {
   // PMI順でソート
   const sortedEdges = useMemo(() => [...edges].sort((a, b) => b.pmi - a.pmi), [edges]);
 
@@ -140,7 +140,7 @@ function EdgeVotersList({ edges }: { edges: CrossBrandEdge[] }) {
           margin: "0 0 8px 0",
         }}
       >
-        ブランド横断ペア詳細（クリックで選出者を表示）- {edges.length}件
+        共起随伴ペア詳細（クリックで選出者を表示）- {edges.length}件
         <span style={{ marginLeft: "8px", fontSize: "12px", color: "#d4a017" }}>
           ★ PMI≥3.0（強い関連性）
         </span>
@@ -266,7 +266,7 @@ function ClusterCard({
   rank,
   originalIndex,
 }: {
-  cluster: CrossBrandCluster;
+  cluster: CooccurrenceCompanionCluster;
   rank: number;
   originalIndex: number;
 }) {
@@ -308,7 +308,7 @@ function ClusterCard({
     <ClusterCardContainer id={`cluster-${originalIndex}`}>
       <ClusterCardHeader>
         <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-          <RankBadge rank={rank} variant="crossbrand" />
+          <RankBadge rank={rank} variant="cooccurrence" />
           {cluster.memberDetails.length}人 / {cluster.brandCount}ブランド
         </h3>
         <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
@@ -326,7 +326,7 @@ function ClusterCard({
 
       <GraphSection>
         {(width) => (
-          <CrossBrandClusterGraph
+          <CooccurrenceCompanionClusterGraph
             cluster={cluster}
             width={width}
             height={500}
@@ -400,7 +400,7 @@ function ClusterCard({
   );
 }
 
-export default function CrossBrandClusterList({ clusters }: Props) {
+export default function CooccurrenceCompanionClusterList({ clusters }: Props) {
   const [brandFilter, setBrandFilter] = useState<Brand | null>(null);
   const [minSize, setMinSize] = useState(3);
 

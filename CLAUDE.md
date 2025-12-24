@@ -12,6 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **相互随伴（A↔B）**: AとBが互いのページに掲載されている関係
 - **共起（B‖C｜A）**: アイドルAのページにBとCが同時に掲載されている関係
 - **共起元（cooccurrenceSource）**: 共起関係の文脈となるアイドル（上記のA）
+- **共起随伴ペア（CooccurrenceCompanionPair）**: 異なるブランドのアイドル2人が複数の共起元のページで同時に随伴として掲載されているペア
 
 ## Commands
 

@@ -10,7 +10,7 @@ interface IdolInfo {
   brand: Brand[];
 }
 
-interface CrossBrandClusterMember {
+interface CooccurrenceCompanionClusterMember {
   id: string;
   name: string;
   brand: Brand[];
@@ -18,7 +18,7 @@ interface CrossBrandClusterMember {
   role: "core" | "peripheral";
 }
 
-interface CrossBrandEdge {
+interface CooccurrenceCompanionEdge {
   idolA: IdolInfo;
   idolB: IdolInfo;
   /** 共起元の数（このペアを同時に随伴しているアイドルの数） */
@@ -26,14 +26,14 @@ interface CrossBrandEdge {
   pmi: number;
 }
 
-interface CrossBrandCluster {
+interface CooccurrenceCompanionCluster {
   memberDetails: IdolInfo[];
-  memberRoles: CrossBrandClusterMember[];
-  edges: CrossBrandEdge[];
+  memberRoles: CooccurrenceCompanionClusterMember[];
+  edges: CooccurrenceCompanionEdge[];
 }
 
 interface Props {
-  cluster: CrossBrandCluster;
+  cluster: CooccurrenceCompanionCluster;
   width?: number;
   height?: number;
   hiddenIds?: Set<string>;
@@ -52,7 +52,7 @@ interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
   pmi: number;
 }
 
-export default function CrossBrandClusterGraph({
+export default function CooccurrenceCompanionClusterGraph({
   cluster,
   width = 700,
   height = 500,
@@ -240,7 +240,7 @@ export default function CrossBrandClusterGraph({
     <GraphSvgContainer svgRef={svgRef} width={width} height={height}>
       <GraphLegend>
         <LegendLine color="#d4a017" width={4} label="PMI≥3.0（強い関連性）" bold icon="★" />
-        <LegendLine color="#8e44ad" width={3} label="ブランド横断ペア（太いほど多くの共起元）" />
+        <LegendLine color="#8e44ad" width={3} label="共起随伴ペア（太いほど多くの共起元）" />
         <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
           <span
             style={{

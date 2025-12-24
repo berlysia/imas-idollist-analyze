@@ -1,17 +1,17 @@
 import { createRoute } from "honox/factory";
 import { readFile } from "fs/promises";
 import { join } from "path";
-import type { CrossBrandBridge, CrossBrandCluster } from "../lib/compute";
+import type { CooccurrenceCompanionPair, CooccurrenceCompanionCluster } from "../lib/compute";
 import BridgesTable from "../islands/BridgesTable";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
 import { SITE_TITLE } from "../lib/constants";
 
 interface BridgesData {
-  data: CrossBrandBridge[];
+  data: CooccurrenceCompanionPair[];
 }
 
 interface ClustersData {
-  data: CrossBrandCluster[];
+  data: CooccurrenceCompanionCluster[];
 }
 
 interface MetadataData {
@@ -29,7 +29,9 @@ function makePairKey(idA: string, idB: string): string {
   return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
 }
 
-function buildPairToClusterMap(clusters: CrossBrandCluster[]): Record<string, ClusterInfo> {
+function buildPairToClusterMap(
+  clusters: CooccurrenceCompanionCluster[]
+): Record<string, ClusterInfo> {
   const map: Record<string, ClusterInfo> = {};
   clusters.forEach((cluster, clusterIndex) => {
     for (const edge of cluster.edges) {
@@ -47,8 +49,8 @@ async function loadData(): Promise<{
 }> {
   const dataDir = join(process.cwd(), "data/precomputed");
   const [bridgesRaw, clustersRaw, metadataRaw] = await Promise.all([
-    readFile(join(dataDir, "cross-brand.json"), "utf-8"),
-    readFile(join(dataDir, "cross-brand-clusters.json"), "utf-8"),
+    readFile(join(dataDir, "cooccurrence-companion.json"), "utf-8"),
+    readFile(join(dataDir, "cooccurrence-companion-clusters.json"), "utf-8"),
     readFile(join(dataDir, "metadata.json"), "utf-8"),
   ]);
   return {
@@ -66,13 +68,13 @@ export default createRoute(async (c) => {
   return c.render(
     <>
       <PageHeader metadata={metadata} />
-      <NavigationTabs activeTab="/cross-brand-pairs" />
+      <NavigationTabs activeTab="/cooccurrence-companion-pairs" />
       <main>
         <div className="chart-container">
-          <h3>ブランド横断ペア</h3>
+          <h3>共起随伴ペア</h3>
           <ExplanationBox>
             <p>
-              <strong>ブランド横断ペア</strong>
+              <strong>共起随伴ペア</strong>
               とは、異なるブランドのアイドル2人が、複数のアイドルのページに同時に随伴として表示されているペアです。
             </p>
             <p>
@@ -88,6 +90,6 @@ export default createRoute(async (c) => {
       </main>
       <PageFooter />
     </>,
-    { title: `ブランド横断ペア - ${SITE_TITLE}` }
+    { title: `共起随伴ペア - ${SITE_TITLE}` }
   );
 });

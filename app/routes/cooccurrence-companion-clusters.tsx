@@ -1,13 +1,13 @@
 import { createRoute } from "honox/factory";
 import { readFile } from "fs/promises";
 import { join } from "path";
-import type { CrossBrandCluster } from "../lib/compute";
-import CrossBrandClusterList from "../islands/CrossBrandClusterList";
+import type { CooccurrenceCompanionCluster } from "../lib/compute";
+import CooccurrenceCompanionClusterList from "../islands/CooccurrenceCompanionClusterList";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
 import { SITE_TITLE } from "../lib/constants";
 
 interface ClustersData {
-  data: CrossBrandCluster[];
+  data: CooccurrenceCompanionCluster[];
 }
 
 interface MetadataData {
@@ -19,7 +19,7 @@ interface MetadataData {
 async function loadData(): Promise<{ clusters: ClustersData; metadata: MetadataData }> {
   const dataDir = join(process.cwd(), "data/precomputed");
   const [clustersRaw, metadataRaw] = await Promise.all([
-    readFile(join(dataDir, "cross-brand-clusters.json"), "utf-8"),
+    readFile(join(dataDir, "cooccurrence-companion-clusters.json"), "utf-8"),
     readFile(join(dataDir, "metadata.json"), "utf-8"),
   ]);
   return {
@@ -34,25 +34,25 @@ export default createRoute(async (c) => {
   return c.render(
     <>
       <PageHeader metadata={metadata} />
-      <NavigationTabs activeTab="/cross-brand-clusters" variant="crossbrand" />
+      <NavigationTabs activeTab="/cooccurrence-companion-clusters" variant="cooccurrence" />
       <main>
         <div className="chart-container">
-          <h3>ブランド横断クラスタ</h3>
+          <h3>共起随伴クラスタ</h3>
           <ExplanationBox>
             <p>
-              <strong>ブランド横断クラスタ</strong>
+              <strong>共起随伴クラスタ</strong>
               とは、異なるブランドのアイドル同士が同時に随伴として選ばれている（共起している）グループです。
             </p>
             <p>
-              ブランド横断ペア（異なるブランドのアイドルが共起元のページに同時に掲載されている）のみを
+              共起随伴ペア（異なるブランドのアイドルが共起元のページに同時に掲載されている）のみを
               エッジとしてLouvain法でコミュニティ検出を行っています。
             </p>
           </ExplanationBox>
-          <CrossBrandClusterList clusters={clusters.data} />
+          <CooccurrenceCompanionClusterList clusters={clusters.data} />
         </div>
       </main>
       <PageFooter />
     </>,
-    { title: `ブランド横断クラスタ - ${SITE_TITLE}` }
+    { title: `共起随伴クラスタ - ${SITE_TITLE}` }
   );
 });

@@ -39,7 +39,7 @@ export interface PairCooccurrence {
   count: number;
   /** PMI値 */
   pmi: number;
-  /** ブランド横断かどうか */
+  /** 異種ブランドかどうか */
   crossBrand: boolean;
 }
 
@@ -101,7 +101,7 @@ export function computePMIRanking(data: NormalizedData, minCount: number = 2): P
     // PMI = log2(P(A,B) / (P(A) * P(B)))
     const pmi = Math.log2(pAB / (pA * pB));
 
-    // ブランド横断判定
+    // 共起随伴判定
     const brandsA = new Set(idolA.brand);
     const brandsB = new Set(idolB.brand);
     const crossBrand = ![...brandsA].some((b) => brandsB.has(b));
@@ -120,9 +120,9 @@ export function computePMIRanking(data: NormalizedData, minCount: number = 2): P
 }
 
 /**
- * ブランド横断ペア: 異なるブランドの2人が、複数のアイドルのページ上で同時に掲載されている（共起）
+ * 共起随伴ペア: 異なるブランドの2人が、複数のアイドルのページ上で同時に掲載されている（共起）
  */
-export interface CrossBrandBridge {
+export interface CooccurrenceCompanionPair {
   idolA: { id: string; name: string; brand: Brand[] };
   idolB: { id: string; name: string; brand: Brand[] };
   /** 共起元の数（このペアを同時に随伴しているアイドルの数） */
@@ -134,13 +134,13 @@ export interface CrossBrandBridge {
 }
 
 /**
- * ブランド横断で複数人から同時に選ばれているペアを計算（PMI付き）
+ * 共起随伴で複数人から同時に選ばれているペアを計算（PMI付き）
  * @param minCooccurrenceSources 最低共起元数
  */
-export function computeCrossBrandBridges(
+export function computeCooccurrenceCompanionPairs(
   data: NormalizedData,
   minCooccurrenceSources: number = 2
-): CrossBrandBridge[] {
+): CooccurrenceCompanionPair[] {
   // 各アイドルが随伴リストに現れる回数（被随伴数）
   const appearanceCount = new Map<string, number>();
   for (const targetIds of Object.values(data.accompaniments)) {
@@ -171,7 +171,7 @@ export function computeCrossBrandBridges(
     }
   }
 
-  const results: CrossBrandBridge[] = [];
+  const results: CooccurrenceCompanionPair[] = [];
 
   for (const [key, sources] of pairCooccurrenceSources.entries()) {
     if (sources.length < minCooccurrenceSources) continue;
@@ -185,7 +185,7 @@ export function computeCrossBrandBridges(
     const idolB = data.idols[idB];
     if (!idolA || !idolB) continue;
 
-    // ブランド横断判定
+    // 共起随伴判定
     const brandsA = new Set(idolA.brand);
     const brandsB = new Set(idolB.brand);
     const isCrossBrand = ![...brandsA].some((b) => brandsB.has(b));
@@ -307,8 +307,8 @@ export interface IdolDetail {
   selectedBy: Array<{ id: string; name: string; brand: Brand[]; score: SelectionScore }>;
   /** 相思相愛ペア（互いに選び合っている） */
   mutualPairs: Array<{ id: string; name: string; brand: Brand[]; pmi: number }>;
-  /** ブランド横断ペア（異なるブランドのアイドルと同時に掲載されている） */
-  crossBrandBridges: Array<{
+  /** 共起随伴ペア（異なるブランドのアイドルと同時に掲載されている） */
+  cooccurrenceCompanionPairs: Array<{
     partner: { id: string; name: string; brand: Brand[] };
     cooccurrenceSourceCount: number;
     pmi: number;
@@ -588,7 +588,7 @@ export function detectClusters(
           (edgeWeight -
             currentCommWeight -
             (nodeWeight * (targetCommWeight - currentCommTotalWeight + nodeWeight)) /
-            (2 * totalWeight));
+              (2 * totalWeight));
 
         if (delta > bestDelta) {
           bestDelta = delta;
@@ -750,7 +750,7 @@ export function computeIdolDetail(
   data: NormalizedData,
   idolId: string,
   pmiPairs: PairCooccurrence[],
-  crossBrandBridges: CrossBrandBridge[]
+  cooccurrenceCompanionPairs: CooccurrenceCompanionPair[]
 ): IdolDetail | null {
   const idol = data.idols[idolId];
   if (!idol) return null;
@@ -803,8 +803,8 @@ export function computeIdolDetail(
     })
     .sort((a, b) => b.pmi - a.pmi);
 
-  // ブランド横断ペア
-  const bridges = crossBrandBridges
+  // 共起随伴ペア
+  const bridges = cooccurrenceCompanionPairs
     .filter((b) => b.idolA.id === idolId || b.idolB.id === idolId)
     .map((b) => {
       const partner = b.idolA.id === idolId ? b.idolB : b.idolA;
@@ -841,7 +841,7 @@ export function computeIdolDetail(
     selectedIdols,
     selectedBy,
     mutualPairs,
-    crossBrandBridges: bridges,
+    cooccurrenceCompanionPairs: bridges,
     incomingCount: selectedBy.length,
     incomingByBrand,
   };
@@ -850,7 +850,7 @@ export function computeIdolDetail(
 /**
  * クロスブランドクラスタメンバーの役割
  */
-export interface CrossBrandClusterMember {
+export interface CooccurrenceCompanionClusterMember {
   id: string;
   name: string;
   brand: Brand[];
@@ -867,21 +867,21 @@ export interface CrossBrandClusterMember {
 }
 
 /**
- * ブランド横断クラスタ: cross-brand bridgesのみからグラフを構築
+ * 共起随伴クラスタ: cross-brand bridgesのみからグラフを構築
  */
-export interface CrossBrandCluster {
+export interface CooccurrenceCompanionCluster {
   id: number;
   members: string[];
   memberDetails: Array<{ id: string; name: string; brand: Brand[] }>;
   /** メンバー情報（役割付き） */
-  memberRoles: CrossBrandClusterMember[];
+  memberRoles: CooccurrenceCompanionClusterMember[];
   /** コアメンバーのID */
   coreMembers: string[];
   /** 周辺メンバーのID */
   peripheralMembers: string[];
   /** コア部分の密度 */
   coreDensity: number;
-  /** クラスタ内のブランド横断エッジ */
+  /** クラスタ内の共起随伴エッジ */
   edges: Array<{
     idolA: { id: string; name: string; brand: Brand[] };
     idolB: { id: string; name: string; brand: Brand[] };
@@ -901,12 +901,12 @@ export interface CrossBrandCluster {
 }
 
 /**
- * ブランド横断ペアのみでクラスタを検出
+ * 共起随伴ペアのみでクラスタを検出
  * 異なるブランドを繋ぐコミュニティを発見する
  */
-export function detectCrossBrandClusters(
+export function detectCooccurrenceCompanionClusters(
   data: NormalizedData,
-  crossBrandBridges: CrossBrandBridge[],
+  cooccurrenceCompanionPairs: CooccurrenceCompanionPair[],
   options: {
     /** 最小クラスタサイズ（デフォルト: 3） */
     minSize?: number;
@@ -915,18 +915,18 @@ export function detectCrossBrandClusters(
     /** 最小PMI閾値（これ以上のPMIを持つエッジのみ使用、デフォルト: 中央値） */
     minPmi?: number;
   } = {}
-): CrossBrandCluster[] {
+): CooccurrenceCompanionCluster[] {
   const { minSize = 3, minEdges = 2 } = options;
 
-  if (crossBrandBridges.length === 0) return [];
+  if (cooccurrenceCompanionPairs.length === 0) return [];
 
   // PMI閾値を計算（指定がなければ中央値を使用）
-  const sortedPmis = crossBrandBridges.map((b) => b.pmi).sort((a, b) => a - b);
+  const sortedPmis = cooccurrenceCompanionPairs.map((b) => b.pmi).sort((a, b) => a - b);
   const medianPmi = sortedPmis[Math.floor(sortedPmis.length / 2)] ?? 0;
   const minPmi = options.minPmi ?? medianPmi;
 
   // PMI閾値でフィルタ（意外性のある関係のみ抽出）
-  const filteredBridges = crossBrandBridges.filter((b) => b.pmi >= minPmi);
+  const filteredBridges = cooccurrenceCompanionPairs.filter((b) => b.pmi >= minPmi);
 
   if (filteredBridges.length === 0) return [];
 
@@ -944,7 +944,7 @@ export function detectCrossBrandClusters(
     return normCooccurrence * 0.6 + normPmi * 0.4;
   };
 
-  // ブランド横断ペアからグラフを構築
+  // 共起随伴ペアからグラフを構築
   // 重み = 共起元数(60%) + PMI(40%) の組み合わせ
   const adjacency = new Map<string, Map<string, number>>();
   const nodeSet = new Set<string>();
@@ -1032,7 +1032,7 @@ export function detectCrossBrandClusters(
           (edgeWeight -
             currentCommWeight -
             (nodeWeight * (targetCommWeight - currentCommTotalWeight + nodeWeight)) /
-            (2 * totalWeight));
+              (2 * totalWeight));
 
         if (delta > bestDelta) {
           bestDelta = delta;
@@ -1057,7 +1057,7 @@ export function detectCrossBrandClusters(
   }
 
   // クラスタ情報を構築
-  const clusters: CrossBrandCluster[] = [];
+  const clusters: CooccurrenceCompanionCluster[] = [];
   let clusterId = 0;
 
   for (const [, members] of clusterMembers) {
@@ -1065,7 +1065,7 @@ export function detectCrossBrandClusters(
 
     const memberSet = new Set(members);
 
-    // クラスタ内のブランド横断エッジ（フィルタ済みのものを使用）
+    // クラスタ内の共起随伴エッジ（フィルタ済みのものを使用）
     const clusterEdges = filteredBridges.filter(
       (b) => memberSet.has(b.idolA.id) && memberSet.has(b.idolB.id)
     );
@@ -1158,7 +1158,7 @@ export function detectCrossBrandClusters(
 
     const coreMembers: string[] = [];
     const peripheralMembers: string[] = [];
-    const memberRoles: CrossBrandClusterMember[] = [];
+    const memberRoles: CooccurrenceCompanionClusterMember[] = [];
 
     for (const memberId of members) {
       const idol = data.idols[memberId];

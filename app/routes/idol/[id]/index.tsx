@@ -134,9 +134,9 @@ export default createRoute(
               </p>
               {detail.selectedIdols.length > 0 ? (
                 (() => {
-                  // ブランド横断ペアのPMI情報をマップ化
+                  // 共起随伴ペアのPMI情報をマップ化
                   const crossBrandPmiMap = new Map(
-                    detail.crossBrandBridges.map((b) => [b.partner.id, b.pmi])
+                    detail.cooccurrenceCompanionPairs.map((b) => [b.partner.id, b.pmi])
                   );
                   // PMI ≥ 3.0 を高PMIとする（期待の8倍以上の頻度で共起 = 強い関連性）
                   const HIGH_PMI_THRESHOLD = 3.0;
@@ -184,7 +184,7 @@ export default createRoute(
                                   fontWeight: isHighPmi ? "bold" : "normal",
                                 }}
                               >
-                                {isHighPmi && "★ "}ブランド横断PMI: {crossBrandPmi.toFixed(2)}
+                                {isHighPmi && "★ "}共起随伴PMI: {crossBrandPmi.toFixed(2)}
                               </span>
                             )}
                           </li>
@@ -269,14 +269,14 @@ export default createRoute(
               )}
             </div>
 
-            {detail.crossBrandBridges.length > 0 && (
+            {detail.cooccurrenceCompanionPairs.length > 0 && (
               <div className="detail-section">
-                <h3>ブランド横断ペア</h3>
+                <h3>共起随伴ペア</h3>
                 <p className="section-description">
                   異なるブランドのアイドルと一緒に随伴として表示されているペア
                 </p>
                 <ul className="bridge-list">
-                  {detail.crossBrandBridges.slice(0, 10).map((bridge) => (
+                  {detail.cooccurrenceCompanionPairs.slice(0, 10).map((bridge) => (
                     <li key={bridge.partner.id}>
                       <div className="bridge-header">
                         <a href={`/idol/${bridge.partner.id}`} className="idol-link">

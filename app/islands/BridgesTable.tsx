@@ -8,7 +8,7 @@ interface IdolInfo {
   brand: Brand[];
 }
 
-interface CrossBrandBridge {
+interface CooccurrenceCompanionPair {
   idolA: IdolInfo;
   idolB: IdolInfo;
   /** 共起元の数（このペアを同時に随伴しているアイドルの数） */
@@ -24,7 +24,7 @@ interface ClusterInfo {
 }
 
 interface Props {
-  bridges: CrossBrandBridge[];
+  bridges: CooccurrenceCompanionPair[];
   /** ペアID（"小さいID|大きいID"形式）からクラスタ情報へのマッピング */
   pairToCluster?: Record<string, ClusterInfo>;
 }
@@ -48,7 +48,7 @@ function ClusterLink({ clusterInfo }: { clusterInfo: ClusterInfo | undefined }) 
 
   return (
     <a
-      href={`/cross-brand-clusters#cluster-${clusterInfo.clusterIndex}`}
+      href={`/cooccurrence-companion-clusters#cluster-${clusterInfo.clusterIndex}`}
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -61,7 +61,7 @@ function ClusterLink({ clusterInfo }: { clusterInfo: ClusterInfo | undefined }) 
         fontSize: "0.85em",
         fontWeight: 500,
       }}
-      title={`ブランド横断クラスタ #${clusterInfo.clusterIndex + 1} に属する`}
+      title={`共起随伴クラスタ #${clusterInfo.clusterIndex + 1} に属する`}
     >
       <span style={{ fontSize: "0.9em" }}>🔗</span>#{clusterInfo.clusterIndex + 1}
     </a>

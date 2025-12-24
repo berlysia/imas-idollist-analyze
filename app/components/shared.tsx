@@ -29,9 +29,9 @@ const TAB_ITEMS = [
   { href: "/idol-list", label: "アイドル一覧" },
   { href: "/incoming-ranking", label: "被随伴ランキング" },
   { href: "/mutual-pairs", label: "相互随伴ペア" },
-  { href: "/cross-brand-pairs", label: "ブランド横断ペア" },
+  { href: "/cooccurrence-companion-pairs", label: "共起随伴ペア" },
   { href: "/accompaniment-clusters", label: "随伴クラスタ" },
-  { href: "/cross-brand-clusters", label: "ブランド横断クラスタ" },
+  { href: "/cooccurrence-companion-clusters", label: "共起随伴クラスタ" },
   { href: "/network", label: "ネットワーク" },
   { href: "/graph-explorer", label: "グラフ探索" },
 ] as const;
@@ -44,9 +44,9 @@ export function NavigationTabs({
   variant = "default",
 }: {
   activeTab: string;
-  variant?: "default" | "crossbrand";
+  variant?: "default" | "cooccurrence";
 }) {
-  const activeColor = variant === "crossbrand" ? "#8e44ad" : "#333";
+  const activeColor = variant === "cooccurrence" ? "#8e44ad" : "#333";
 
   return (
     <nav
@@ -133,9 +133,9 @@ export function RankBadge({
   variant = "default",
 }: {
   rank: number;
-  variant?: "default" | "crossbrand";
+  variant?: "default" | "cooccurrence";
 }) {
-  const bgColor = variant === "crossbrand" ? "#8e44ad" : "#333";
+  const bgColor = variant === "cooccurrence" ? "#8e44ad" : "#333";
   return (
     <span
       style={{
@@ -162,9 +162,9 @@ export function GraphToggleButton({
 }: {
   showGraph: boolean;
   onClick: () => void;
-  variant?: "default" | "crossbrand";
+  variant?: "default" | "cooccurrence";
 }) {
-  const activeColor = variant === "crossbrand" ? "#8e44ad" : "#1976d2";
+  const activeColor = variant === "cooccurrence" ? "#8e44ad" : "#1976d2";
   return (
     <button
       onClick={onClick}

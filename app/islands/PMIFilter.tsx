@@ -25,7 +25,7 @@ interface Props {
   pairs: PairCooccurrence[];
   /** ペアID（"小さいID|大きいID"形式）から随伴クラスタ情報へのマッピング */
   pairToCluster?: Record<string, ClusterInfo>;
-  /** ペアID（"小さいID|大きいID"形式）からブランド横断クラスタ情報へのマッピング */
+  /** ペアID（"小さいID|大きいID"形式）から共起随伴クラスタ情報へのマッピング */
   crossBrandPairToCluster?: Record<string, ClusterInfo>;
 }
 
@@ -76,7 +76,7 @@ function ClusterLink({
       )}
       {crossBrandClusterInfo && (
         <a
-          href={`/cross-brand-clusters#cluster-${crossBrandClusterInfo.clusterIndex}`}
+          href={`/cooccurrence-companion-clusters#cluster-${crossBrandClusterInfo.clusterIndex}`}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -89,7 +89,7 @@ function ClusterLink({
             fontSize: "0.85em",
             fontWeight: 500,
           }}
-          title={`ブランド横断クラスタ #${crossBrandClusterInfo.clusterIndex + 1} に属する`}
+          title={`共起随伴クラスタ #${crossBrandClusterInfo.clusterIndex + 1} に属する`}
         >
           <span style={{ fontSize: "0.9em" }}>🌐</span>#{crossBrandClusterInfo.clusterIndex + 1}
         </a>
@@ -124,7 +124,7 @@ export default function PMIFilter({ pairs, pairToCluster, crossBrandPairToCluste
             checked={crossBrandOnly}
             onChange={(e) => handleCrossBrandChange(e.target.checked)}
           />
-          ブランド横断ペアのみ表示
+          異種ブランドペアのみ表示
         </label>
       </section>
 
