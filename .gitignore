@@ -32,3 +32,5 @@ coverage/
 data
 
 *.tsbuildinfo
+
+public/static/icons

@@ -12,6 +12,7 @@
     "scrape:list": "bun src/scraper/index.ts list",
     "scrape:details": "bun src/scraper/index.ts details",
     "transform:normalize": "bun src/transformer/index.ts",
+    "download:images": "bun scripts/downloadImages.ts",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
