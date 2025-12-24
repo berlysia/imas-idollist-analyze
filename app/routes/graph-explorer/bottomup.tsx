@@ -1,5 +1,6 @@
 import { createRoute } from "honox/factory";
 import GraphExplorer from "../../islands/GraphExplorer";
+import ModeToggleLink from "../../islands/ModeToggleLink";
 import { SITE_TITLE } from "../../lib/constants";
 import { loadGraphExplorerData } from "../../lib/graphExplorerData";
 
@@ -42,16 +43,7 @@ export default createRoute(async (c) => {
             ← 戻る
           </a>
           <span style={{ fontSize: "14px" }}>ボトムアップ グラフ探索</span>
-          <a
-            href="/graph-explorer/topdown"
-            style={{
-              color: "#aaa",
-              textDecoration: "none",
-              fontSize: "12px",
-            }}
-          >
-            ← トップダウンへ
-          </a>
+          <ModeToggleLink targetMode="topdown" />
         </div>
         <span style={{ fontSize: "11px", color: "#aaa" }}>
           ドラッグでノード移動 / ダブルクリックで固定 / ホイールでズーム
