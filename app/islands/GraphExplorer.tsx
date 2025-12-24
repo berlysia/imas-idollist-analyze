@@ -385,6 +385,7 @@ export default function GraphExplorer({
 
   const nodesArray = useMemo(() => Array.from(nodes.values()), [nodes]);
   const edgesArray = useMemo(() => Array.from(edges.values()), [edges]);
+  const displayedNodeIds = useMemo(() => new Set(nodes.keys()), [nodes]);
 
   const addNode = useCallback(
     (idol: IdolListItem, options?: { keepSelection?: boolean }) => {
@@ -592,6 +593,9 @@ export default function GraphExplorer({
           idolList={idolList}
           selectedIds={selectedIds}
           onSelectionChange={handleSelectionChange}
+          displayedNodeIds={displayedNodeIds}
+          focusedNodeId={selectedNodeId}
+          onFocusNode={handleNodeClick}
         />
 
         {/* トップダウンモードのみ: エッジモード切り替え */}

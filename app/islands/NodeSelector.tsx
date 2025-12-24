@@ -21,6 +21,9 @@ interface Props {
   idolList: IdolListItem[];
   selectedIds: Set<string>;
   onSelectionChange: (selectedIds: Set<string>) => void;
+  displayedNodeIds?: Set<string>;
+  focusedNodeId?: string | null;
+  onFocusNode?: (nodeId: string) => void;
 }
 
 type BrandState = "all" | "none" | "partial";
@@ -88,10 +91,13 @@ interface BrandRowProps {
   idols: IdolListItem[];
   originalIdols: IdolListItem[];
   selectedIds: Set<string>;
+  displayedNodeIds: Set<string> | undefined;
+  focusedNodeId: string | null | undefined;
   isExpanded: boolean;
   onToggle: () => void;
   onBrandCheckChange: (brandData: IdolsByBrand) => void;
   onIdolCheckChange: (idolId: string) => void;
+  onFocusNode: ((nodeId: string) => void) | undefined;
 }
 
 function BrandRow({
@@ -99,10 +105,13 @@ function BrandRow({
   idols,
   originalIdols,
   selectedIds,
+  displayedNodeIds,
+  focusedNodeId,
   isExpanded,
   onToggle,
   onBrandCheckChange,
   onIdolCheckChange,
+  onFocusNode,
 }: BrandRowProps) {
   const checkboxRef = useRef<HTMLInputElement>(null);
   const state = getBrandState(originalIdols, selectedIds);
@@ -149,38 +158,60 @@ function BrandRow({
       {/* Idol list */}
       {isExpanded && (
         <div style={{ background: "#fff" }}>
-          {idols.map((idol) => (
-            <label
-              key={idol.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                padding: "6px 8px 6px 24px",
-                cursor: "pointer",
-                borderTop: "1px solid #f0f0f0",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={selectedIds.has(idol.id)}
-                onChange={() => onIdolCheckChange(idol.id)}
-                style={{ marginRight: "8px" }}
-              />
-              <span style={{ display: "flex", gap: "2px", marginRight: "6px" }}>
-                {idol.brand.map((b) => (
-                  <BrandDot key={b} brand={b} size="small" />
-                ))}
-              </span>
-              <span style={{ flex: 1 }}>{idol.name}</span>
-            </label>
-          ))}
+          {idols.map((idol) => {
+            const isDisplayed = displayedNodeIds?.has(idol.id) ?? false;
+            const isFocused = focusedNodeId === idol.id;
+            return (
+              <div
+                key={idol.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "6px 8px 6px 24px",
+                  borderTop: "1px solid #f0f0f0",
+                  background: isFocused ? "#e3f2fd" : "transparent",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(idol.id)}
+                  onChange={() => onIdolCheckChange(idol.id)}
+                  style={{ marginRight: "8px", cursor: "pointer" }}
+                />
+                <span style={{ display: "flex", gap: "2px", marginRight: "6px" }}>
+                  {idol.brand.map((b) => (
+                    <BrandDot key={b} brand={b} size="small" />
+                  ))}
+                </span>
+                <span
+                  onClick={isDisplayed && onFocusNode ? () => onFocusNode(idol.id) : undefined}
+                  style={{
+                    flex: 1,
+                    cursor: isDisplayed && onFocusNode ? "pointer" : "default",
+                    color: isDisplayed ? "#1976d2" : "inherit",
+                    fontWeight: isFocused ? "bold" : "normal",
+                  }}
+                  title={isDisplayed ? "クリックでグラフ上のノードにフォーカス" : undefined}
+                >
+                  {idol.name}
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
-export default function NodeSelector({ idolList, selectedIds, onSelectionChange }: Props) {
+export default function NodeSelector({
+  idolList,
+  selectedIds,
+  onSelectionChange,
+  displayedNodeIds,
+  focusedNodeId,
+  onFocusNode,
+}: Props) {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedBrands, setExpandedBrands] = useState<Set<ExtendedBrand>>(new Set());
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -343,10 +374,13 @@ export default function NodeSelector({ idolList, selectedIds, onSelectionChange 
             idols={idols}
             originalIdols={idolsByBrand.find((b) => b.brand === brand)?.idols ?? idols}
             selectedIds={selectedIds}
+            displayedNodeIds={displayedNodeIds}
+            focusedNodeId={focusedNodeId}
             isExpanded={expandedBrands.has(brand)}
             onToggle={() => toggleBrand(brand)}
             onBrandCheckChange={handleBrandCheckChange}
             onIdolCheckChange={handleIdolCheckChange}
+            onFocusNode={onFocusNode}
           />
         ))}
 
