@@ -15,6 +15,34 @@ interface Props {
   pmiMap: Record<string, number>;
 }
 
+const BRAND_LIST: Brand[] = ["imas", "deremas", "milimas", "sidem", "shiny", "gakuen"];
+
+const BRAND_LABELS: Record<Brand, string> = {
+  imas: "765PRO",
+  deremas: "シンデレラ",
+  milimas: "ミリオン",
+  sidem: "SideM",
+  shiny: "シャイニー",
+  gakuen: "学マス",
+};
+
+function getIdolsByBrand(
+  idols: Record<string, { name: string; brand: Brand[]; kana: string }>,
+  brand: Brand
+): Map<string, ExplorerNode> {
+  const nodeMap = new Map<string, ExplorerNode>();
+  for (const [id, idol] of Object.entries(idols)) {
+    if (idol.brand.includes(brand)) {
+      nodeMap.set(id, {
+        id,
+        name: idol.name,
+        brand: idol.brand,
+      });
+    }
+  }
+  return nodeMap;
+}
+
 function getInitialNodesFromUrl(
   idols: Record<string, { name: string; brand: Brand[]; kana: string }>
 ): Map<string, ExplorerNode> {
@@ -23,6 +51,7 @@ function getInitialNodesFromUrl(
   const params = new URLSearchParams(window.location.search);
 
   // preset=all: 全アイドルを初期表示
+  // preset=imas, preset=deremas, etc.: ブランド別
   const presetParam = params.get("preset");
   if (presetParam === "all") {
     const nodeMap = new Map<string, ExplorerNode>();
@@ -34,6 +63,10 @@ function getInitialNodesFromUrl(
       });
     }
     return nodeMap;
+  }
+
+  if (presetParam && BRAND_LIST.includes(presetParam as Brand)) {
+    return getIdolsByBrand(idols, presetParam as Brand);
   }
 
   // ids: 個別指定
@@ -123,8 +156,26 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
       params.delete("ids");
       params.set("preset", "all");
     } else if (ids.length > 0) {
-      params.delete("preset");
-      params.set("ids", ids.join(","));
+      // ブランド別プリセットかチェック
+      let matchedBrand: Brand | null = null;
+      for (const brand of BRAND_LIST) {
+        const brandIdols = getIdolsByBrand(idols, brand);
+        if (brandIdols.size === ids.length) {
+          const allMatch = ids.every((id) => brandIdols.has(id));
+          if (allMatch) {
+            matchedBrand = brand;
+            break;
+          }
+        }
+      }
+
+      if (matchedBrand) {
+        params.delete("ids");
+        params.set("preset", matchedBrand);
+      } else {
+        params.delete("preset");
+        params.set("ids", ids.join(","));
+      }
     } else {
       params.delete("ids");
       params.delete("preset");
@@ -273,6 +324,17 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
     setSelectedNodeId(null);
   }, [idols, accompaniments]);
 
+  const addIdolsByBrand = useCallback(
+    (brand: Brand) => {
+      const brandNodes = getIdolsByBrand(idols, brand);
+      nodesRef.current = brandNodes;
+      setNodes(brandNodes);
+      setEdges(calculateEdgesForNodes(brandNodes, accompaniments));
+      setSelectedNodeId(null);
+    },
+    [idols, accompaniments]
+  );
+
   const clearAllNodes = useCallback(() => {
     nodesRef.current = new Map();
     setNodes(new Map());
@@ -391,6 +453,35 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
             </button>
           )}
         </div>
+        <select
+          onChange={(e) => {
+            if (e.target.value) {
+              addIdolsByBrand(e.target.value as Brand);
+              e.target.value = "";
+            }
+          }}
+          style={{
+            marginTop: "8px",
+            padding: "6px 12px",
+            fontSize: "12px",
+            background: "#fff",
+            color: "#333",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            cursor: "pointer",
+            width: "100%",
+          }}
+          defaultValue=""
+        >
+          <option value="" disabled>
+            ブランド別に追加...
+          </option>
+          {BRAND_LIST.map((brand) => (
+            <option key={brand} value={brand}>
+              {BRAND_LABELS[brand]}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* フローティング凡例（左下） */}
