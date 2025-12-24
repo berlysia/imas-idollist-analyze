@@ -233,7 +233,7 @@ export function computeIncomingStats(data: NormalizedData): CooccurrenceStats[] 
 
       let byBrand = incomingByBrand.get(targetId);
       if (!byBrand) {
-        byBrand = { imas: 0, deremas: 0, milimas: 0, sidem: 0, shiny: 0, gakuen: 0 };
+        byBrand = { imas: 0, deremas: 0, milimas: 0, sidem: 0, shiny: 0, gakuen: 0, other: 0 };
         incomingByBrand.set(targetId, byBrand);
       }
       for (const brand of sourceIdol.brand) {
@@ -259,6 +259,7 @@ export function computeIncomingStats(data: NormalizedData): CooccurrenceStats[] 
         sidem: 0,
         shiny: 0,
         gakuen: 0,
+        other: 0,
       },
     });
   }
@@ -825,6 +826,7 @@ export function computeIdolDetail(
     sidem: 0,
     shiny: 0,
     gakuen: 0,
+    other: 0,
   };
   for (const selector of selectedBy) {
     for (const brand of selector.brand) {
