@@ -185,10 +185,25 @@ export default function GraphExplorer({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const isInitializedRef = useRef(false);
 
-  // Edge mode state
-  const [edgeMode, setEdgeMode] = useState<EdgeMode>("accompaniment");
-  const [minPmi, setMinPmi] = useState(0);
-  const [minCooccurrenceSourceCount, setMinCooccurrenceSourceCount] = useState(2);
+  // Edge mode state - initialize from URL params
+  const [edgeMode, setEdgeMode] = useState<EdgeMode>(() => {
+    if (typeof window === "undefined") return "accompaniment";
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get("edgeMode");
+    return mode === "cooccurrenceCompanion" ? "cooccurrenceCompanion" : "accompaniment";
+  });
+  const [minPmi, setMinPmi] = useState(() => {
+    if (typeof window === "undefined") return 2;
+    const params = new URLSearchParams(window.location.search);
+    const pmi = params.get("minPmi");
+    return pmi ? Number(pmi) : 2;
+  });
+  const [minCooccurrenceSourceCount, setMinCooccurrenceSourceCount] = useState(() => {
+    if (typeof window === "undefined") return 2;
+    const params = new URLSearchParams(window.location.search);
+    const count = params.get("minCooccurrenceSourceCount");
+    return count ? Number(count) : 2;
+  });
 
   // Recalculate edges when mode or filter changes
   useEffect(() => {
@@ -255,9 +270,20 @@ export default function GraphExplorer({
       params.delete("preset");
     }
 
+    // Sync edge mode and filter params
+    if (edgeMode === "cooccurrenceCompanion") {
+      params.set("edgeMode", edgeMode);
+      params.set("minPmi", String(minPmi));
+      params.set("minCooccurrenceSourceCount", String(minCooccurrenceSourceCount));
+    } else {
+      params.delete("edgeMode");
+      params.delete("minPmi");
+      params.delete("minCooccurrenceSourceCount");
+    }
+
     const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
     window.history.replaceState({}, "", newUrl);
-  }, [nodes, idols]);
+  }, [nodes, idols, edgeMode, minPmi, minCooccurrenceSourceCount]);
 
   // Ref to access current nodes without stale closure
   const nodesRef = useRef(nodes);

@@ -486,9 +486,6 @@ export default function GraphExplorerGraph({
               const isHighPmi = (edge.pmi ?? 0) >= 3.0;
               const strokeColor = isHighPmi ? "#d4a017" : "#8e44ad";
               const strokeWidth = 1 + (edge.cooccurrenceSourceCount ?? 1) * 2;
-              const markerEnd = isHighPmi
-                ? "url(#explorer-arrow-highpmi)"
-                : "url(#explorer-arrow-cooccurrence)";
 
               return (
                 <line
@@ -500,7 +497,6 @@ export default function GraphExplorerGraph({
                   stroke={strokeColor}
                   strokeOpacity={isHighPmi ? 0.9 : 0.6}
                   strokeWidth={strokeWidth}
-                  markerEnd={markerEnd}
                 />
               );
             }
