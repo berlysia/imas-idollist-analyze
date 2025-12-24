@@ -1,36 +1,29 @@
-import { useEffect, useState } from "react";
+import type { ExplorerMode } from "./graphExplorerTypes";
 
 interface Props {
-  /** 遷移先モード */
-  targetMode: "topdown" | "bottomup";
+  currentMode: ExplorerMode;
+  onModeChange: (mode: ExplorerMode) => void;
 }
 
 /**
- * topdown/bottomup間を遷移するリンク
- * 現在のクエリパラメータを維持したまま遷移する
+ * topdown/bottomup間を切り替えるトグル
  */
-export default function ModeToggleLink({ targetMode }: Props) {
-  const [href, setHref] = useState(`/graph-explorer/${targetMode}`);
-
-  useEffect(() => {
-    // クライアントサイドでクエリパラメータを取得してリンクに付加
-    const search = window.location.search;
-    setHref(`/graph-explorer/${targetMode}${search}`);
-  }, [targetMode]);
-
-  const isTopdown = targetMode === "topdown";
-  const label = isTopdown ? "← トップダウンへ" : "ボトムアップへ →";
+export default function ModeToggleLink({ currentMode, onModeChange }: Props) {
+  const isTopdown = currentMode === "topdown";
 
   return (
-    <a
-      href={href}
+    <button
+      onClick={() => onModeChange(isTopdown ? "bottomup" : "topdown")}
       style={{
         color: "#aaa",
-        textDecoration: "none",
+        background: "none",
+        border: "none",
+        cursor: "pointer",
         fontSize: "12px",
+        padding: 0,
       }}
     >
-      {label}
-    </a>
+      {isTopdown ? "ボトムアップへ →" : "← トップダウンへ"}
+    </button>
   );
 }

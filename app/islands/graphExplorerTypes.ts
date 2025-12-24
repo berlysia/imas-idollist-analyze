@@ -1,5 +1,7 @@
 import type { Brand } from "@/types";
 
+export type ExplorerMode = "topdown" | "bottomup";
+
 export interface IdolListItem {
   id: string;
   name: string;

@@ -1,8 +1,36 @@
 import { createRoute } from "honox/factory";
+import GraphExplorer from "../islands/GraphExplorer";
+import { SITE_TITLE } from "../lib/constants";
+import { loadGraphExplorerData } from "../lib/graphExplorerData";
 
 export default createRoute(async (c) => {
-  // クエリパラメータを維持してトップダウンにリダイレクト
-  const url = new URL(c.req.url);
-  const queryString = url.search;
-  return c.redirect(`/graph-explorer/topdown${queryString}`, 302);
+  const {
+    idolList,
+    normalized,
+    idfMap,
+    pmiMap,
+    cooccurrenceCompanionPairs,
+    similarByAccompanimentPairs,
+  } = await loadGraphExplorerData();
+
+  return c.render(
+    <div
+      data-fullscreen
+      style={{
+        height: "100vh",
+        overflow: "hidden",
+      }}
+    >
+      <GraphExplorer
+        idolList={idolList}
+        accompaniments={normalized.accompaniments}
+        idols={normalized.idols}
+        idfMap={idfMap}
+        pmiMap={pmiMap}
+        cooccurrenceCompanionPairs={cooccurrenceCompanionPairs}
+        similarByAccompanimentPairs={similarByAccompanimentPairs}
+      />
+    </div>,
+    { title: `グラフ探索 - ${SITE_TITLE}` }
+  );
 });

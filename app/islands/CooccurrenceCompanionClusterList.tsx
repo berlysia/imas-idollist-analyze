@@ -306,7 +306,7 @@ function ClusterCard({
 
   const graphExplorerUrl = useMemo(() => {
     const ids = cluster.members.join(",");
-    return `/graph-explorer/bottomup?ids=${encodeURIComponent(ids)}`;
+    return `/graph-explorer?mode=bottomup&ids=${encodeURIComponent(ids)}`;
   }, [cluster.members]);
 
   return (

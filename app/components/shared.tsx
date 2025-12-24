@@ -32,8 +32,8 @@ const TAB_ITEMS = [
   { href: "/cooccurrence-companion-pairs", label: "共起随伴ペア" },
   { href: "/accompaniment-clusters", label: "随伴クラスタ" },
   { href: "/cooccurrence-companion-clusters", label: "共起随伴クラスタ" },
-  { href: "/graph-explorer/topdown?brands=all", label: "グラフ(トップダウン)" },
-  { href: "/graph-explorer/bottomup", label: "グラフ(ボトムアップ)" },
+  { href: "/graph-explorer?brands=all", label: "グラフ(トップダウン)" },
+  { href: "/graph-explorer?mode=bottomup", label: "グラフ(ボトムアップ)" },
 ] as const;
 
 /**
@@ -517,7 +517,11 @@ export function ScoreBadge({
 }) {
   const { label, description } = METRIC_DESCRIPTIONS[metric];
   const altValue =
-    ["idf", "idf-geometric-mean"].includes(metric) && value === 0 ? "-" : value.toFixed(2);
+    ["idf", "idf-geometric-mean"].includes(metric) && value === 0
+      ? "-"
+      : metric === "rank"
+        ? String(Math.floor(value))
+        : value.toFixed(2);
   return (
     <span className="score-badge-wrapper">
       <span className="score-badge">
