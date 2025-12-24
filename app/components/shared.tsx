@@ -13,7 +13,7 @@ interface MetadataData {
  */
 export function PageHeader({ metadata }: { metadata: MetadataData }) {
   return (
-    <header>
+    <header style={{ marginBottom: "24px" }}>
       <h1>
         <a href="/">{SITE_TITLE}</a>
       </h1>

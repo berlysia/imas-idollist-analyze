@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import type { Brand } from "@/types";
-import { GraphSection, EmptyMessage } from "../components/shared";
+import { EmptyMessage } from "../components/shared";
 import IdolSearchBox from "./IdolSearchBox";
 import GraphExplorerGraph from "./GraphExplorerGraph";
 import AccompanimentPanel from "./AccompanimentPanel";
@@ -240,96 +240,184 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
   }, []);
 
   const selectedNode = selectedNodeId ? nodes.get(selectedNodeId) : null;
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
+
+  // コンテナサイズを監視
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          setContainerSize({ width, height });
+        }
+      }
+    });
+
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, []);
 
   return (
-    <div>
-      <div style={{ marginBottom: "16px" }}>
+    <div
+      ref={containerRef}
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        background: "#fafafa",
+        overflow: "hidden",
+      }}
+    >
+      {/* フルスクリーングラフ */}
+      {nodesArray.length === 0 ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100%",
+          }}
+        >
+          <EmptyMessage message="アイドルを検索して追加してください" />
+        </div>
+      ) : (
+        <GraphExplorerGraph
+          nodes={nodesArray}
+          edges={edgesArray}
+          width={containerSize.width}
+          height={containerSize.height}
+          selectedNodeId={selectedNodeId}
+          onNodeClick={handleNodeClick}
+          setNodes={setNodes}
+        />
+      )}
+
+      {/* フローティング検索ボックス（左上） */}
+      <div
+        style={{
+          position: "absolute",
+          top: "16px",
+          left: "16px",
+          zIndex: 10,
+          background: "rgba(255, 255, 255, 0.95)",
+          borderRadius: "8px",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+          padding: "8px",
+          maxWidth: "320px",
+        }}
+      >
         <IdolSearchBox idolList={idolList} onSelect={addNode} existingNodeIds={nodes} />
       </div>
 
-      <div
+      {/* フローティング凡例（左下） */}
+      {nodesArray.length > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: "16px",
+            left: "16px",
+            zIndex: 10,
+            background: "rgba(255, 255, 255, 0.95)",
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+            padding: "12px",
+            fontSize: "11px",
+            color: "#666",
+          }}
+        >
+          <div style={{ marginBottom: "6px" }}>
+            <span
+              style={{
+                display: "inline-block",
+                width: "20px",
+                height: "2px",
+                background: "#1976d2",
+                verticalAlign: "middle",
+                marginRight: "6px",
+              }}
+            />
+            相互随伴
+          </div>
+          <div style={{ marginBottom: "6px" }}>
+            <span
+              style={{
+                display: "inline-block",
+                width: "20px",
+                height: "1px",
+                background: "#999",
+                verticalAlign: "middle",
+                marginRight: "6px",
+              }}
+            />
+            一方向
+          </div>
+          <div style={{ marginBottom: "6px" }}>
+            <span
+              style={{
+                display: "inline-block",
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: "#4caf50",
+                verticalAlign: "middle",
+                marginRight: "6px",
+              }}
+            />
+            固定
+          </div>
+          <div style={{ color: "#999", fontSize: "10px" }}>ノード: {nodesArray.length}</div>
+        </div>
+      )}
+
+      {/* フローティングパネルトグルボタン（右上） */}
+      <button
+        onClick={() => setIsPanelOpen(!isPanelOpen)}
         style={{
-          display: "flex",
-          gap: "16px",
-          flexWrap: "wrap",
+          position: "absolute",
+          top: "16px",
+          right: isPanelOpen ? "336px" : "16px",
+          zIndex: 11,
+          background: "#fff",
+          border: "1px solid #ddd",
+          borderRadius: "4px",
+          padding: "8px 12px",
+          cursor: "pointer",
+          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+          fontSize: "12px",
+          transition: "right 0.2s ease",
         }}
       >
-        <div style={{ flex: "1 1 600px", minWidth: "300px" }}>
-          <GraphSection>
-            {(width) =>
-              nodesArray.length === 0 ? (
-                <EmptyMessage message="アイドルを検索して追加してください" />
-              ) : (
-                <GraphExplorerGraph
-                  nodes={nodesArray}
-                  edges={edgesArray}
-                  width={width}
-                  height={500}
-                  selectedNodeId={selectedNodeId}
-                  onNodeClick={handleNodeClick}
-                  setNodes={setNodes}
-                />
-              )
-            }
-          </GraphSection>
+        {isPanelOpen ? "パネルを閉じる ▶" : "◀ パネルを開く"}
+      </button>
 
-          {nodesArray.length > 0 && (
-            <div
-              style={{
-                fontSize: "12px",
-                color: "#666",
-                marginTop: "8px",
-                padding: "8px",
-                background: "#f9f9f9",
-                borderRadius: "4px",
-              }}
-            >
-              <span style={{ marginRight: "16px" }}>
-                <span
-                  style={{
-                    display: "inline-block",
-                    width: "20px",
-                    height: "2px",
-                    background: "#1976d2",
-                    verticalAlign: "middle",
-                    marginRight: "4px",
-                  }}
-                />
-                相互随伴
-              </span>
-              <span style={{ marginRight: "16px" }}>
-                <span
-                  style={{
-                    display: "inline-block",
-                    width: "20px",
-                    height: "1px",
-                    background: "#999",
-                    verticalAlign: "middle",
-                    marginRight: "4px",
-                  }}
-                />
-                一方向
-              </span>
-              <span style={{ marginRight: "16px" }}>
-                <span
-                  style={{
-                    display: "inline-block",
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    background: "#4caf50",
-                    verticalAlign: "middle",
-                    marginRight: "4px",
-                  }}
-                />
-                固定 (ドラッグ/ダブルクリックで解除)
-              </span>
-              <span>ノード数: {nodesArray.length}</span>
-            </div>
-          )}
-        </div>
-
-        <div style={{ flex: "0 0 300px", minWidth: "280px" }}>
+      {/* フローティングAccompanimentPanel（右側） */}
+      <div
+        style={{
+          position: "absolute",
+          top: "16px",
+          right: isPanelOpen ? "16px" : "-320px",
+          bottom: "16px",
+          width: "300px",
+          zIndex: 10,
+          transition: "right 0.2s ease",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            height: "100%",
+            overflowY: "auto",
+            background: "rgba(255, 255, 255, 0.98)",
+            borderRadius: "8px",
+            boxShadow: "0 2px 12px rgba(0, 0, 0, 0.15)",
+          }}
+        >
           {selectedNode ? (
             <AccompanimentPanel
               selectedNode={selectedNode}
@@ -344,16 +432,18 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
           ) : (
             <div
               style={{
-                padding: "16px",
-                background: "#f9f9f9",
-                borderRadius: "8px",
+                padding: "24px 16px",
                 textAlign: "center",
                 color: "#666",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               {nodesArray.length > 0
                 ? "ノードをクリックして随伴アイドルを表示"
-                : "アイドルを検索して追加してください"}
+                : "アイドルを検索してグラフにアイドルを追加してください"}
             </div>
           )}
         </div>

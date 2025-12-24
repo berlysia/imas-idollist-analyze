@@ -27,7 +27,7 @@ body {
 
 header {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 
 header h1 {
@@ -875,6 +875,19 @@ footer a:hover {
 .empty-message {
   color: #999;
   font-style: italic;
+}
+
+/* Graph Explorer Fullscreen Mode */
+.app:has([data-fullscreen]) {
+  max-width: none;
+  padding: 0;
+}
+
+.app:has([data-fullscreen]) main {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
 }
 
 @media (max-width: 768px) {

@@ -49,6 +49,9 @@ export default function GraphExplorerGraph({
   // Keep edges ref in sync
   edgesRef.current = edges;
 
+  // Track previous node count to detect actual node changes
+  const prevNodeCountRef = useRef(0);
+
   // Initialize/update simulation nodes when props change
   useEffect(() => {
     const existingById = new Map(simNodesRef.current.map((n) => [n.id, n]));
@@ -78,19 +81,62 @@ export default function GraphExplorerGraph({
     });
 
     simNodesRef.current = newSimNodes;
-    // Restart simulation when nodes change
-    alphaRef.current = 1;
+
+    // Only restart simulation when nodes actually change (not on resize)
+    const nodesChanged =
+      nodes.length !== prevNodeCountRef.current || nodes.some((n) => !existingById.has(n.id));
+    if (nodesChanged) {
+      alphaRef.current = 1;
+      prevNodeCountRef.current = nodes.length;
+    }
+
     // Immediately update render state
     setRenderNodes(newSimNodes.map((n) => ({ ...n })));
   }, [nodes, width, height]);
 
-  // Force simulation
+  // Refs for width/height to avoid re-starting simulation on resize
+  const sizeRef = useRef({ width, height });
+  const prevSizeRef = useRef({ width, height });
+
+  // When container size changes significantly, recenter nodes
+  useEffect(() => {
+    const prevWidth = prevSizeRef.current.width;
+    const prevHeight = prevSizeRef.current.height;
+
+    // Check if size changed significantly (more than 100px difference)
+    const widthDiff = Math.abs(width - prevWidth);
+    const heightDiff = Math.abs(height - prevHeight);
+
+    if (widthDiff > 100 || heightDiff > 100) {
+      // Calculate offset to shift nodes to new center
+      const offsetX = (width - prevWidth) / 2;
+      const offsetY = (height - prevHeight) / 2;
+
+      // Shift all simulation nodes to new center
+      for (const node of simNodesRef.current) {
+        node.x += offsetX;
+        node.y += offsetY;
+        if (node.fx !== null) {
+          node.fx += offsetX;
+        }
+        if (node.fy !== null) {
+          node.fy += offsetY;
+        }
+      }
+
+      // Update render state immediately
+      setRenderNodes(simNodesRef.current.map((n) => ({ ...n })));
+    }
+
+    prevSizeRef.current = { width, height };
+    sizeRef.current = { width, height };
+  }, [width, height]);
+
+  // Force simulation - runs once and uses refs for dynamic values
   useEffect(() => {
     const k = 120;
     const gravity = 0.02; // 弱めの重力
     const damping = 0.9;
-    const centerX = width / 2;
-    const centerY = height / 2;
     let running = true;
 
     function simulate() {
@@ -98,6 +144,9 @@ export default function GraphExplorerGraph({
 
       const simNodes = simNodesRef.current;
       const currentEdges = edgesRef.current;
+      const { width: currentWidth, height: currentHeight } = sizeRef.current;
+      const centerX = currentWidth / 2;
+      const centerY = currentHeight / 2;
 
       if (simNodes.length === 0) {
         animationRef.current = requestAnimationFrame(simulate);
@@ -181,8 +230,9 @@ export default function GraphExplorerGraph({
         } else {
           node.y += node.vy;
         }
-        node.x = Math.max(30, Math.min(width - 30, node.x));
-        node.y = Math.max(30, Math.min(height - 30, node.y));
+        // Use current size for boundary clamping
+        node.x = Math.max(30, Math.min(currentWidth - 30, node.x));
+        node.y = Math.max(30, Math.min(currentHeight - 30, node.y));
       }
 
       // Copy to render state (new objects for React)
@@ -196,7 +246,7 @@ export default function GraphExplorerGraph({
       running = false;
       cancelAnimationFrame(animationRef.current);
     };
-  }, [width, height]);
+  }, []); // 依存配列を空に - シミュレーションは一度だけ開始
 
   // Save positions to parent when simulation stabilizes
   useEffect(() => {

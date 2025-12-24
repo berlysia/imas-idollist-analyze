@@ -3,7 +3,6 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import GraphExplorer from "../islands/GraphExplorer";
 import type { Brand } from "@/types";
-import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
 import { SITE_TITLE } from "../lib/constants";
 import { buildIdfMap, computePMIRanking, type NormalizedData } from "../lib/compute";
 
@@ -65,33 +64,60 @@ async function loadData(): Promise<{
 }
 
 export default createRoute(async (c) => {
-  const { metadata, idolList, normalized, idfMap, pmiMap } = await loadData();
+  const { idolList, normalized, idfMap, pmiMap } = await loadData();
 
   return c.render(
-    <>
-      <PageHeader metadata={metadata} />
-      <NavigationTabs activeTab="/graph-explorer" />
-      <main>
-        <div className="chart-container">
-          <h3>グラフ探索</h3>
-          <ExplanationBox>
-            <p>
-              <strong>インタラクティブグラフ探索</strong>:
-              アイドルを検索して追加し、随伴関係を探索できます。
-              ノードをクリックして随伴アイドルを追加してください。
-            </p>
-          </ExplanationBox>
-          <GraphExplorer
-            idolList={idolList}
-            accompaniments={normalized.accompaniments}
-            idols={normalized.idols}
-            idfMap={idfMap}
-            pmiMap={pmiMap}
-          />
+    <div
+      data-fullscreen
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        overflow: "hidden",
+      }}
+    >
+      {/* 軽量ヘッダー */}
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "8px 16px",
+          background: "#333",
+          color: "#fff",
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <a
+            href="/"
+            style={{
+              color: "#fff",
+              textDecoration: "none",
+              fontSize: "14px",
+              fontWeight: "bold",
+            }}
+          >
+            ← 戻る
+          </a>
+          <span style={{ fontSize: "14px" }}>グラフ探索</span>
         </div>
+        <span style={{ fontSize: "11px", color: "#aaa" }}>
+          ドラッグでノード移動 / ダブルクリックで固定 / ホイールでズーム
+        </span>
+      </header>
+
+      {/* フルスクリーングラフ */}
+      <main style={{ flex: 1, overflow: "hidden" }}>
+        <GraphExplorer
+          idolList={idolList}
+          accompaniments={normalized.accompaniments}
+          idols={normalized.idols}
+          idfMap={idfMap}
+          pmiMap={pmiMap}
+        />
       </main>
-      <PageFooter />
-    </>,
+    </div>,
     { title: `グラフ探索 - ${SITE_TITLE}` }
   );
 });
