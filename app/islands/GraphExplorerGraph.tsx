@@ -45,6 +45,8 @@ export default function GraphExplorerGraph({
   const [isDragging, setIsDragging] = useState(false);
   const [dragNodeId, setDragNodeId] = useState<string | null>(null);
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
 
   // Keep edges ref in sync
   edgesRef.current = edges;
@@ -135,8 +137,6 @@ export default function GraphExplorerGraph({
   // Force simulation - runs once and uses refs for dynamic values
   useEffect(() => {
     const damping = 0.9;
-    const boundaryMargin = 50;
-    const boundaryStrength = 0.5;
     let running = true;
 
     function simulate() {
@@ -182,18 +182,6 @@ export default function GraphExplorerGraph({
           const gravityForce = gravity * ((distFromCenter - maxDist * 0.6) / maxDist);
           node.vx += (centerX - node.x) * gravityForce * 0.01;
           node.vy += (centerY - node.y) * gravityForce * 0.01;
-        }
-
-        // ソフトな境界反発力
-        if (node.x < boundaryMargin) {
-          node.vx += (boundaryMargin - node.x) * boundaryStrength;
-        } else if (node.x > currentWidth - boundaryMargin) {
-          node.vx -= (node.x - (currentWidth - boundaryMargin)) * boundaryStrength;
-        }
-        if (node.y < boundaryMargin) {
-          node.vy += (boundaryMargin - node.y) * boundaryStrength;
-        } else if (node.y > currentHeight - boundaryMargin) {
-          node.vy -= (node.y - (currentHeight - boundaryMargin)) * boundaryStrength;
         }
       }
 
@@ -244,7 +232,7 @@ export default function GraphExplorerGraph({
         }
       }
 
-      // Update positions（ソフト境界なのでハードクランプは緩めに）
+      // Update positions（境界制限なし、画面外にも広がれる）
       for (const node of simNodes) {
         if (node.fx !== null) {
           node.x = node.fx;
@@ -256,9 +244,6 @@ export default function GraphExplorerGraph({
         } else {
           node.y += node.vy;
         }
-        // 完全に外に出ないようにする緩いクランプ
-        node.x = Math.max(-50, Math.min(currentWidth + 50, node.x));
-        node.y = Math.max(-50, Math.min(currentHeight + 50, node.y));
       }
 
       // Copy to render state (new objects for React)
@@ -306,31 +291,61 @@ export default function GraphExplorerGraph({
     setDragNodeId(nodeId);
   }, []);
 
+  // 背景クリックでパン開始
+  const handleBackgroundMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      // ノードドラッグ中はパンしない
+      if (isDragging) return;
+
+      setIsPanning(true);
+      panStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        tx: transform.x,
+        ty: transform.y,
+      };
+    },
+    [isDragging, transform]
+  );
+
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      if (!isDragging || !dragNodeId || !svgRef.current) return;
+      // ノードドラッグ
+      if (isDragging && dragNodeId && svgRef.current) {
+        const svg = svgRef.current;
+        const rect = svg.getBoundingClientRect();
+        const x = (e.clientX - rect.left - transform.x) / transform.scale;
+        const y = (e.clientY - rect.top - transform.y) / transform.scale;
 
-      const svg = svgRef.current;
-      const rect = svg.getBoundingClientRect();
-      const x = (e.clientX - rect.left - transform.x) / transform.scale;
-      const y = (e.clientY - rect.top - transform.y) / transform.scale;
+        const node = simNodesRef.current.find((n) => n.id === dragNodeId);
+        if (node) {
+          node.x = x;
+          node.y = y;
+          node.fx = x;
+          node.fy = y;
+          setRenderNodes(simNodesRef.current.map((n) => ({ ...n })));
+        }
+        return;
+      }
 
-      // Update simulation nodes directly
-      const node = simNodesRef.current.find((n) => n.id === dragNodeId);
-      if (node) {
-        node.x = x;
-        node.y = y;
-        node.fx = x;
-        node.fy = y;
-        setRenderNodes(simNodesRef.current.map((n) => ({ ...n })));
+      // 背景パン
+      if (isPanning) {
+        const dx = e.clientX - panStartRef.current.x;
+        const dy = e.clientY - panStartRef.current.y;
+        setTransform((prev) => ({
+          ...prev,
+          x: panStartRef.current.tx + dx,
+          y: panStartRef.current.ty + dy,
+        }));
       }
     },
-    [isDragging, dragNodeId, transform]
+    [isDragging, dragNodeId, transform, isPanning]
   );
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
     setDragNodeId(null);
+    setIsPanning(false);
   }, []);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent, nodeId: string) => {
@@ -379,11 +394,12 @@ export default function GraphExplorerGraph({
         ref={svgRef}
         width={width}
         height={height}
+        onMouseDown={handleBackgroundMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         style={{
-          cursor: isDragging ? "grabbing" : "default",
+          cursor: isDragging ? "grabbing" : isPanning ? "grabbing" : "grab",
           background: "#fafafa",
           borderRadius: "8px",
           border: "1px solid #eee",
