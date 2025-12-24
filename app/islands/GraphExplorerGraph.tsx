@@ -44,6 +44,7 @@ export default function GraphExplorerGraph({
   const alphaRef = useRef(1);
   const [isDragging, setIsDragging] = useState(false);
   const [dragNodeId, setDragNodeId] = useState<string | null>(null);
+  const wasPinnedBeforeDragRef = useRef(false);
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
 
   // Keep edges ref in sync
@@ -226,6 +227,9 @@ export default function GraphExplorerGraph({
 
   const handleMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
+    // Remember if node was pinned before drag
+    const node = simNodesRef.current.find((n) => n.id === nodeId);
+    wasPinnedBeforeDragRef.current = node?.fx !== null && node?.fy !== null;
     setIsDragging(true);
     setDragNodeId(nodeId);
   }, []);
@@ -253,8 +257,39 @@ export default function GraphExplorerGraph({
   );
 
   const handleMouseUp = useCallback(() => {
+    // Clear fixed position if node wasn't pinned before drag
+    if (dragNodeId && !wasPinnedBeforeDragRef.current) {
+      const node = simNodesRef.current.find((n) => n.id === dragNodeId);
+      if (node) {
+        node.fx = null;
+        node.fy = null;
+        setRenderNodes(simNodesRef.current.map((n) => ({ ...n })));
+        // Restart simulation to let physics take over
+        alphaRef.current = Math.max(alphaRef.current, 0.5);
+      }
+    }
     setIsDragging(false);
     setDragNodeId(null);
+  }, [dragNodeId]);
+
+  const handleDoubleClick = useCallback((e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
+    // Toggle fixed position
+    const node = simNodesRef.current.find((n) => n.id === nodeId);
+    if (node) {
+      if (node.fx !== null && node.fy !== null) {
+        // Unpin: clear fixed position
+        node.fx = null;
+        node.fy = null;
+      } else {
+        // Pin: set fixed position to current position
+        node.fx = node.x;
+        node.fy = node.y;
+      }
+      setRenderNodes(simNodesRef.current.map((n) => ({ ...n })));
+      // Restart simulation slightly to let other nodes adjust
+      alphaRef.current = Math.max(alphaRef.current, 0.3);
+    }
   }, []);
 
   // Wheel zoom - must use non-passive listener for preventDefault to work
@@ -357,6 +392,7 @@ export default function GraphExplorerGraph({
           {/* Nodes */}
           {renderNodes.map((node) => {
             const isSelected = node.id === selectedNodeId;
+            const isPinned = node.fx !== null && node.fy !== null;
             const displayName = (() => {
               const parts = node.name.split(" ");
               return parts.length > 1 ? (parts[parts.length - 1] ?? node.name) : node.name;
@@ -374,6 +410,7 @@ export default function GraphExplorerGraph({
                     onNodeClick(node.id);
                   }
                 }}
+                onDoubleClick={(e) => handleDoubleClick(e, node.id)}
               >
                 {isSelected && (
                   <circle
@@ -387,9 +424,13 @@ export default function GraphExplorerGraph({
                 <circle
                   r={20}
                   fill={BRAND_COLORS[node.brand[0] ?? "imas"]}
-                  stroke={isSelected ? "#ff9800" : "#fff"}
-                  strokeWidth={isSelected ? 4 : 2}
+                  stroke={isSelected ? "#ff9800" : isPinned ? "#4caf50" : "#fff"}
+                  strokeWidth={isSelected ? 4 : isPinned ? 3 : 2}
                 />
+                {/* Pin indicator */}
+                {isPinned && (
+                  <circle r={5} cx={14} cy={-14} fill="#4caf50" stroke="#fff" strokeWidth={1} />
+                )}
                 <text fontSize="11px" textAnchor="middle" dy={35} fill="#333">
                   {displayName}
                 </text>

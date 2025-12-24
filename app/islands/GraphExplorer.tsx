@@ -310,6 +310,20 @@ export default function GraphExplorer({ idolList, accompaniments, idols, idfMap,
                 />
                 一方向
               </span>
+              <span style={{ marginRight: "16px" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    background: "#4caf50",
+                    verticalAlign: "middle",
+                    marginRight: "4px",
+                  }}
+                />
+                固定 (ダブルクリック)
+              </span>
               <span>ノード数: {nodesArray.length}</span>
             </div>
           )}
