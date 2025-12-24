@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { Brand } from "@/types";
 import { BrandDot, ScoreBadge } from "../components/shared";
 import { BRAND_NAMES } from "../lib/constants";
-import type { ExplorerNode } from "./graphExplorerTypes";
+import type { ExplorerNode, EdgeMode, CooccurrenceCompanionPairData } from "./graphExplorerTypes";
 import { computeSimilarIdolGroups } from "../lib/compute";
 
 interface Props {
@@ -14,6 +14,8 @@ interface Props {
   onDeleteNode: (nodeId: string) => void;
   idfMap: Record<string, number>;
   pmiMap: Record<string, number>;
+  edgeMode?: EdgeMode;
+  cooccurrenceCompanionPairs?: CooccurrenceCompanionPairData[];
 }
 
 export default function AccompanimentPanel({
@@ -25,6 +27,8 @@ export default function AccompanimentPanel({
   onDeleteNode,
   idfMap,
   pmiMap,
+  edgeMode,
+  cooccurrenceCompanionPairs,
 }: Props) {
   const [expandedSimilarIdol, setExpandedSimilarIdol] = useState<string | null>(null);
 
@@ -69,13 +73,15 @@ export default function AccompanimentPanel({
   const incomingAccompaniments = useMemo(() => {
     const list = Object.entries(accompaniments).flatMap(([idolId, accompIds]) => {
       if (accompIds.includes(selectedNode.id)) {
-        return [{
-          id: idolId,
-          name: idols[idolId]?.name,
-          brand: idols[idolId]?.brand ?? [],
-          isMutual: accompaniments[selectedNode.id]?.includes(idolId) ?? false,
-          idf: idfMap[idolId] ?? 0,
-        }];
+        return [
+          {
+            id: idolId,
+            name: idols[idolId]?.name,
+            brand: idols[idolId]?.brand ?? [],
+            isMutual: accompaniments[selectedNode.id]?.includes(idolId) ?? false,
+            idf: idfMap[idolId] ?? 0,
+          },
+        ];
       }
       return [];
     });
@@ -101,6 +107,23 @@ export default function AccompanimentPanel({
 
     return computeSimilarIdolGroups(normalizedData, selectedNode.id, idfMapAsMap, 5);
   }, [selectedNode.id, idols, accompaniments, idfMap]);
+
+  // 共起随伴ペアモード時: 選択アイドルとペアを形成している相手アイドル一覧
+  const cooccurrencePartners = useMemo(() => {
+    if (edgeMode !== "cooccurrenceCompanion" || !cooccurrenceCompanionPairs) {
+      return [];
+    }
+
+    return cooccurrenceCompanionPairs
+      .filter((pair) => pair.idolA.id === selectedNode.id || pair.idolB.id === selectedNode.id)
+      .map((pair) => ({
+        partner: pair.idolA.id === selectedNode.id ? pair.idolB : pair.idolA,
+        pmi: pair.pmi,
+        cooccurrenceSourceCount: pair.cooccurrenceSourceCount,
+        cooccurrenceSources: pair.cooccurrenceSources,
+      }))
+      .sort((a, b) => b.pmi - a.pmi);
+  }, [selectedNode.id, edgeMode, cooccurrenceCompanionPairs]);
 
   return (
     <div
@@ -141,6 +164,149 @@ export default function AccompanimentPanel({
             overflowY: "auto",
           }}
         >
+          {/* Cooccurrence Companion Pairs Section */}
+          {edgeMode === "cooccurrenceCompanion" && cooccurrencePartners.length > 0 && (
+            <>
+              <div
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "13px",
+                  padding: "4px 0",
+                  marginBottom: "4px",
+                  color: "#8e44ad",
+                }}
+              >
+                共起随伴ペア ({cooccurrencePartners.length})
+              </div>
+
+              {cooccurrencePartners.map((item) => {
+                const isExisting = existingNodeIds.has(item.partner.id);
+                const isHighPmi = item.pmi >= 3.0;
+
+                return (
+                  <details
+                    key={item.partner.id}
+                    style={{
+                      marginBottom: "4px",
+                      border: isHighPmi ? "2px solid #d4a017" : "1px solid #e0e0e0",
+                      borderRadius: "4px",
+                      background: isHighPmi ? "#fffbeb" : "#fafafa",
+                      boxShadow: isHighPmi ? "0 2px 8px rgba(212, 160, 23, 0.2)" : undefined,
+                    }}
+                  >
+                    <summary
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "8px",
+                        cursor: "pointer",
+                        fontSize: "13px",
+                      }}
+                    >
+                      {isHighPmi && (
+                        <span style={{ color: "#d4a017", fontSize: "14px" }} title="高PMIペア">
+                          ★
+                        </span>
+                      )}
+                      <span style={{ display: "flex", gap: "2px" }}>
+                        {item.partner.brand.map((b) => (
+                          <BrandDot key={b} brand={b} size="small" />
+                        ))}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: isHighPmi ? "bold" : "normal" }}>
+                          {item.partner.name}
+                        </div>
+                        <div style={{ fontSize: "10px", color: "#888", marginTop: "2px" }}>
+                          <ScoreBadge metric="pmi" value={item.pmi} />
+                          <span style={{ marginLeft: "6px" }}>
+                            共起元: {item.cooccurrenceSourceCount}人
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onAddIdol(selectedNode.id, item.partner.id);
+                        }}
+                        disabled={isExisting}
+                        style={{
+                          padding: "4px 8px",
+                          fontSize: "11px",
+                          background: isExisting ? "#e0e0e0" : "#8e44ad",
+                          color: isExisting ? "#999" : "#fff",
+                          border: "none",
+                          borderRadius: "4px",
+                          cursor: isExisting ? "default" : "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {isExisting ? "追加済" : "+追加"}
+                      </button>
+                    </summary>
+
+                    <div
+                      style={{
+                        padding: "8px 12px 12px 28px",
+                        borderTop: "1px solid #e0e0e0",
+                        background: "#fff",
+                      }}
+                    >
+                      <div style={{ fontSize: "12px", color: "#666", marginBottom: "6px" }}>
+                        共起元（このペアを同時に随伴しているアイドル）:
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                        {item.cooccurrenceSources.map((source) => {
+                          const sourceIsExisting = existingNodeIds.has(source.id);
+                          return (
+                            <div
+                              key={source.id}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                padding: "4px 8px",
+                                background: sourceIsExisting ? "#e8f5e9" : "#f5f5f5",
+                                border: "1px solid #ddd",
+                                borderRadius: "4px",
+                                fontSize: "12px",
+                              }}
+                            >
+                              {source.brand.map((b) => (
+                                <BrandDot key={b} brand={b} size="small" />
+                              ))}
+                              <span>{source.name}</span>
+                              <button
+                                onClick={() => onAddIdol(selectedNode.id, source.id)}
+                                disabled={sourceIsExisting}
+                                style={{
+                                  padding: "2px 4px",
+                                  fontSize: "9px",
+                                  background: sourceIsExisting ? "#e0e0e0" : "#1976d2",
+                                  color: sourceIsExisting ? "#999" : "#fff",
+                                  border: "none",
+                                  borderRadius: "3px",
+                                  cursor: sourceIsExisting ? "default" : "pointer",
+                                  marginLeft: "4px",
+                                }}
+                              >
+                                {sourceIsExisting ? "済" : "+"}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </details>
+                );
+              })}
+
+              <div style={{ height: "12px" }} />
+            </>
+          )}
+
           {/* Accompaniments Section */}
           <div
             style={{
@@ -207,9 +373,7 @@ export default function AccompanimentPanel({
                       }}
                     >
                       <ScoreBadge metric="idf" value={idol.idf} />
-                      {idol.pmi !== undefined && (
-                        <ScoreBadge metric="pmi" value={idol.pmi} />
-                      )}
+                      {idol.pmi !== undefined && <ScoreBadge metric="pmi" value={idol.pmi} />}
                     </div>
                   </div>
                   <button
@@ -245,7 +409,9 @@ export default function AccompanimentPanel({
             被随伴アイドル ({incomingAccompaniments.length})
           </div>
 
-          {incomingAccompaniments.length === 0 ? (<div>随伴元アイドルは0名です</div>) : (
+          {incomingAccompaniments.length === 0 ? (
+            <div>随伴元アイドルは0名です</div>
+          ) : (
             incomingAccompaniments.map((idol) => {
               const isExisting = existingNodeIds.has(idol.id);
               return (
@@ -483,12 +649,8 @@ export default function AccompanimentPanel({
           ) : (
             <div>類似アイドルは0名です</div>
           )}
-
-          
         </div>
       </div>
-
-
 
       {/* Delete Button */}
       <div

@@ -510,6 +510,10 @@ export default function GraphExplorer({
     setSelectedNodeId(nodeId);
   }, []);
 
+  const handleBackgroundClick = useCallback(() => {
+    setSelectedNodeId(null);
+  }, []);
+
   const selectedNode = selectedNodeId ? nodes.get(selectedNodeId) : null;
   const [isPanelOpen, setIsPanelOpen] = useState(true);
 
@@ -568,6 +572,7 @@ export default function GraphExplorer({
           width={containerSize.width}
           height={containerSize.height}
           selectedNodeId={selectedNodeId}
+          onBackgroundClick={handleBackgroundClick}
           onNodeClick={handleNodeClick}
           setNodes={setNodes}
           edgeMode={edgeMode}
@@ -598,53 +603,48 @@ export default function GraphExplorer({
           onFocusNode={handleNodeClick}
         />
 
-        {/* トップダウンモードのみ: エッジモード切り替え */}
-        {mode === "topdown" && (
-          <div style={{ marginTop: "12px", borderTop: "1px solid #eee", paddingTop: "12px" }}>
-            <div
+        <div style={{ marginTop: "12px", borderTop: "1px solid #eee", paddingTop: "12px" }}>
+          <div
+            style={{
+              display: "flex",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              overflow: "hidden",
+            }}
+          >
+            <button
+              onClick={() => setEdgeMode("accompaniment")}
               style={{
-                display: "flex",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-                overflow: "hidden",
+                flex: 1,
+                padding: "6px 8px",
+                fontSize: "11px",
+                background: edgeMode === "accompaniment" ? "#1976d2" : "#fff",
+                color: edgeMode === "accompaniment" ? "#fff" : "#666",
+                border: "none",
+                borderRight: "1px solid #ccc",
+                cursor: "pointer",
+                fontWeight: edgeMode === "accompaniment" ? "bold" : "normal",
               }}
             >
-              <button
-                onClick={() => setEdgeMode("accompaniment")}
-                style={{
-                  flex: 1,
-                  padding: "6px 8px",
-                  fontSize: "11px",
-                  background: edgeMode === "accompaniment" ? "#1976d2" : "#fff",
-                  color: edgeMode === "accompaniment" ? "#fff" : "#666",
-                  border: "none",
-                  borderRight: "1px solid #ccc",
-                  cursor: "pointer",
-                  fontWeight: edgeMode === "accompaniment" ? "bold" : "normal",
-                }}
-              >
-                随伴関係
-              </button>
-              <button
-                onClick={() => setEdgeMode("cooccurrenceCompanion")}
-                style={{
-                  flex: 1,
-                  padding: "6px 8px",
-                  fontSize: "11px",
-                  background: edgeMode === "cooccurrenceCompanion" ? "#8e44ad" : "#fff",
-                  color: edgeMode === "cooccurrenceCompanion" ? "#fff" : "#666",
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: edgeMode === "cooccurrenceCompanion" ? "bold" : "normal",
-                }}
-              >
-                共起随伴ペア
-              </button>
-            </div>
+              随伴関係
+            </button>
+            <button
+              onClick={() => setEdgeMode("cooccurrenceCompanion")}
+              style={{
+                flex: 1,
+                padding: "6px 8px",
+                fontSize: "11px",
+                background: edgeMode === "cooccurrenceCompanion" ? "#8e44ad" : "#fff",
+                color: edgeMode === "cooccurrenceCompanion" ? "#fff" : "#666",
+                border: "none",
+                cursor: "pointer",
+                fontWeight: edgeMode === "cooccurrenceCompanion" ? "bold" : "normal",
+              }}
+            >
+              共起随伴ペア
+            </button>
           </div>
-        )}
 
-        <div style={{ marginTop: "12px", borderTop: "1px solid #eee", paddingTop: "12px" }}>
           {/* 共起随伴ペアモード時のフィルタ */}
           {edgeMode === "cooccurrenceCompanion" && (
             <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
@@ -865,6 +865,8 @@ export default function GraphExplorer({
                 onDeleteNode={deleteNode}
                 idfMap={idfMap}
                 pmiMap={pmiMap}
+                edgeMode={edgeMode}
+                cooccurrenceCompanionPairs={cooccurrenceCompanionPairs}
               />
             ) : (
               <div
