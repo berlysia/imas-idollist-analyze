@@ -520,7 +520,7 @@ export default function GraphExplorer({
   const [isPanelOpen, setIsPanelOpen] = useState(true);
 
   // タブ: "graph"（グラフ表示）または "edit"（ノード編集）
-  const [activeTab, setActiveTab] = useState<"graph" | "edit">("graph");
+  const [activeTab, setActiveTab] = useState<"topdown" | "bottomup">("topdown");
 
   // コンテナサイズを監視
   const containerRef = useRef<HTMLDivElement>(null);
@@ -602,43 +602,43 @@ export default function GraphExplorer({
           }}
         >
           <button
-            onClick={() => setActiveTab("graph")}
+            onClick={() => setActiveTab("topdown")}
             style={{
               flex: 1,
               padding: "8px 12px",
               fontSize: "12px",
-              fontWeight: activeTab === "graph" ? "bold" : "normal",
+              fontWeight: activeTab === "topdown" ? "bold" : "normal",
               background: "none",
               border: "none",
-              borderBottom: activeTab === "graph" ? "2px solid #1976d2" : "2px solid transparent",
+              borderBottom: activeTab === "topdown" ? "2px solid #1976d2" : "2px solid transparent",
               marginBottom: "-2px",
               cursor: "pointer",
-              color: activeTab === "graph" ? "#1976d2" : "#666",
+              color: activeTab === "topdown" ? "#1976d2" : "#666",
             }}
           >
-            グラフ
+            トップダウン
           </button>
           <button
-            onClick={() => setActiveTab("edit")}
+            onClick={() => setActiveTab("bottomup")}
             style={{
               flex: 1,
               padding: "8px 12px",
               fontSize: "12px",
-              fontWeight: activeTab === "edit" ? "bold" : "normal",
+              fontWeight: activeTab === "bottomup" ? "bold" : "normal",
               background: "none",
               border: "none",
-              borderBottom: activeTab === "edit" ? "2px solid #1976d2" : "2px solid transparent",
+              borderBottom: activeTab === "bottomup" ? "2px solid #1976d2" : "2px solid transparent",
               marginBottom: "-2px",
               cursor: "pointer",
-              color: activeTab === "edit" ? "#1976d2" : "#666",
+              color: activeTab === "bottomup" ? "#1976d2" : "#666",
             }}
           >
-            ノード編集
+            ボトムアップ
           </button>
         </div>
 
         {/* ノード編集タブ */}
-        {activeTab === "edit" && (
+        {activeTab === "bottomup" && (
           <NodeSelector
             idolList={idolList}
             selectedIds={selectedIds}
@@ -647,7 +647,7 @@ export default function GraphExplorer({
         )}
 
         {/* グラフタブ */}
-        {activeTab === "graph" && (
+        {activeTab === "topdown" && (
           <>
             {/* 初期ノード構成の編集 */}
             <NodeSelector
