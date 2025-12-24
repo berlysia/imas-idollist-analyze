@@ -278,10 +278,10 @@ export default function GraphExplorer({
     };
   });
   const [minPmi, setMinPmi] = useState(() => {
-    if (typeof window === "undefined") return 2;
+    if (typeof window === "undefined") return 3;
     const params = new URLSearchParams(window.location.search);
     const pmi = params.get("minPmi");
-    return pmi ? Number(pmi) : 2;
+    return pmi ? Number(pmi) : 3;
   });
   const [minCooccurrenceSourceCount, setMinCooccurrenceSourceCount] = useState(() => {
     if (typeof window === "undefined") return 2;
@@ -314,7 +314,7 @@ export default function GraphExplorer({
     if (typeof window === "undefined") return 0;
     const params = new URLSearchParams(window.location.search);
     const score = params.get("minRareScore");
-    return score ? Number(score) : 0;
+    return score ? Number(score) : 3.5;
   });
 
   // Recalculate edges when visibility or filter changes
@@ -464,7 +464,7 @@ export default function GraphExplorer({
     }
 
     // 共起随伴ペアフィルターパラメータ
-    if (minPmi !== 2) {
+    if (minPmi !== 3) {
       params.set("minPmi", String(minPmi));
     } else {
       params.delete("minPmi");
@@ -481,7 +481,7 @@ export default function GraphExplorer({
     } else {
       params.delete("minCommonAccompanimentCount");
     }
-    if (minRareScore > 0) {
+    if (minRareScore - 3.5 > 1e-4) {
       params.set("minRareScore", String(minRareScore));
     } else {
       params.delete("minRareScore");
@@ -799,7 +799,7 @@ export default function GraphExplorer({
                     type="range"
                     min="0"
                     max="10"
-                    step="0.5"
+                    step="0.1"
                     value={minIdf}
                     onChange={(e) => setMinIdf(Number(e.target.value))}
                     style={{ width: "100%" }}
@@ -859,7 +859,7 @@ export default function GraphExplorer({
                     type="range"
                     min="0"
                     max="10"
-                    step="0.5"
+                    step="0.1"
                     value={minPmi}
                     onChange={(e) => setMinPmi(Number(e.target.value))}
                     style={{ width: "100%" }}
@@ -947,7 +947,7 @@ export default function GraphExplorer({
                     type="range"
                     min="0"
                     max="5"
-                    step="0.5"
+                    step="0.1"
                     value={minRareScore}
                     onChange={(e) => setMinRareScore(Number(e.target.value))}
                     style={{ width: "100%" }}
