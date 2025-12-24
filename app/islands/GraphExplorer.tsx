@@ -267,74 +267,47 @@ export default function GraphExplorer({
       return;
     }
 
-    if (edgeMode === "accompaniment") {
-      // トップダウンモード: エッジに接続されているノードだけを表示
-      const filteredEdges = calculateEdgesForNodes(nodesFromSelection, accompaniments, {
-        mutualOnly,
-        minIdf,
-        idfMap,
-      });
+    // エッジモードに応じてエッジを計算
+    const filteredEdges =
+      edgeMode === "accompaniment"
+        ? calculateEdgesForNodes(nodesFromSelection, accompaniments, {
+            mutualOnly,
+            minIdf,
+            idfMap,
+          })
+        : calculateCooccurrenceEdgesForNodes(
+            nodesFromSelection,
+            cooccurrenceCompanionPairs,
+            minPmi,
+            minCooccurrenceSourceCount
+          );
 
-      if (mode === "bottomup") {
-        // ボトムアップモード: 選択されたノードをそのまま表示、エッジは存在する場合のみ描画
-        nodesRef.current = nodesFromSelection;
-        setNodes(nodesFromSelection);
-        setEdges(filteredEdges);
-        return;
-      }
-
-      const connectedNodeIds = new Set<string>();
-      for (const edge of filteredEdges.values()) {
-        connectedNodeIds.add(edge.source);
-        connectedNodeIds.add(edge.target);
-      }
-
-      const filteredNodes = new Map<string, ExplorerNode>();
-      for (const id of connectedNodeIds) {
-        const node = nodesFromSelection.get(id);
-        if (node) {
-          filteredNodes.set(id, node);
-        }
-      }
-
-      nodesRef.current = filteredNodes;
-      setNodes(filteredNodes);
+    // ボトムアップモード: 選択されたノードをそのまま表示
+    if (mode === "bottomup") {
+      nodesRef.current = nodesFromSelection;
+      setNodes(nodesFromSelection);
       setEdges(filteredEdges);
-    } else {
-      // トップダウンモード
-      const filteredEdges = calculateCooccurrenceEdgesForNodes(
-        nodesFromSelection,
-        cooccurrenceCompanionPairs,
-        minPmi,
-        minCooccurrenceSourceCount
-      );
-
-      if (mode === "bottomup") {
-        // ボトムアップモード: 選択されたノードをそのまま表示、エッジは存在する場合のみ描画
-        nodesRef.current = nodesFromSelection;
-        setNodes(nodesFromSelection);
-        setEdges(filteredEdges);
-        return;
-      }
-
-      const connectedNodeIds = new Set<string>();
-      for (const edge of filteredEdges.values()) {
-        connectedNodeIds.add(edge.source);
-        connectedNodeIds.add(edge.target);
-      }
-
-      const filteredNodes = new Map<string, ExplorerNode>();
-      for (const id of connectedNodeIds) {
-        const node = nodesFromSelection.get(id);
-        if (node) {
-          filteredNodes.set(id, node);
-        }
-      }
-
-      nodesRef.current = filteredNodes;
-      setNodes(filteredNodes);
-      setEdges(filteredEdges);
+      return;
     }
+
+    // トップダウンモード: エッジに接続されているノードだけを表示
+    const connectedNodeIds = new Set<string>();
+    for (const edge of filteredEdges.values()) {
+      connectedNodeIds.add(edge.source);
+      connectedNodeIds.add(edge.target);
+    }
+
+    const filteredNodes = new Map<string, ExplorerNode>();
+    for (const id of connectedNodeIds) {
+      const node = nodesFromSelection.get(id);
+      if (node) {
+        filteredNodes.set(id, node);
+      }
+    }
+
+    nodesRef.current = filteredNodes;
+    setNodes(filteredNodes);
+    setEdges(filteredEdges);
   }, [
     mode,
     edgeMode,
@@ -667,71 +640,71 @@ export default function GraphExplorer({
           </div>
         )}
 
-          <div style={{ marginTop: "12px", borderTop: "1px solid #eee", paddingTop: "12px" }}>
-            {/* 共起随伴ペアモード時のフィルタ */}
-            {edgeMode === "cooccurrenceCompanion" && (
-              <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
-                <div style={{ marginBottom: "4px" }}>
-                  <label style={{ display: "block", marginBottom: "2px" }}>
-                    最小PMI: {minPmi.toFixed(1)}
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="10"
-                    step="0.5"
-                    value={minPmi}
-                    onChange={(e) => setMinPmi(Number(e.target.value))}
-                    style={{ width: "100%" }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", marginBottom: "2px" }}>
-                    最小共起元数: {minCooccurrenceSourceCount}
-                  </label>
-                  <input
-                    type="range"
-                    min="1"
-                    max="10"
-                    step="1"
-                    value={minCooccurrenceSourceCount}
-                    onChange={(e) => setMinCooccurrenceSourceCount(Number(e.target.value))}
-                    style={{ width: "100%" }}
-                  />
-                </div>
+        <div style={{ marginTop: "12px", borderTop: "1px solid #eee", paddingTop: "12px" }}>
+          {/* 共起随伴ペアモード時のフィルタ */}
+          {edgeMode === "cooccurrenceCompanion" && (
+            <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
+              <div style={{ marginBottom: "4px" }}>
+                <label style={{ display: "block", marginBottom: "2px" }}>
+                  最小PMI: {minPmi.toFixed(1)}
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="0.5"
+                  value={minPmi}
+                  onChange={(e) => setMinPmi(Number(e.target.value))}
+                  style={{ width: "100%" }}
+                />
               </div>
-            )}
+              <div>
+                <label style={{ display: "block", marginBottom: "2px" }}>
+                  最小共起元数: {minCooccurrenceSourceCount}
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  step="1"
+                  value={minCooccurrenceSourceCount}
+                  onChange={(e) => setMinCooccurrenceSourceCount(Number(e.target.value))}
+                  style={{ width: "100%" }}
+                />
+              </div>
+            </div>
+          )}
 
-            {/* 随伴関係モード時のフィルタ */}
-            {edgeMode === "accompaniment" && (
-              <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
-                <div style={{ marginBottom: "4px" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <input
-                      type="checkbox"
-                      checked={mutualOnly}
-                      onChange={(e) => setMutualOnly(e.target.checked)}
-                    />
-                    相互随伴のみ表示
-                  </label>
-                </div>
-                <div>
-                  <label style={{ display: "block", marginBottom: "2px" }}>
-                    最小IDF: {minIdf.toFixed(1)}
-                  </label>
+          {/* 随伴関係モード時のフィルタ */}
+          {edgeMode === "accompaniment" && (
+            <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
+              <div style={{ marginBottom: "4px" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <input
-                    type="range"
-                    min="0"
-                    max="10"
-                    step="0.5"
-                    value={minIdf}
-                    onChange={(e) => setMinIdf(Number(e.target.value))}
-                    style={{ width: "100%" }}
+                    type="checkbox"
+                    checked={mutualOnly}
+                    onChange={(e) => setMutualOnly(e.target.checked)}
                   />
-                </div>
+                  相互随伴のみ表示
+                </label>
               </div>
-            )}
-          </div>
+              <div>
+                <label style={{ display: "block", marginBottom: "2px" }}>
+                  最小IDF: {minIdf.toFixed(1)}
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="0.5"
+                  value={minIdf}
+                  onChange={(e) => setMinIdf(Number(e.target.value))}
+                  style={{ width: "100%" }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* フローティング凡例（左下） */}
