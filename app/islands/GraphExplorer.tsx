@@ -970,6 +970,7 @@ export default function GraphExplorer({
                 existingNodeIds={nodes}
                 onAddIdol={addAccompanyingIdol}
                 onDeleteNode={deleteNode}
+                onFocusNode={id => setSelectedNodeId(id)}
                 idfMap={idfMap}
                 pmiMap={pmiMap}
                 cooccurrenceCompanionPairs={cooccurrenceCompanionPairs}

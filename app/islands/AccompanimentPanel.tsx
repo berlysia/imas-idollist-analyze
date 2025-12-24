@@ -12,6 +12,7 @@ interface Props {
   existingNodeIds: Map<string, ExplorerNode>;
   onAddIdol: (fromId: string, toId: string) => void;
   onDeleteNode: (nodeId: string) => void;
+  onFocusNode: (nodeId: string) => void;
   idfMap: Record<string, number>;
   pmiMap: Record<string, number>;
   cooccurrenceCompanionPairs?: CooccurrenceCompanionPairData[];
@@ -24,6 +25,7 @@ export default function AccompanimentPanel({
   existingNodeIds,
   onAddIdol,
   onDeleteNode,
+  onFocusNode,
   idfMap,
   pmiMap,
   cooccurrenceCompanionPairs,
@@ -232,8 +234,7 @@ export default function AccompanimentPanel({
                     </div>
                   </div>
                   <button
-                    onClick={() => onAddIdol(selectedNode.id, idol.id)}
-                    disabled={isExisting}
+                    onClick={() => isExisting ? onFocusNode(idol.id) : onAddIdol(selectedNode.id, idol.id)}
                     style={{
                       padding: "4px 8px",
                       fontSize: "11px",
@@ -316,8 +317,7 @@ export default function AccompanimentPanel({
                     </div>
                   </div>
                   <button
-                    onClick={() => onAddIdol(selectedNode.id, idol.id)}
-                    disabled={isExisting}
+                    onClick={() => isExisting ? onFocusNode(idol.id) : onAddIdol(selectedNode.id, idol.id)}
                     style={{
                       padding: "4px 8px",
                       fontSize: "11px",
@@ -408,6 +408,12 @@ export default function AccompanimentPanel({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+
+                            if (isExisting) {
+                              onFocusNode(idol.id);
+                              return;
+                            }
+
                             // 類似アイドル自身を追加
                             onAddIdol(selectedNode.id, idol.id);
                             // 共通随伴も自動追加
@@ -417,7 +423,6 @@ export default function AccompanimentPanel({
                               }
                             }
                           }}
-                          disabled={isExisting}
                           style={{
                             padding: "2px 6px",
                             fontSize: "10px",
@@ -468,7 +473,7 @@ export default function AccompanimentPanel({
                                 <span style={{ flex: 1 }}>{accompIdol?.name ?? accompId}</span>
                                 <ScoreBadge metric="idf" value={accompIdf} />
                                 <button
-                                  onClick={() => onAddIdol(idol.id, accompId)}
+                                  onClick={() => accompIsExisting ? onFocusNode(accompId) : onAddIdol(idol.id, accompId)}
                                   disabled={accompIsExisting}
                                   style={{
                                     padding: "2px 4px",
@@ -558,6 +563,10 @@ export default function AccompanimentPanel({
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        if (isExisting) {
+                          onFocusNode(item.partner.id);
+                          return;
+                        }
                         onAddIdol(selectedNode.id, item.partner.id);
                       }}
                       disabled={isExisting}
