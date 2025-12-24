@@ -165,7 +165,7 @@ export default function AccompanimentPanel({
           }}
         >
           {/* Cooccurrence Companion Pairs Section */}
-          {edgeMode === "cooccurrenceCompanion" && cooccurrencePartners.length > 0 && (
+          {edgeMode === "cooccurrenceCompanion" && (
             <>
               <div
                 style={{
@@ -179,7 +179,7 @@ export default function AccompanimentPanel({
                 共起随伴ペア ({cooccurrencePartners.length})
               </div>
 
-              {cooccurrencePartners.map((item) => {
+              {cooccurrencePartners.length > 0 && cooccurrencePartners.map((item) => {
                 const isExisting = existingNodeIds.has(item.partner.id);
                 const isHighPmi = item.pmi >= 3.0;
 
