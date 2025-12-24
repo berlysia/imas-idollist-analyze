@@ -442,26 +442,31 @@ export default function GraphExplorer({
     setSelectedNodeId(null);
   }, []);
 
-  const removeIsolatedNodes = useCallback(() => {
-    const connectedNodeIds = new Set<string>();
-    for (const edge of edges.values()) {
-      connectedNodeIds.add(edge.source);
-      connectedNodeIds.add(edge.target);
+  const setNodesFromCooccurrencePairs = useCallback(() => {
+    const nodeIds = new Set<string>();
+    for (const pair of cooccurrenceCompanionPairs) {
+      if (pair.pmi >= minPmi && pair.cooccurrenceSourceCount >= minCooccurrenceSourceCount) {
+        nodeIds.add(pair.idolA.id);
+        nodeIds.add(pair.idolB.id);
+      }
     }
 
     const newNodes = new Map<string, ExplorerNode>();
-    for (const [id, node] of nodes) {
-      if (connectedNodeIds.has(id)) {
-        newNodes.set(id, node);
+    for (const id of nodeIds) {
+      const idol = idols[id];
+      if (idol) {
+        newNodes.set(id, {
+          id,
+          name: idol.name,
+          brand: idol.brand,
+        });
       }
     }
 
     nodesRef.current = newNodes;
     setNodes(newNodes);
-    if (selectedNodeId && !connectedNodeIds.has(selectedNodeId)) {
-      setSelectedNodeId(null);
-    }
-  }, [nodes, edges, selectedNodeId]);
+    setSelectedNodeId(null);
+  }, [cooccurrenceCompanionPairs, minPmi, minCooccurrenceSourceCount, idols]);
 
   const handleNodeClick = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId);
@@ -667,24 +672,21 @@ export default function GraphExplorer({
                 style={{ width: "100%" }}
               />
             </div>
-            {nodesArray.length > 0 && (
-              <button
-                onClick={removeIsolatedNodes}
-                disabled={edgesArray.length === 0}
-                style={{
-                  width: "100%",
-                  padding: "6px 8px",
-                  fontSize: "11px",
-                  background: edgesArray.length === 0 ? "#ccc" : "#ff9800",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "4px",
-                  cursor: edgesArray.length === 0 ? "not-allowed" : "pointer",
-                }}
-              >
-                孤立ノードを削除
-              </button>
-            )}
+            <button
+              onClick={setNodesFromCooccurrencePairs}
+              style={{
+                width: "100%",
+                padding: "6px 8px",
+                fontSize: "11px",
+                background: "#8e44ad",
+                color: "#fff",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              条件を満たすノードだけにする
+            </button>
           </div>
         )}
       </div>
