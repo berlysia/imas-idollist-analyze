@@ -99,10 +99,16 @@ function getInitialNodesFromUrl(
 
 function calculateEdgesForNodes(
   nodes: Map<string, ExplorerNode>,
-  accompaniments: Record<string, string[]>
+  accompaniments: Record<string, string[]>,
+  options?: {
+    mutualOnly?: boolean;
+    minIdf?: number;
+    idfMap?: Record<string, number>;
+  }
 ): Map<string, ExplorerEdge> {
   const edgeMap = new Map<string, ExplorerEdge>();
   const nodeIds = Array.from(nodes.keys());
+  const { mutualOnly = false, minIdf = 0, idfMap = {} } = options ?? {};
 
   for (let i = 0; i < nodeIds.length; i++) {
     const idA = nodeIds[i];
@@ -118,8 +124,20 @@ function calculateEdgesForNodes(
       const bToA = accompB.includes(idA);
 
       if (aToB || bToA) {
-        const edgeKey = idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
         const isMutual = aToB && bToA;
+
+        // 相互のみフィルター
+        if (mutualOnly && !isMutual) continue;
+
+        // IDF閾値フィルター（両端のIDFの最小値を使用）
+        if (minIdf > 0) {
+          const idfA = idfMap[idA] ?? 0;
+          const idfB = idfMap[idB] ?? 0;
+          const edgeIdf = Math.min(idfA, idfB);
+          if (edgeIdf < minIdf) continue;
+        }
+
+        const edgeKey = idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
         const source = aToB ? idA : idB;
         const target = aToB ? idB : idA;
 
@@ -205,10 +223,29 @@ export default function GraphExplorer({
     return count ? Number(count) : 2;
   });
 
+  // 随伴関係モード用フィルター
+  const [mutualOnly, setMutualOnly] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const params = new URLSearchParams(window.location.search);
+    return params.get("mutualOnly") === "true";
+  });
+  const [minIdf, setMinIdf] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    const params = new URLSearchParams(window.location.search);
+    const idf = params.get("minIdf");
+    return idf ? Number(idf) : 0;
+  });
+
   // Recalculate edges when mode or filter changes
   useEffect(() => {
     if (edgeMode === "accompaniment") {
-      setEdges(calculateEdgesForNodes(nodes, accompaniments));
+      setEdges(
+        calculateEdgesForNodes(nodes, accompaniments, {
+          mutualOnly,
+          minIdf,
+          idfMap,
+        })
+      );
     } else {
       setEdges(
         calculateCooccurrenceEdgesForNodes(
@@ -223,9 +260,12 @@ export default function GraphExplorer({
     edgeMode,
     minPmi,
     minCooccurrenceSourceCount,
+    mutualOnly,
+    minIdf,
     nodes,
     accompaniments,
     cooccurrenceCompanionPairs,
+    idfMap,
   ]);
 
   // Sync nodes to URL query params
@@ -275,15 +315,28 @@ export default function GraphExplorer({
       params.set("edgeMode", edgeMode);
       params.set("minPmi", String(minPmi));
       params.set("minCooccurrenceSourceCount", String(minCooccurrenceSourceCount));
+      params.delete("mutualOnly");
+      params.delete("minIdf");
     } else {
       params.delete("edgeMode");
       params.delete("minPmi");
       params.delete("minCooccurrenceSourceCount");
+      // 随伴関係モードのフィルターパラメータ
+      if (mutualOnly) {
+        params.set("mutualOnly", "true");
+      } else {
+        params.delete("mutualOnly");
+      }
+      if (minIdf > 0) {
+        params.set("minIdf", String(minIdf));
+      } else {
+        params.delete("minIdf");
+      }
     }
 
     const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
     window.history.replaceState({}, "", newUrl);
-  }, [nodes, idols, edgeMode, minPmi, minCooccurrenceSourceCount]);
+  }, [nodes, idols, edgeMode, minPmi, minCooccurrenceSourceCount, mutualOnly, minIdf]);
 
   // Ref to access current nodes without stale closure
   const nodesRef = useRef(nodes);
@@ -420,19 +473,27 @@ export default function GraphExplorer({
     }
     nodesRef.current = allNodes;
     setNodes(allNodes);
-    setEdges(calculateEdgesForNodes(allNodes, accompaniments));
+    // エッジはuseEffectで再計算されるが、即座に反映するためにここでも計算
+    if (edgeMode === "accompaniment") {
+      setEdges(calculateEdgesForNodes(allNodes, accompaniments, { mutualOnly, minIdf, idfMap }));
+    }
     setSelectedNodeId(null);
-  }, [idols, accompaniments]);
+  }, [idols, accompaniments, edgeMode, mutualOnly, minIdf, idfMap]);
 
   const addIdolsByBrand = useCallback(
     (brand: Brand) => {
       const brandNodes = getIdolsByBrand(idols, brand);
       nodesRef.current = brandNodes;
       setNodes(brandNodes);
-      setEdges(calculateEdgesForNodes(brandNodes, accompaniments));
+      // エッジはuseEffectで再計算されるが、即座に反映するためにここでも計算
+      if (edgeMode === "accompaniment") {
+        setEdges(
+          calculateEdgesForNodes(brandNodes, accompaniments, { mutualOnly, minIdf, idfMap })
+        );
+      }
       setSelectedNodeId(null);
     },
-    [idols, accompaniments]
+    [idols, accompaniments, edgeMode, mutualOnly, minIdf, idfMap]
   );
 
   const clearAllNodes = useCallback(() => {
@@ -687,6 +748,36 @@ export default function GraphExplorer({
             >
               条件を満たすノードだけにする
             </button>
+          </div>
+        )}
+
+        {/* 随伴関係モード時のフィルタ */}
+        {edgeMode === "accompaniment" && (
+          <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
+            <div style={{ marginBottom: "4px" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <input
+                  type="checkbox"
+                  checked={mutualOnly}
+                  onChange={(e) => setMutualOnly(e.target.checked)}
+                />
+                相互随伴のみ表示
+              </label>
+            </div>
+            <div style={{ marginBottom: "4px" }}>
+              <label style={{ display: "block", marginBottom: "2px" }}>
+                最小IDF: {minIdf.toFixed(1)}
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="10"
+                step="0.5"
+                value={minIdf}
+                onChange={(e) => setMinIdf(Number(e.target.value))}
+                style={{ width: "100%" }}
+              />
+            </div>
           </div>
         )}
       </div>
