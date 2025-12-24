@@ -32,7 +32,7 @@ const TAB_ITEMS = [
   { href: "/cooccurrence-companion-pairs", label: "共起随伴ペア" },
   { href: "/accompaniment-clusters", label: "随伴クラスタ" },
   { href: "/cooccurrence-companion-clusters", label: "共起随伴クラスタ" },
-  { href: "/graph-explorer", label: "グラフ探索" },
+  { href: "/graph-explorer?brands=all", label: "グラフ探索" },
 ] as const;
 
 /**

@@ -254,131 +254,81 @@ export default function GraphExplorer({
     return idf ? Number(idf) : 0;
   });
 
-  // Isolateモード: エッジに繋がるノードだけを動的にフィルタリングする
-  // 初期値はtrue（選択があればtrue）
-  const hasInitialSelection = nodesFromSelection.size > 0 || initialNodes.size > 0;
-  const [isIsolateMode, setIsIsolateMode] = useState(() => hasInitialSelection);
-  const [baseNodes, setBaseNodes] = useState<Map<string, ExplorerNode> | null>(() =>
-    hasInitialSelection ? (nodesFromSelection.size > 0 ? nodesFromSelection : initialNodes) : null
-  );
+  // 常にisolateモード: nodesFromSelectionをベースにエッジに繋がるノードだけを表示
 
   // Recalculate edges when mode or filter changes
-  // Isolateモードの場合はbaseNodesからフィルタリング
+  // 常にnodesFromSelectionをベースにフィルタリング
   useEffect(() => {
-    if (edgeMode === "accompaniment") {
-      if (isIsolateMode && baseNodes) {
-        // Isolateモード: baseNodesからエッジを計算し、接続されているノードだけを表示
-        const filteredEdges = calculateEdgesForNodes(baseNodes, accompaniments, {
-          mutualOnly,
-          minIdf,
-          idfMap,
-        });
-
-        const connectedNodeIds = new Set<string>();
-        for (const edge of filteredEdges.values()) {
-          connectedNodeIds.add(edge.source);
-          connectedNodeIds.add(edge.target);
-        }
-
-        const filteredNodes = new Map<string, ExplorerNode>();
-        for (const id of connectedNodeIds) {
-          const node = baseNodes.get(id);
-          if (node) {
-            filteredNodes.set(id, node);
-          }
-        }
-
-        nodesRef.current = filteredNodes;
-        setNodes(filteredNodes);
-        setEdges(filteredEdges);
-      } else {
-        // 通常モード: 現在のノードに対してエッジを計算
-        setEdges(
-          calculateEdgesForNodes(nodes, accompaniments, {
-            mutualOnly,
-            minIdf,
-            idfMap,
-          })
-        );
-      }
-    } else {
-      if (isIsolateMode && baseNodes) {
-        // 共起随伴ペアモードのIsolate
-        const filteredEdges = calculateCooccurrenceEdgesForNodes(
-          baseNodes,
-          cooccurrenceCompanionPairs,
-          minPmi,
-          minCooccurrenceSourceCount
-        );
-
-        const connectedNodeIds = new Set<string>();
-        for (const edge of filteredEdges.values()) {
-          connectedNodeIds.add(edge.source);
-          connectedNodeIds.add(edge.target);
-        }
-
-        const filteredNodes = new Map<string, ExplorerNode>();
-        for (const id of connectedNodeIds) {
-          const node = baseNodes.get(id);
-          if (node) {
-            filteredNodes.set(id, node);
-          }
-        }
-
-        nodesRef.current = filteredNodes;
-        setNodes(filteredNodes);
-        setEdges(filteredEdges);
-      } else {
-        setEdges(
-          calculateCooccurrenceEdgesForNodes(
-            nodes,
-            cooccurrenceCompanionPairs,
-            minPmi,
-            minCooccurrenceSourceCount
-          )
-        );
-      }
+    if (nodesFromSelection.size === 0) {
+      nodesRef.current = new Map();
+      setNodes(new Map());
+      setEdges(new Map());
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    if (edgeMode === "accompaniment") {
+      // nodesFromSelectionからエッジを計算し、接続されているノードだけを表示
+      const filteredEdges = calculateEdgesForNodes(nodesFromSelection, accompaniments, {
+        mutualOnly,
+        minIdf,
+        idfMap,
+      });
+
+      const connectedNodeIds = new Set<string>();
+      for (const edge of filteredEdges.values()) {
+        connectedNodeIds.add(edge.source);
+        connectedNodeIds.add(edge.target);
+      }
+
+      const filteredNodes = new Map<string, ExplorerNode>();
+      for (const id of connectedNodeIds) {
+        const node = nodesFromSelection.get(id);
+        if (node) {
+          filteredNodes.set(id, node);
+        }
+      }
+
+      nodesRef.current = filteredNodes;
+      setNodes(filteredNodes);
+      setEdges(filteredEdges);
+    } else {
+      // 共起随伴ペアモード
+      const filteredEdges = calculateCooccurrenceEdgesForNodes(
+        nodesFromSelection,
+        cooccurrenceCompanionPairs,
+        minPmi,
+        minCooccurrenceSourceCount
+      );
+
+      const connectedNodeIds = new Set<string>();
+      for (const edge of filteredEdges.values()) {
+        connectedNodeIds.add(edge.source);
+        connectedNodeIds.add(edge.target);
+      }
+
+      const filteredNodes = new Map<string, ExplorerNode>();
+      for (const id of connectedNodeIds) {
+        const node = nodesFromSelection.get(id);
+        if (node) {
+          filteredNodes.set(id, node);
+        }
+      }
+
+      nodesRef.current = filteredNodes;
+      setNodes(filteredNodes);
+      setEdges(filteredEdges);
+    }
   }, [
     edgeMode,
     minPmi,
     minCooccurrenceSourceCount,
     mutualOnly,
     minIdf,
-    // nodesは除外（isolateモード時に無限ループになるため）
-    // 代わりにisIsolateModeとbaseNodesを監視
-    isIsolateMode,
-    baseNodes,
+    nodesFromSelection,
     accompaniments,
     cooccurrenceCompanionPairs,
     idfMap,
   ]);
-
-  // 通常モード（非isolate）時のノード変更を監視
-  useEffect(() => {
-    if (!isIsolateMode) {
-      if (edgeMode === "accompaniment") {
-        setEdges(
-          calculateEdgesForNodes(nodes, accompaniments, {
-            mutualOnly,
-            minIdf,
-            idfMap,
-          })
-        );
-      } else {
-        setEdges(
-          calculateCooccurrenceEdgesForNodes(
-            nodes,
-            cooccurrenceCompanionPairs,
-            minPmi,
-            minCooccurrenceSourceCount
-          )
-        );
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, isIsolateMode]);
 
   // Sync selection to URL query params
   useEffect(() => {
@@ -437,55 +387,13 @@ export default function GraphExplorer({
   nodesRef.current = nodes;
 
   // 選択が変更されたらノードを更新
-  const handleSelectionChange = useCallback(
-    (newSelectedIds: Set<string>) => {
-      setSelectedIds(newSelectedIds);
-
-      // ノードマップを更新
-      const newNodes = new Map<string, ExplorerNode>();
-      for (const id of newSelectedIds) {
-        const idol = idols[id];
-        if (idol) {
-          // 既存のノード位置を保持
-          const existingNode = nodesRef.current.get(id);
-          newNodes.set(id, {
-            id,
-            name: idol.name,
-            brand: idol.brand,
-            x: existingNode?.x,
-            y: existingNode?.y,
-            fx: existingNode?.fx,
-            fy: existingNode?.fy,
-          });
-        }
-      }
-
-      nodesRef.current = newNodes;
-      setNodes(newNodes);
-
-      // baseNodesも更新（Isolateモード用）
-      setBaseNodes(newNodes.size > 0 ? newNodes : null);
-      setIsIsolateMode(newNodes.size > 0);
-    },
-    [idols]
-  );
+  const handleSelectionChange = useCallback((newSelectedIds: Set<string>) => {
+    setSelectedIds(newSelectedIds);
+    // nodesFromSelectionがuseMemoで自動更新され、useEffectでフィルタリングされる
+  }, []);
 
   const nodesArray = useMemo(() => Array.from(nodes.values()), [nodes]);
   const edgesArray = useMemo(() => Array.from(edges.values()), [edges]);
-
-  // Isolateモードを解除
-  const disableIsolateMode = useCallback(() => {
-    setIsIsolateMode(false);
-    setBaseNodes(null);
-  }, []);
-
-  // Isolateモードを有効にして、エッジに繋がるノードだけを動的にフィルタリング
-  const enableIsolateMode = useCallback(() => {
-    // 現在のノードをbaseNodesとして保存
-    setBaseNodes(new Map(nodes));
-    setIsIsolateMode(true);
-    setSelectedNodeId(null);
-  }, [nodes]);
 
   const addNode = useCallback(
     (idol: IdolListItem, options?: { keepSelection?: boolean }) => {
@@ -603,15 +511,6 @@ export default function GraphExplorer({
     },
     [selectedNodeId]
   );
-
-  const setNodesFromCooccurrencePairs = useCallback(() => {
-    enableIsolateMode();
-  }, [enableIsolateMode]);
-
-  // 現在のフィルター条件を満たすエッジに接続されているノードだけを残す
-  const setNodesFromAccompanimentEdges = useCallback(() => {
-    enableIsolateMode();
-  }, [enableIsolateMode]);
 
   const handleNodeClick = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId);
@@ -800,50 +699,6 @@ export default function GraphExplorer({
                 </button>
               </div>
 
-              {/* Isolateモード表示・切り替え */}
-              <div
-                style={{
-                  marginTop: "8px",
-                  padding: "6px 8px",
-                  background: isIsolateMode ? "#e3f2fd" : "#f5f5f5",
-                  borderRadius: "4px",
-                  fontSize: "11px",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <span style={{ color: isIsolateMode ? "#1976d2" : "#666" }}>
-                    {isIsolateMode ? "🔒 全体から再計算" : "📝 現在のノードを編集"}
-                  </span>
-                  {isIsolateMode && (
-                    <button
-                      onClick={disableIsolateMode}
-                      style={{
-                        padding: "2px 6px",
-                        fontSize: "10px",
-                        background: "#fff",
-                        color: "#666",
-                        border: "1px solid #ccc",
-                        borderRadius: "3px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      解除
-                    </button>
-                  )}
-                </div>
-                {isIsolateMode && baseNodes && (
-                  <div style={{ marginTop: "4px", color: "#999", fontSize: "10px" }}>
-                    ベース: {baseNodes.size}ノード
-                  </div>
-                )}
-              </div>
-
               {/* 共起随伴ペアモード時のフィルタ */}
               {edgeMode === "cooccurrenceCompanion" && (
                 <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
@@ -861,7 +716,7 @@ export default function GraphExplorer({
                       style={{ width: "100%" }}
                     />
                   </div>
-                  <div style={{ marginBottom: "8px" }}>
+                  <div>
                     <label style={{ display: "block", marginBottom: "2px" }}>
                       最小共起元数: {minCooccurrenceSourceCount}
                     </label>
@@ -875,21 +730,6 @@ export default function GraphExplorer({
                       style={{ width: "100%" }}
                     />
                   </div>
-                  <button
-                    onClick={setNodesFromCooccurrencePairs}
-                    style={{
-                      width: "100%",
-                      padding: "6px 8px",
-                      fontSize: "11px",
-                      background: "#8e44ad",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    エッジに繋がるノードだけにする
-                  </button>
                 </div>
               )}
 
@@ -906,7 +746,7 @@ export default function GraphExplorer({
                       相互随伴のみ表示
                     </label>
                   </div>
-                  <div style={{ marginBottom: "8px" }}>
+                  <div>
                     <label style={{ display: "block", marginBottom: "2px" }}>
                       最小IDF: {minIdf.toFixed(1)}
                     </label>
@@ -920,21 +760,6 @@ export default function GraphExplorer({
                       style={{ width: "100%" }}
                     />
                   </div>
-                  <button
-                    onClick={setNodesFromAccompanimentEdges}
-                    style={{
-                      width: "100%",
-                      padding: "6px 8px",
-                      fontSize: "11px",
-                      background: "#1976d2",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    エッジに繋がるノードだけにする
-                  </button>
                 </div>
               )}
             </div>
