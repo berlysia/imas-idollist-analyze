@@ -24,14 +24,19 @@ export interface ExplorerEdge {
   weight: number;
   pmi?: number;
   cooccurrenceSourceCount?: number;
+  /** 類似アイドル用: 共通随伴アイドルの数 */
+  commonAccompanimentCount?: number;
+  /** 類似アイドル用: レアスコア */
+  rareScore?: number;
   edgeType: EdgeType;
 }
 
-export type EdgeType = "accompaniment" | "cooccurrenceCompanion";
+export type EdgeType = "accompaniment" | "cooccurrenceCompanion" | "similarByAccompaniment";
 
 export interface EdgeVisibility {
   accompaniment: boolean;
   cooccurrenceCompanion: boolean;
+  similarByAccompaniment: boolean;
 }
 
 export interface CooccurrenceCompanionPairData {
@@ -40,4 +45,12 @@ export interface CooccurrenceCompanionPairData {
   cooccurrenceSourceCount: number;
   cooccurrenceSources: Array<{ id: string; name: string; brand: Brand[] }>;
   pmi: number;
+}
+
+export interface SimilarByAccompanimentPairData {
+  idolA: { id: string; name: string; brand: Brand[] };
+  idolB: { id: string; name: string; brand: Brand[] };
+  commonAccompanimentCount: number;
+  rareScore: number;
+  commonAccompaniments: Array<{ id: string; name: string; brand: Brand[]; idf: number }>;
 }

@@ -5,8 +5,14 @@ import { SITE_TITLE } from "../../lib/constants";
 import { loadGraphExplorerData } from "../../lib/graphExplorerData";
 
 export default createRoute(async (c) => {
-  const { idolList, normalized, idfMap, pmiMap, cooccurrenceCompanionPairs } =
-    await loadGraphExplorerData();
+  const {
+    idolList,
+    normalized,
+    idfMap,
+    pmiMap,
+    cooccurrenceCompanionPairs,
+    similarByAccompanimentPairs,
+  } = await loadGraphExplorerData();
 
   return c.render(
     <div
@@ -59,6 +65,7 @@ export default createRoute(async (c) => {
           idfMap={idfMap}
           pmiMap={pmiMap}
           cooccurrenceCompanionPairs={cooccurrenceCompanionPairs}
+          similarByAccompanimentPairs={similarByAccompanimentPairs}
           mode="topdown"
         />
       </main>

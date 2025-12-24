@@ -483,6 +483,25 @@ export default function GraphExplorerGraph({
               );
             }
 
+            // 随伴類似
+            if (edge.edgeType === "similarByAccompaniment") {
+              const strokeWidth = 1 + (edge.commonAccompanimentCount ?? 1) * 1.5;
+
+              return (
+                <line
+                  key={edgeKey}
+                  x1={source.x}
+                  y1={source.y}
+                  x2={target.x}
+                  y2={target.y}
+                  stroke="#2e7d32"
+                  strokeOpacity={0.6}
+                  strokeWidth={strokeWidth}
+                  strokeDasharray="4,2"
+                />
+              );
+            }
+
             // 随伴関係
             if (edge.isMutual) {
               // 相互随伴: 矢印なし、中央に丸

@@ -12,6 +12,7 @@ import {
   detectClusters,
   detectCooccurrenceCompanionClusters,
   computeSimilarIdolGroups,
+  computeSimilarByAccompanimentPairs,
   buildIdfMap,
   type NormalizedData,
 } from "../app/lib/compute";
@@ -127,6 +128,16 @@ async function main() {
   console.log("🔄 Building IDF map for similarity computation...");
   const idfMap = buildIdfMap(data);
 
+  // 随伴類似ペアを計算
+  console.log("👥 Computing similar by accompaniment pairs...");
+  const similarByAccompanimentPairs = computeSimilarByAccompanimentPairs(data, idfMap, 2, 2000);
+
+  console.log("💾 Writing similar-by-accompaniment.json...");
+  await writeFile(
+    join(OUTPUT_DIR, "similar-by-accompaniment.json"),
+    JSON.stringify({ data: similarByAccompanimentPairs }, null, 2)
+  );
+
   let count = 0;
   for (const idolId of idolIds) {
     const detail = computeIdolDetail(data, idolId, pmiPairs, cooccurrenceCompanionPairs);
@@ -146,6 +157,9 @@ async function main() {
   console.log(`   - pmi-pairs.json: ${pmiPairs.length} pairs`);
   console.log(
     `   - cooccurrence-companion.json: ${cooccurrenceCompanionPairs.length} cooccurrence companion pairs`
+  );
+  console.log(
+    `   - similar-by-accompaniment.json: ${similarByAccompanimentPairs.length} similar pairs`
   );
   console.log(`   - clusters.json: ${clusters.length} clusters`);
   console.log(

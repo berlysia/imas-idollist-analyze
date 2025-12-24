@@ -1361,3 +1361,90 @@ export function buildIdfMap(data: NormalizedData): Map<string, number> {
 
   return idfMap;
 }
+
+/**
+ * 随伴類似ペア: 共通の随伴アイドルを持つ2人のアイドル
+ */
+export interface SimilarByAccompanimentPair {
+  idolA: { id: string; name: string; brand: Brand[] };
+  idolB: { id: string; name: string; brand: Brand[] };
+  /** 共通する随伴アイドルの数 */
+  commonAccompanimentCount: number;
+  /** レアスコア: 共通随伴のIDFの累乗平均（p=5）で高い値を重視 */
+  rareScore: number;
+  /** 共通する随伴アイドル */
+  commonAccompaniments: Array<{ id: string; name: string; brand: Brand[]; idf: number }>;
+}
+
+/**
+ * 随伴類似ペアを計算
+ * 共通の随伴アイドルを持つペアを抽出し、レアスコアで順位付け
+ * @param minCommonAccompaniments 最低共通随伴数（デフォルト: 2）
+ * @param topN 上位N件を取得（デフォルト: 1000）
+ */
+export function computeSimilarByAccompanimentPairs(
+  data: NormalizedData,
+  idfMap: Map<string, number>,
+  minCommonAccompaniments: number = 2,
+  topN: number = 1000
+): SimilarByAccompanimentPair[] {
+  const idolIds = Object.keys(data.accompaniments);
+  const results: SimilarByAccompanimentPair[] = [];
+
+  // 各アイドルの随伴リストをSetに変換（高速な検索のため）
+  const accompanimentSets = new Map<string, Set<string>>();
+  for (const [idolId, accompaniments] of Object.entries(data.accompaniments)) {
+    accompanimentSets.set(idolId, new Set(accompaniments));
+  }
+
+  // 全ペアについて共通随伴を計算
+  for (let i = 0; i < idolIds.length; i++) {
+    const idolAId = idolIds[i]!;
+    const idolA = data.idols[idolAId];
+    const setA = accompanimentSets.get(idolAId);
+    if (!idolA || !setA || setA.size === 0) continue;
+
+    for (let j = i + 1; j < idolIds.length; j++) {
+      const idolBId = idolIds[j]!;
+      const idolB = data.idols[idolBId];
+      const setB = accompanimentSets.get(idolBId);
+      if (!idolB || !setB || setB.size === 0) continue;
+
+      // 共通随伴を抽出
+      const commonAccompaniments: Array<{ id: string; name: string; brand: Brand[]; idf: number }> =
+        [];
+
+      for (const accompId of setA) {
+        if (setB.has(accompId)) {
+          const accompIdol = data.idols[accompId];
+          if (accompIdol) {
+            commonAccompaniments.push({
+              id: accompId,
+              name: accompIdol.name,
+              brand: accompIdol.brand,
+              idf: idfMap.get(accompId) ?? 0,
+            });
+          }
+        }
+      }
+
+      if (commonAccompaniments.length < minCommonAccompaniments) continue;
+
+      // レアスコア計算: IDFの累乗平均（p=5）
+      const p = 5;
+      const powerSum = commonAccompaniments.reduce((sum, a) => sum + Math.pow(a.idf, p), 0);
+      const rareScore = Math.pow(powerSum / commonAccompaniments.length, 1 / p);
+
+      results.push({
+        idolA: { id: idolAId, name: idolA.name, brand: idolA.brand },
+        idolB: { id: idolBId, name: idolB.name, brand: idolB.brand },
+        commonAccompanimentCount: commonAccompaniments.length,
+        rareScore,
+        commonAccompaniments: commonAccompaniments.sort((a, b) => b.idf - a.idf),
+      });
+    }
+  }
+
+  // レアスコアでソートして上位N件を返す
+  return results.sort((a, b) => b.rareScore - a.rareScore).slice(0, topN);
+}

@@ -9,6 +9,7 @@ import type {
   ExplorerNode,
   ExplorerEdge,
   CooccurrenceCompanionPairData,
+  SimilarByAccompanimentPairData,
   EdgeVisibility,
 } from "./graphExplorerTypes";
 export type { IdolListItem, ExplorerNode, ExplorerEdge } from "./graphExplorerTypes";
@@ -22,6 +23,7 @@ interface Props {
   idfMap: Record<string, number>;
   pmiMap: Record<string, number>;
   cooccurrenceCompanionPairs: CooccurrenceCompanionPairData[];
+  similarByAccompanimentPairs: SimilarByAccompanimentPairData[];
   mode: ExplorerMode;
 }
 
@@ -182,6 +184,39 @@ function calculateCooccurrenceEdgesForNodes(
   return edgeMap;
 }
 
+function calculateSimilarByAccompanimentEdgesForNodes(
+  nodes: Map<string, ExplorerNode>,
+  similarByAccompanimentPairs: SimilarByAccompanimentPairData[],
+  minCommonAccompanimentCount: number,
+  minRareScore: number
+): Map<string, ExplorerEdge> {
+  const edgeMap = new Map<string, ExplorerEdge>();
+  const nodeIds = new Set(nodes.keys());
+
+  for (const pair of similarByAccompanimentPairs) {
+    if (!nodeIds.has(pair.idolA.id) || !nodeIds.has(pair.idolB.id)) continue;
+    if (pair.commonAccompanimentCount < minCommonAccompanimentCount) continue;
+    if (pair.rareScore < minRareScore) continue;
+
+    const edgeKey =
+      pair.idolA.id < pair.idolB.id
+        ? `similar:${pair.idolA.id}|${pair.idolB.id}`
+        : `similar:${pair.idolB.id}|${pair.idolA.id}`;
+
+    edgeMap.set(edgeKey, {
+      source: pair.idolA.id,
+      target: pair.idolB.id,
+      isMutual: true,
+      weight: pair.commonAccompanimentCount / 6,
+      commonAccompanimentCount: pair.commonAccompanimentCount,
+      rareScore: pair.rareScore,
+      edgeType: "similarByAccompaniment",
+    });
+  }
+
+  return edgeMap;
+}
+
 export default function GraphExplorer({
   idolList,
   accompaniments,
@@ -189,6 +224,7 @@ export default function GraphExplorer({
   idfMap,
   pmiMap,
   cooccurrenceCompanionPairs,
+  similarByAccompanimentPairs,
   mode,
 }: Props) {
   // 選択されたアイドルIDのセット（NodeSelectorと同期）
@@ -229,11 +265,17 @@ export default function GraphExplorer({
 
   // Edge visibility state - initialize from URL params
   const [edgeVisibility, setEdgeVisibility] = useState<EdgeVisibility>(() => {
-    if (typeof window === "undefined") return { accompaniment: true, cooccurrenceCompanion: true };
+    if (typeof window === "undefined")
+      return { accompaniment: true, cooccurrenceCompanion: true, similarByAccompaniment: false };
     const params = new URLSearchParams(window.location.search);
     const showAccompaniment = params.get("showAccompaniment") !== "false";
     const showCooccurrence = params.get("showCooccurrence") !== "false";
-    return { accompaniment: showAccompaniment, cooccurrenceCompanion: showCooccurrence };
+    const showSimilar = params.get("showSimilarByAccompaniment") === "true";
+    return {
+      accompaniment: showAccompaniment,
+      cooccurrenceCompanion: showCooccurrence,
+      similarByAccompaniment: showSimilar,
+    };
   });
   const [minPmi, setMinPmi] = useState(() => {
     if (typeof window === "undefined") return 2;
@@ -259,6 +301,20 @@ export default function GraphExplorer({
     const params = new URLSearchParams(window.location.search);
     const idf = params.get("minIdf");
     return idf ? Number(idf) : 0;
+  });
+
+  // 随伴類似用フィルター
+  const [minCommonAccompanimentCount, setMinCommonAccompanimentCount] = useState(() => {
+    if (typeof window === "undefined") return 2;
+    const params = new URLSearchParams(window.location.search);
+    const count = params.get("minCommonAccompanimentCount");
+    return count ? Number(count) : 2;
+  });
+  const [minRareScore, setMinRareScore] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    const params = new URLSearchParams(window.location.search);
+    const score = params.get("minRareScore");
+    return score ? Number(score) : 0;
   });
 
   // Recalculate edges when visibility or filter changes
@@ -296,6 +352,18 @@ export default function GraphExplorer({
       }
     }
 
+    if (edgeVisibility.similarByAccompaniment) {
+      const similarEdges = calculateSimilarByAccompanimentEdgesForNodes(
+        nodesFromSelection,
+        similarByAccompanimentPairs,
+        minCommonAccompanimentCount,
+        minRareScore
+      );
+      for (const [key, edge] of similarEdges) {
+        allEdges.set(key, edge);
+      }
+    }
+
     // ボトムアップモード: 選択されたノードをそのまま表示
     if (mode === "bottomup") {
       nodesRef.current = nodesFromSelection;
@@ -329,9 +397,12 @@ export default function GraphExplorer({
     minCooccurrenceSourceCount,
     mutualOnly,
     minIdf,
+    minCommonAccompanimentCount,
+    minRareScore,
     nodesFromSelection,
     accompaniments,
     cooccurrenceCompanionPairs,
+    similarByAccompanimentPairs,
     idfMap,
   ]);
 
@@ -374,6 +445,12 @@ export default function GraphExplorer({
       params.delete("showCooccurrence");
     }
 
+    if (edgeVisibility.similarByAccompaniment) {
+      params.set("showSimilarByAccompaniment", "true");
+    } else {
+      params.delete("showSimilarByAccompaniment");
+    }
+
     // 随伴関係フィルターパラメータ
     if (mutualOnly) {
       params.set("mutualOnly", "true");
@@ -398,6 +475,18 @@ export default function GraphExplorer({
       params.delete("minCooccurrenceSourceCount");
     }
 
+    // 随伴類似フィルターパラメータ
+    if (minCommonAccompanimentCount !== 2) {
+      params.set("minCommonAccompanimentCount", String(minCommonAccompanimentCount));
+    } else {
+      params.delete("minCommonAccompanimentCount");
+    }
+    if (minRareScore > 0) {
+      params.set("minRareScore", String(minRareScore));
+    } else {
+      params.delete("minRareScore");
+    }
+
     const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
     window.history.replaceState({}, "", newUrl);
   }, [
@@ -408,6 +497,8 @@ export default function GraphExplorer({
     minCooccurrenceSourceCount,
     mutualOnly,
     minIdf,
+    minCommonAccompanimentCount,
+    minRareScore,
   ]);
 
   // Ref to access current nodes without stale closure
@@ -791,6 +882,80 @@ export default function GraphExplorer({
               </div>
             )}
           </div>
+
+          {/* 随伴類似トグル */}
+          <div style={{ marginTop: "8px" }}>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                cursor: "pointer",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                background: edgeVisibility.similarByAccompaniment ? "#e8f5e9" : "#f5f5f5",
+                border: edgeVisibility.similarByAccompaniment
+                  ? "1px solid #2e7d32"
+                  : "1px solid #ddd",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={edgeVisibility.similarByAccompaniment}
+                onChange={(e) =>
+                  setEdgeVisibility((prev) => ({
+                    ...prev,
+                    similarByAccompaniment: e.target.checked,
+                  }))
+                }
+                style={{ margin: 0 }}
+              />
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: edgeVisibility.similarByAccompaniment ? "#2e7d32" : "#666",
+                  fontWeight: edgeVisibility.similarByAccompaniment ? "bold" : "normal",
+                }}
+              >
+                随伴類似
+              </span>
+            </label>
+
+            {edgeVisibility.similarByAccompaniment && (
+              <div
+                style={{ marginTop: "6px", marginLeft: "24px", fontSize: "10px", color: "#666" }}
+              >
+                <div style={{ marginBottom: "4px" }}>
+                  <label style={{ display: "block", marginBottom: "2px" }}>
+                    最小共通随伴数: {minCommonAccompanimentCount}
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="6"
+                    step="1"
+                    value={minCommonAccompanimentCount}
+                    onChange={(e) => setMinCommonAccompanimentCount(Number(e.target.value))}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", marginBottom: "2px" }}>
+                    最小レアスコア: {minRareScore.toFixed(1)}
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="5"
+                    step="0.5"
+                    value={minRareScore}
+                    onChange={(e) => setMinRareScore(Number(e.target.value))}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -897,11 +1062,45 @@ export default function GraphExplorer({
             </>
           )}
 
+          {/* 随伴類似の凡例 */}
+          {edgeVisibility.similarByAccompaniment && (
+            <>
+              <div
+                style={{
+                  marginBottom: "4px",
+                  fontWeight: "bold",
+                  fontSize: "10px",
+                  color: "#2e7d32",
+                }}
+              >
+                随伴類似
+              </div>
+              <div style={{ marginBottom: "4px" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: "20px",
+                    height: "2px",
+                    background: "#2e7d32",
+                    verticalAlign: "middle",
+                    marginRight: "6px",
+                  }}
+                />
+                共通随伴あり
+              </div>
+              <div style={{ marginBottom: "6px", color: "#999", fontSize: "10px" }}>
+                太さ = 共通随伴数
+              </div>
+            </>
+          )}
+
           <div
             style={{
               marginBottom: "6px",
               borderTop:
-                edgeVisibility.accompaniment || edgeVisibility.cooccurrenceCompanion
+                edgeVisibility.accompaniment ||
+                edgeVisibility.cooccurrenceCompanion ||
+                edgeVisibility.similarByAccompaniment
                   ? "1px solid #eee"
                   : "none",
               paddingTop: "4px",
