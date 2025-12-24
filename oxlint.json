@@ -5,7 +5,9 @@
     "no-console": "warn",
     "eqeqeq": "error",
     "no-var": "error",
-    "prefer-const": "error"
+    "prefer-const": "error",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn"
   },
   "ignore_patterns": ["dist/**", "node_modules/**", ".tmp/**"]
 }

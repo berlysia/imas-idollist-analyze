@@ -33,6 +33,7 @@ const TAB_ITEMS = [
   { href: "/accompaniment-clusters", label: "随伴クラスタ" },
   { href: "/cross-brand-clusters", label: "ブランド横断クラスタ" },
   { href: "/network", label: "ネットワーク" },
+  { href: "/graph-explorer", label: "グラフ探索" },
 ] as const;
 
 /**
