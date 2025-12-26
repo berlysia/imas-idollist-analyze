@@ -149,30 +149,6 @@ export default function ClusterGraph({
           >
             <path d="M0,-5L10,0L0,5" fill="#999" />
           </marker>
-          {/* 双方向矢印（青）- 終点 */}
-          <marker
-            id="arrow-bi-end"
-            viewBox="0 -5 10 10"
-            refX={20}
-            refY={0}
-            markerWidth={6}
-            markerHeight={6}
-            orient="auto"
-          >
-            <path d="M0,-5L10,0L0,5" fill="#1976d2" />
-          </marker>
-          {/* 双方向矢印（青）- 始点 */}
-          <marker
-            id="arrow-bi-start"
-            viewBox="0 -5 10 10"
-            refX={-10}
-            refY={0}
-            markerWidth={6}
-            markerHeight={6}
-            orient="auto"
-          >
-            <path d="M10,-5L0,0L10,5" fill="#1976d2" />
-          </marker>
         </defs>
 
         <g transform={`translate(${transform.x},${transform.y}) scale(${transform.scale})`}>
@@ -185,20 +161,23 @@ export default function ClusterGraph({
             const isBidirectional = edge.directionality === 2;
             const strokeColor = isBidirectional ? "#1976d2" : "#999";
             const strokeWidth = 1 + (edge.weight / maxWeight) * 4;
+            const midX = (source.x + target.x) / 2;
+            const midY = (source.y + target.y) / 2;
 
             return (
-              <line
-                key={`${edge.source}-${edge.target}-${idx}`}
-                x1={source.x}
-                y1={source.y}
-                x2={target.x}
-                y2={target.y}
-                stroke={strokeColor}
-                strokeOpacity={0.6}
-                strokeWidth={strokeWidth}
-                markerEnd={isBidirectional ? "url(#arrow-bi-end)" : "url(#arrow-uni)"}
-                markerStart={isBidirectional ? "url(#arrow-bi-start)" : undefined}
-              />
+              <g key={`${edge.source}-${edge.target}-${idx}`}>
+                <line
+                  x1={source.x}
+                  y1={source.y}
+                  x2={target.x}
+                  y2={target.y}
+                  stroke={strokeColor}
+                  strokeOpacity={0.6}
+                  strokeWidth={strokeWidth}
+                  markerEnd={isBidirectional ? undefined : "url(#arrow-uni)"}
+                />
+                {isBidirectional && <circle cx={midX} cy={midY} r={4} fill="#1976d2" />}
+              </g>
             );
           })}
 
@@ -286,40 +265,8 @@ export default function ClusterGraph({
       <GraphLegend>
         <div style={{ marginBottom: "2px" }}>
           <svg width="24" height="12" style={{ verticalAlign: "middle", marginRight: "4px" }}>
-            <defs>
-              <marker
-                id="legend-arrow-bi-end"
-                viewBox="0 -3 6 6"
-                refX="6"
-                refY="0"
-                markerWidth="4"
-                markerHeight="4"
-                orient="auto"
-              >
-                <path d="M0,-3L6,0L0,3" fill="#1976d2" />
-              </marker>
-              <marker
-                id="legend-arrow-bi-start"
-                viewBox="0 -3 6 6"
-                refX="0"
-                refY="0"
-                markerWidth="4"
-                markerHeight="4"
-                orient="auto"
-              >
-                <path d="M6,-3L0,0L6,3" fill="#1976d2" />
-              </marker>
-            </defs>
-            <line
-              x1="4"
-              y1="6"
-              x2="20"
-              y2="6"
-              stroke="#1976d2"
-              strokeWidth="2"
-              markerEnd="url(#legend-arrow-bi-end)"
-              markerStart="url(#legend-arrow-bi-start)"
-            />
+            <line x1="2" y1="6" x2="22" y2="6" stroke="#1976d2" strokeWidth="2" />
+            <circle cx="12" cy="6" r="3" fill="#1976d2" />
           </svg>
           双方向（相互選択）
         </div>
