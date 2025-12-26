@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { Brand } from "../types";
 import { BRAND_COLORS } from "../lib/constants";
+import { withBasePath } from "../lib/url";
 import type { ExplorerNode, ExplorerEdge } from "./graphExplorerTypes";
 
 interface GraphNode {
@@ -596,7 +597,7 @@ export default function GraphExplorerGraph({
                 {/* Idol image */}
                 {!failedImages.has(node.id) && (
                   <image
-                    href={`/static/icons/${node.id}.jpg`}
+                    href={withBasePath(`/static/icons/${node.id}.jpg`)}
                     x={-nodeRadius}
                     y={-nodeRadius}
                     width={nodeRadius * 2}

@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import type { Brand } from "../types";
 import { BRAND_COLORS, BRAND_NAMES, ALL_BRANDS } from "../lib/constants";
+import { withBasePath } from "../lib/url";
 
 interface CooccurrenceStats {
   id: string;
@@ -142,7 +143,7 @@ export default function RankingChart({ stats }: Props) {
               <td className="rank">{index + 1}</td>
               <td>
                 <a
-                  href={`/idol/${stat.id}`}
+                  href={withBasePath(`/idol/${stat.id}`)}
                   className="idol-name clickable"
                   style={{
                     display: "flex",

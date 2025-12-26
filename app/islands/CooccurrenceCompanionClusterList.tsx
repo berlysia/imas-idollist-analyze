@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import type { Brand } from "../types";
 import { BRAND_NAMES, ALL_BRANDS } from "../lib/constants";
+import { withBasePath } from "../lib/url";
 import CooccurrenceCompanionClusterGraph from "./CooccurrenceCompanionClusterGraph";
 import {
   BrandDot,
@@ -91,7 +92,7 @@ function MemberTag({
         style={{ cursor: "pointer", margin: 0 }}
       />
       <a
-        href={`/idol/${member.id}`}
+        href={withBasePath(`/idol/${member.id}`)}
         style={{
           display: "inline-flex",
           alignItems: "center",
@@ -185,7 +186,7 @@ function EdgeVotersList({ edges }: { edges: CooccurrenceCompanionEdge[] }) {
                     <BrandDot key={b} brand={b} />
                   ))}
                   <a
-                    href={`/idol/${edge.idolA.id}`}
+                    href={withBasePath(`/idol/${edge.idolA.id}`)}
                     onClick={(e) => e.stopPropagation()}
                     style={{ color: "inherit", textDecoration: "none" }}
                   >
@@ -198,7 +199,7 @@ function EdgeVotersList({ edges }: { edges: CooccurrenceCompanionEdge[] }) {
                     <BrandDot key={b} brand={b} />
                   ))}
                   <a
-                    href={`/idol/${edge.idolB.id}`}
+                    href={withBasePath(`/idol/${edge.idolB.id}`)}
                     onClick={(e) => e.stopPropagation()}
                     style={{ color: "inherit", textDecoration: "none" }}
                   >
@@ -231,7 +232,7 @@ function EdgeVotersList({ edges }: { edges: CooccurrenceCompanionEdge[] }) {
                   {edge.cooccurrenceSources.map((source) => (
                     <a
                       key={source.id}
-                      href={`/idol/${source.id}`}
+                      href={withBasePath(`/idol/${source.id}`)}
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
@@ -306,7 +307,7 @@ function ClusterCard({
 
   const graphExplorerUrl = useMemo(() => {
     const ids = cluster.members.join(",");
-    return `/graph-explorer?mode=bottomup&ids=${encodeURIComponent(ids)}`;
+    return withBasePath(`/graph-explorer?mode=bottomup&ids=${encodeURIComponent(ids)}`);
   }, [cluster.members]);
 
   return (

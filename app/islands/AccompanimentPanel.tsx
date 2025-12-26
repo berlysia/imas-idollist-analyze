@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { Brand } from "../types";
 import { BrandDot, ScoreBadge } from "../components/shared";
 import { BRAND_NAMES } from "../lib/constants";
+import { withBasePath } from "../lib/url";
 import type { ExplorerNode, CooccurrenceCompanionPairData } from "./graphExplorerTypes";
 import { computeSimilarIdolGroups } from "../lib/compute";
 
@@ -147,7 +148,7 @@ export default function AccompanimentPanel({
             <BrandDot key={b} brand={b} size="large" />
           ))}
           <span style={{ fontWeight: "bold", fontSize: "16px" }}>{selectedNode.name}</span>
-          <a href={`/idol/${selectedNode.id}`} target="_blank" rel="noreferrer">
+          <a href={withBasePath(`/idol/${selectedNode.id}`)} target="_blank" rel="noreferrer">
             🔗
           </a>
         </div>

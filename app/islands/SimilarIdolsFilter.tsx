@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import type { Brand } from "../types";
 import { BrandDot } from "../components/shared";
+import { withBasePath } from "../lib/url";
 
 interface CommonAccompaniment {
   id: string;
@@ -204,7 +205,7 @@ export default function SimilarIdolsFilter({ groups, selectedIdols }: Props) {
                   return (
                     <a
                       key={accomp.id}
-                      href={`/idol/${accomp.id}`}
+                      href={withBasePath(`/idol/${accomp.id}`)}
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
@@ -249,7 +250,7 @@ export default function SimilarIdolsFilter({ groups, selectedIdols }: Props) {
                 {group.idols.map((idol) => (
                   <a
                     key={idol.id}
-                    href={`/idol/${idol.id}`}
+                    href={withBasePath(`/idol/${idol.id}`)}
                     className="idol-link"
                     style={{
                       display: "inline-flex",

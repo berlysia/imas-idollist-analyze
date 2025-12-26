@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import type { Brand } from "../types";
 import { BRAND_COLORS, BRAND_NAMES } from "../lib/constants";
+import { withBasePath } from "../lib/url";
 
 interface IdolInfo {
   id: string;
@@ -56,7 +57,7 @@ function ClusterLink({
     <span style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
       {clusterInfo && (
         <a
-          href={`/accompaniment-clusters#cluster-${clusterInfo.clusterIndex}`}
+          href={withBasePath(`/accompaniment-clusters#cluster-${clusterInfo.clusterIndex}`)}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -76,7 +77,9 @@ function ClusterLink({
       )}
       {crossBrandClusterInfo && (
         <a
-          href={`/cooccurrence-companion-clusters#cluster-${crossBrandClusterInfo.clusterIndex}`}
+          href={withBasePath(
+            `/cooccurrence-companion-clusters#cluster-${crossBrandClusterInfo.clusterIndex}`
+          )}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -162,7 +165,7 @@ export default function PMIFilter({ pairs, pairToCluster, crossBrandPairToCluste
                 <td className="rank">{index + 1}</td>
                 <td>
                   <a
-                    href={`/idol/${pair.idolA.id}`}
+                    href={withBasePath(`/idol/${pair.idolA.id}`)}
                     className="idol-name clickable"
                     style={{
                       display: "flex",
@@ -181,7 +184,7 @@ export default function PMIFilter({ pairs, pairToCluster, crossBrandPairToCluste
                 <td className="arrow">↔</td>
                 <td>
                   <a
-                    href={`/idol/${pair.idolB.id}`}
+                    href={withBasePath(`/idol/${pair.idolB.id}`)}
                     className="idol-name clickable"
                     style={{
                       display: "flex",

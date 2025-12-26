@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import type { Brand } from "../types";
 import { BRAND_NAMES, ALL_BRANDS } from "../lib/constants";
+import { withBasePath } from "../lib/url";
 import ClusterGraph from "./ClusterGraph";
 import {
   BrandDot,
@@ -84,7 +85,7 @@ function MemberTag({
         style={{ cursor: "pointer", margin: 0 }}
       />
       <a
-        href={`/idol/${member.id}`}
+        href={withBasePath(`/idol/${member.id}`)}
         style={{
           display: "inline-flex",
           alignItems: "center",
@@ -152,7 +153,7 @@ function ClusterCard({
 
   const graphExplorerUrl = useMemo(() => {
     const ids = cluster.members.join(",");
-    return `/graph-explorer?mode=bottomup&ids=${encodeURIComponent(ids)}`;
+    return withBasePath(`/graph-explorer?mode=bottomup&ids=${encodeURIComponent(ids)}`);
   }, [cluster.members]);
 
   return (

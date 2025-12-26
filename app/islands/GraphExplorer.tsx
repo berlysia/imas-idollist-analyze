@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import type { Brand } from "../types";
 import { EmptyMessage } from "../components/shared";
+import { withBasePath } from "../lib/url";
 import GraphExplorerGraph from "./GraphExplorerGraph";
 import AccompanimentPanel from "./AccompanimentPanel";
 import NodeSelector, { getSelectionUrlParams, parseSelectionFromUrl } from "./NodeSelector";
@@ -720,7 +721,7 @@ export default function GraphExplorer({
       >
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <a
-            href="/"
+            href={withBasePath("/")}
             style={{
               color: "#fff",
               textDecoration: "none",

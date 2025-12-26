@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import type { Brand } from "../types";
 import { BRAND_COLORS, BRAND_NAMES } from "../lib/constants";
+import { withBasePath } from "../lib/url";
 
 interface IdolInfo {
   id: string;
@@ -48,7 +49,7 @@ function ClusterLink({ clusterInfo }: { clusterInfo: ClusterInfo | undefined }) 
 
   return (
     <a
-      href={`/cooccurrence-companion-clusters#cluster-${clusterInfo.clusterIndex}`}
+      href={withBasePath(`/cooccurrence-companion-clusters#cluster-${clusterInfo.clusterIndex}`)}
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -92,7 +93,7 @@ function ExpandedSourcesRow({ sources, colSpan }: { sources: IdolInfo[]; colSpan
           {sources.map((source) => (
             <a
               key={source.id}
-              href={`/idol/${source.id}`}
+              href={withBasePath(`/idol/${source.id}`)}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -235,7 +236,7 @@ export default function BridgesTable({ bridges, pairToCluster }: Props) {
                   <td className="rank">{index + 1}</td>
                   <td>
                     <a
-                      href={`/idol/${bridge.idolA.id}`}
+                      href={withBasePath(`/idol/${bridge.idolA.id}`)}
                       className="idol-name clickable"
                       style={{
                         display: "flex",
@@ -255,7 +256,7 @@ export default function BridgesTable({ bridges, pairToCluster }: Props) {
                   <td className="arrow">↔</td>
                   <td>
                     <a
-                      href={`/idol/${bridge.idolB.id}`}
+                      href={withBasePath(`/idol/${bridge.idolB.id}`)}
                       className="idol-name clickable"
                       style={{
                         display: "flex",

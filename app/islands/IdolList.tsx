@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import type { Brand } from "../types";
 import { BRAND_COLORS, BRAND_NAMES, ALL_BRANDS } from "../lib/constants";
+import { withBasePath } from "../lib/url";
 
 interface IdolListItem {
   id: string;
@@ -129,7 +130,7 @@ export default function IdolList({ idols }: Props) {
             <tr key={idol.id}>
               <td>
                 <a
-                  href={`/idol/${idol.id}`}
+                  href={withBasePath(`/idol/${idol.id}`)}
                   className="idol-name clickable"
                   style={{
                     display: "flex",
