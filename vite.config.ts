@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import honox from "honox/vite";
 import client from "honox/vite/client";
 import ssg from "@hono/vite-ssg";
+import react from "@vitejs/plugin-react";
 import path from "node:path";
 
 export default defineConfig(({ mode }) => {
@@ -18,7 +19,9 @@ export default defineConfig(({ mode }) => {
   if (mode === "client") {
     return {
       ...baseConfig,
-      plugins: [client()],
+      plugins: [client({
+        jsxImportSource: "react",
+      }), react()],
       build: {
         outDir: "dist",
         emptyOutDir: true,

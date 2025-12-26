@@ -1,4 +1,5 @@
 import { reactRenderer } from "@hono/react-renderer";
+import { Script } from "honox/server";
 import { SITE_TITLE } from "../lib/constants";
 
 export default reactRenderer(
@@ -13,7 +14,7 @@ export default reactRenderer(
         </head>
         <body>
           <div className="app">{children}</div>
-          <script type="module" src="/app/client.ts" />
+          <Script src="/app/client.ts" async />
         </body>
       </html>
     );
