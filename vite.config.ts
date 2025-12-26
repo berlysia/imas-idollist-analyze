@@ -4,6 +4,7 @@ import ssg from "@hono/vite-ssg";
 import path from "node:path";
 
 export default defineConfig(({ mode }) => ({
+  base: process.env.BASE_PATH || "/",
   plugins: [
     honox({
       client: {
