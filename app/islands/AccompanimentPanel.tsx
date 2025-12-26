@@ -234,7 +234,9 @@ export default function AccompanimentPanel({
                     </div>
                   </div>
                   <button
-                    onClick={() => isExisting ? onFocusNode(idol.id) : onAddIdol(selectedNode.id, idol.id)}
+                    onClick={() =>
+                      isExisting ? onFocusNode(idol.id) : onAddIdol(selectedNode.id, idol.id)
+                    }
                     style={{
                       padding: "4px 8px",
                       fontSize: "11px",
@@ -317,7 +319,9 @@ export default function AccompanimentPanel({
                     </div>
                   </div>
                   <button
-                    onClick={() => isExisting ? onFocusNode(idol.id) : onAddIdol(selectedNode.id, idol.id)}
+                    onClick={() =>
+                      isExisting ? onFocusNode(idol.id) : onAddIdol(selectedNode.id, idol.id)
+                    }
                     style={{
                       padding: "4px 8px",
                       fontSize: "11px",
@@ -473,7 +477,11 @@ export default function AccompanimentPanel({
                                 <span style={{ flex: 1 }}>{accompIdol?.name ?? accompId}</span>
                                 <ScoreBadge metric="idf" value={accompIdf} />
                                 <button
-                                  onClick={() => accompIsExisting ? onFocusNode(accompId) : onAddIdol(idol.id, accompId)}
+                                  onClick={() =>
+                                    accompIsExisting
+                                      ? onFocusNode(accompId)
+                                      : onAddIdol(idol.id, accompId)
+                                  }
                                   disabled={accompIsExisting}
                                   style={{
                                     padding: "2px 4px",
