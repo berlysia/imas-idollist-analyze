@@ -1,29 +1,48 @@
 import { defineConfig } from "vite";
 import honox from "honox/vite";
+import client from "honox/vite/client";
 import ssg from "@hono/vite-ssg";
 import path from "node:path";
 
-export default defineConfig(({ mode }) => ({
-  base: process.env.BASE_PATH || "/",
-  plugins: [
-    honox({
-      client: {
-        input: ["./app/client.ts"],
+export default defineConfig(({ mode }) => {
+  const baseConfig = {
+    base: process.env.BASE_PATH || "/",
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+        "@/types": path.resolve(__dirname, "./src/types"),
       },
-    }),
-    mode === "ssg" && ssg({ entry: "./app/server.ts" }),
-  ].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "@/types": path.resolve(__dirname, "./src/types"),
     },
-  },
-  ssr: {
-    external: ["react", "react-dom", "recharts", "lodash"],
-  },
-  build: {
-    outDir: "dist",
-    emptyOutDir: true,
-  },
-}));
+  };
+
+  if (mode === "client") {
+    return {
+      ...baseConfig,
+      plugins: [client()],
+      build: {
+        outDir: "dist",
+        emptyOutDir: true,
+        manifest: true,
+      },
+    };
+  }
+
+  return {
+    ...baseConfig,
+    plugins: [
+      honox({
+        client: {
+          input: ["./app/client.ts"],
+        },
+      }),
+      ssg({ entry: "./app/server.ts" }),
+    ],
+    ssr: {
+      external: ["react", "react-dom", "recharts", "lodash"],
+    },
+    build: {
+      outDir: "dist",
+      emptyOutDir: false,
+    },
+  };
+});
