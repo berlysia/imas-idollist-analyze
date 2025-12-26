@@ -26,7 +26,7 @@ pnpm typecheck        # Type check only
 # Scraping (requires Playwright)
 pnpm scrape:list      # Fetch idol list from website
 pnpm scrape:details   # Fetch idol details (run after list)
-pnpm transform:normalize  # Normalize scraped data
+pnpm preprocess       # Normalize and precompute all data
 
 # Testing & Quality
 pnpm test             # Run Vitest in watch mode
