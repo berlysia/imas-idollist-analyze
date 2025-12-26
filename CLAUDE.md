@@ -41,31 +41,48 @@ pnpm clean            # Run knip (unused code detection)
 
 ## Architecture
 
+### Directory Structure
+
+```
+├── app/                    # HonoX application (SSG)
+│   ├── components/         # Shared React components
+│   ├── hooks/              # Custom React hooks
+│   ├── islands/            # Interactive island components
+│   ├── lib/                # Utility functions and computations
+│   ├── routes/             # Page routes
+│   └── types/              # TypeScript type definitions
+├── scripts/                # Build and scraping scripts
+│   ├── scraper/            # Web scraping modules
+│   └── transformer/        # Data transformation modules
+├── data/                   # Scraped and processed data
+└── tests/                  # Test files
+```
+
 ### Three-Layer Pipeline
 
-1. **Scraper** (`src/scraper/`)
+1. **Scraper** (`scripts/scraper/`)
    - `fetchIdolList.ts`: Uses Playwright to scrape idol list from https://idollist.idolmaster-official.jp/
    - `fetchIdolDetails.ts`: Uses JSDOM to fetch each idol's accompanying idols with rate limiting
-   - Output: JSON files in `data/` (e.g., `idols-YYYY-MM-DD.json`, `details-YYYY-MM-DD.json`)
+   - Output: JSON files in `data/raw/`
 
-2. **Transformer** (`src/transformer/`)
+2. **Transformer** (`scripts/transformer/`)
    - `normalizeDetails.ts`: Converts scraped data into normalized format
-   - Output: `normalized-YYYY-MM-DD.json` with `idols` map and `recommendations` adjacency list
+   - `index.ts`: Precomputes rankings, clusters, and per-idol data
+   - Output: `data/normalized.json` and `data/precomputed/`
 
-3. **Visualizer** (`src/visualizer/`)
-   - React app with Vite, renders from `src/visualizer/` (custom root)
-   - `App.tsx`: Main component with brand filters and tab navigation
-   - `components/CooccurrenceRanking.tsx`: Ranking list with recharts bar chart
-   - `components/NetworkGraph.tsx`: SVG-based network visualization
-   - `hooks/useCooccurrenceData.ts`: Data fetching and statistics computation
+3. **Visualizer** (`app/`)
+   - HonoX SSG application with React islands
+   - `routes/`: Page components for each view
+   - `islands/`: Interactive components (charts, graphs, filters)
+   - `lib/compute.ts`: Data computation utilities
 
 ### Data Flow
 
 ```
-Website → Playwright → idols.json → JSDOM → details.json → normalize → normalized.json → React
+Website → Playwright → idols.json → JSDOM → details.json → normalize → normalized.json → HonoX SSG
 ```
 
-### Types (`src/types/index.ts`)
+### Types (`app/types/index.ts`)
 
 - `Brand`: Union type for franchise brands (imas, deremas, milimas, sidem, shiny, gakuen)
 - `Idol`: Basic idol info (link, brand[], name)
@@ -74,8 +91,7 @@ Website → Playwright → idols.json → JSDOM → details.json → normalize �
 
 ## Path Aliases
 
-- `@/*` → `./src/*`
-- `@/types` → `./src/types`
+- `@/types` → `./app/types`
 
 ## Data Location
 

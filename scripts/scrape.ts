@@ -1,6 +1,6 @@
-import { fetchIdolList } from "../src/scraper/fetchIdolList.ts";
-import { fetchAllIdolDetails, extractIdolId } from "../src/scraper/fetchIdolDetails.ts";
-import type { IdolDetail } from "../src/types/index.ts";
+import { fetchIdolList } from "./scraper/fetchIdolList.ts";
+import { fetchAllIdolDetails, extractIdolId } from "./scraper/fetchIdolDetails.ts";
+import type { IdolDetail } from "../app/types/index.ts";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 

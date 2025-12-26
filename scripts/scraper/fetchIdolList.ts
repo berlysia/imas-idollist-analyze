@@ -1,4 +1,4 @@
-import type { Idol, Brand, ScrapeResult } from "../types/index.ts";
+import type { Idol, Brand, ScrapeResult } from "../../app/types/index.ts";
 import { chromium, type Page } from "playwright";
 
 const SEARCH_URL = "https://idollist.idolmaster-official.jp/search";
@@ -35,8 +35,8 @@ async function extractIdolsFromPage(page: Page): Promise<Idol[]> {
       // 名前はテキストノードから抽出
       const textNodes = paragraph
         ? Array.from(paragraph.childNodes)
-          .filter((node) => node.nodeType === Node.TEXT_NODE)
-          .map((node) => (node as Text).data.trim())
+            .filter((node) => node.nodeType === Node.TEXT_NODE)
+            .map((node) => (node as Text).data.trim())
         : [];
 
       return {

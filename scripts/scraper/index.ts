@@ -1,6 +1,6 @@
 import { fetchIdolList } from "./fetchIdolList.ts";
 import { fetchAllIdolDetails } from "./fetchIdolDetails.ts";
-import type { IdolDetail } from "../types/index.ts";
+import type { IdolDetail } from "../../app/types/index.ts";
 import * as fsp from "node:fs/promises";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -94,6 +94,6 @@ if (command === "list") {
 } else if (command === "details") {
   runDetailsScrape();
 } else {
-  process.stderr.write("Usage: node src/scraper/index.ts <list|details>\n");
+  process.stderr.write("Usage: node scripts/scraper/index.ts <list|details>\n");
   process.exit(1);
 }

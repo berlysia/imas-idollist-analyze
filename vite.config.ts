@@ -10,8 +10,7 @@ export default defineConfig(({ mode }) => {
     base: process.env.BASE_PATH || "/",
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "./src"),
-        "@/types": path.resolve(__dirname, "./src/types"),
+        "@/types": path.resolve(__dirname, "./app/types"),
       },
     },
   };
@@ -19,9 +18,12 @@ export default defineConfig(({ mode }) => {
   if (mode === "client") {
     return {
       ...baseConfig,
-      plugins: [client({
-        jsxImportSource: "react",
-      }), react()],
+      plugins: [
+        client({
+          jsxImportSource: "react",
+        }),
+        react(),
+      ],
       build: {
         outDir: "dist",
         emptyOutDir: true,

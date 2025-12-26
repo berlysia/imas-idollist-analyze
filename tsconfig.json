@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
@@ -25,25 +21,8 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@/types": [
-        "./src/types"
-      ],
-      "@/scraper/*": [
-        "./src/scraper/*"
-      ],
-      "@/visualizer/*": [
-        "./src/visualizer/*"
-      ]
+      "@/types": ["./app/types"]
     }
   },
-  "include": [
-    "src",
-    "scripts",
-    "app",
-    "vite.config.ts",
-    "vitest.config.ts"
-  ]
+  "include": ["scripts", "app", "vite.config.ts", "vitest.config.ts"]
 }

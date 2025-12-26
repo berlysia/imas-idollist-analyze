@@ -1,4 +1,4 @@
-import type { Idol, IdolDetail } from "../types/index.ts";
+import type { Idol, IdolDetail } from "../../app/types/index.ts";
 import { JSDOM } from "jsdom";
 
 const MAX_RETRIES = 3;

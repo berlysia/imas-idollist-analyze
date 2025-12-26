@@ -1,4 +1,4 @@
-import type { Brand, Idol, ScrapeResult, IdolDetail } from "../types/index.ts";
+import type { Brand, Idol, ScrapeResult, IdolDetail } from "../../app/types/index.ts";
 
 /**
  * 正規化されたアイドル情報
