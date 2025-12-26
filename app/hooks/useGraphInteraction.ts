@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { SimulationNode } from "./useForceSimulation";
+import type { SimulationNode } from "./useForceSimulation.ts";
 
 export interface Transform {
   x: number;

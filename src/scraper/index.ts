@@ -94,6 +94,6 @@ if (command === "list") {
 } else if (command === "details") {
   runDetailsScrape();
 } else {
-  process.stderr.write("Usage: bun src/scraper/index.ts <list|details>\n");
+  process.stderr.write("Usage: node src/scraper/index.ts <list|details>\n");
   process.exit(1);
 }

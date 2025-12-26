@@ -1,11 +1,11 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
 import type { Brand } from "@/types";
-import { buildIdfMap, computePMIRanking, type NormalizedData } from "./compute";
+import { buildIdfMap, computePMIRanking, type NormalizedData } from "./compute.ts";
 import type {
   CooccurrenceCompanionPairData,
   SimilarByAccompanimentPairData,
-} from "../islands/graphExplorerTypes";
+} from "../islands/graphExplorerTypes.ts";
 
 interface MetadataData {
   scrapedAt: string;

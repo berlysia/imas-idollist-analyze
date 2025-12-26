@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
@@ -10,23 +14,36 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "jsxImportSource": "react",
-
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": true,
     "skipLibCheck": true,
-
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@/types": ["./src/types"],
-      "@/scraper/*": ["./src/scraper/*"],
-      "@/visualizer/*": ["./src/visualizer/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@/types": [
+        "./src/types"
+      ],
+      "@/scraper/*": [
+        "./src/scraper/*"
+      ],
+      "@/visualizer/*": [
+        "./src/visualizer/*"
+      ]
     }
   },
-  "include": ["src", "scripts", "app", "vite.config.ts", "vitest.config.ts"]
+  "include": [
+    "src",
+    "scripts",
+    "app",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ]
 }

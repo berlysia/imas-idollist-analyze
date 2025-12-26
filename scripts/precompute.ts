@@ -15,7 +15,7 @@ import {
   computeSimilarByAccompanimentPairs,
   buildIdfMap,
   type NormalizedData,
-} from "../app/lib/compute";
+} from "../app/lib/compute.ts";
 
 const DATA_DIR = join(import.meta.dirname, "../data");
 const OUTPUT_DIR = join(DATA_DIR, "precomputed");
