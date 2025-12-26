@@ -12,6 +12,8 @@
     "scrape:list": "node src/scraper/index.ts list",
     "scrape:details": "node src/scraper/index.ts details",
     "transform:normalize": "node src/transformer/index.ts",
+    "push:data": "node scripts/push-data-branch.ts",
+    "update:data": "pnpm scrape && pnpm push:data",
     "download:images": "node scripts/downloadImages.ts",
     "test": "vitest",
     "test:run": "vitest run",

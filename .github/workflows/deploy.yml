@@ -21,6 +21,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout raw data from data branch
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          path: data-branch
+
+      - name: Move raw data to data directory
+        run: |
+          mkdir -p data
+          mv data-branch/raw data/raw
+          rm -rf data-branch
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
 
