@@ -57,6 +57,7 @@ export default function GraphExplorerGraph({
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   // Keep edges ref in sync
   edgesRef.current = edges;
@@ -593,15 +594,20 @@ export default function GraphExplorerGraph({
                 {/* Background circle (fallback color) */}
                 <circle r={nodeRadius} fill={brandColor} />
                 {/* Idol image */}
-                <image
-                  href={`/static/icons/${node.id}.jpg`}
-                  x={-nodeRadius}
-                  y={-nodeRadius}
-                  width={nodeRadius * 2}
-                  height={nodeRadius * 2}
-                  clipPath={`url(#clip-${node.id})`}
-                  preserveAspectRatio="xMidYMid slice"
-                />
+                {!failedImages.has(node.id) && (
+                  <image
+                    href={`/static/icons/${node.id}.jpg`}
+                    x={-nodeRadius}
+                    y={-nodeRadius}
+                    width={nodeRadius * 2}
+                    height={nodeRadius * 2}
+                    clipPath={`url(#clip-${node.id})`}
+                    preserveAspectRatio="xMidYMid slice"
+                    onError={() => {
+                      setFailedImages((prev) => new Set(prev).add(node.id));
+                    }}
+                  />
+                )}
                 {/* Border circle with brand color */}
                 <circle r={nodeRadius} fill="none" stroke={brandColor} strokeWidth={3} />
                 {/* Selection/Pin highlight */}
