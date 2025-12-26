@@ -3,16 +3,10 @@ import honox from "honox/vite";
 import client from "honox/vite/client";
 import ssg from "@hono/vite-ssg";
 import react from "@vitejs/plugin-react";
-import path from "node:path";
 
 export default defineConfig(({ mode }) => {
   const baseConfig = {
     base: process.env.BASE_PATH || "/",
-    resolve: {
-      alias: {
-        "@/types": path.resolve(__dirname, "./app/types"),
-      },
-    },
   };
 
   if (mode === "client") {

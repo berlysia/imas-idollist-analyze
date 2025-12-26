@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import type { Brand } from "@/types";
+import type { Brand } from "../types";
 import { BRAND_COLORS } from "../lib/constants";
 import { GraphLegend, LegendNode } from "../components/shared";
 import {

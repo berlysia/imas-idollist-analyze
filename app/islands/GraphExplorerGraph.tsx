@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { Brand } from "@/types";
+import type { Brand } from "../types";
 import { BRAND_COLORS } from "../lib/constants";
 import type { ExplorerNode, ExplorerEdge } from "./graphExplorerTypes";
 

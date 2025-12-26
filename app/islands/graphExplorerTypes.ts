@@ -1,4 +1,4 @@
-import type { Brand } from "@/types";
+import type { Brand } from "../types";
 
 export type ExplorerMode = "topdown" | "bottomup";
 

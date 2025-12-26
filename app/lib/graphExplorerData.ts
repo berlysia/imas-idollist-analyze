@@ -1,6 +1,6 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
-import type { Brand } from "@/types";
+import type { Brand } from "../types";
 import { buildIdfMap, computePMIRanking, type NormalizedData } from "./compute.ts";
 import type {
   CooccurrenceCompanionPairData,

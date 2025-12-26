@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import type { Brand } from "@/types";
+import type { Brand } from "../types";
 import { EmptyMessage } from "../components/shared";
 import GraphExplorerGraph from "./GraphExplorerGraph";
 import AccompanimentPanel from "./AccompanimentPanel";

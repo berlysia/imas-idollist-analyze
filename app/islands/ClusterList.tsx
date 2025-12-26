@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import type { Brand } from "@/types";
+import type { Brand } from "../types";
 import { BRAND_NAMES, ALL_BRANDS } from "../lib/constants";
 import ClusterGraph from "./ClusterGraph";
 import {

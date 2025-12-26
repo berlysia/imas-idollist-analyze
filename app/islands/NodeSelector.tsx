@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import type { Brand } from "@/types";
+import type { Brand } from "../types";
 import { BrandDot } from "../components/shared";
 import type { IdolListItem } from "./graphExplorerTypes";
 

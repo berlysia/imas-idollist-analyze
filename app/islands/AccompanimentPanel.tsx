@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { Brand } from "@/types";
+import type { Brand } from "../types";
 import { BrandDot, ScoreBadge } from "../components/shared";
 import { BRAND_NAMES } from "../lib/constants";
 import type { ExplorerNode, CooccurrenceCompanionPairData } from "./graphExplorerTypes";

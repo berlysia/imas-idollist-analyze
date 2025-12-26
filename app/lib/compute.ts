@@ -1,4 +1,4 @@
-import type { Brand } from "@/types";
+import type { Brand } from "../types";
 import { BRAND_NAMES } from "./constants.ts";
 
 export interface IdolData {

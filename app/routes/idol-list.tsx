@@ -1,7 +1,7 @@
 import { createRoute } from "honox/factory";
 import { readFile } from "fs/promises";
 import { join } from "path";
-import type { Brand } from "@/types";
+import type { Brand } from "../types";
 import IdolList from "../islands/IdolList";
 import { PageHeader, NavigationTabs, PageFooter, ExplanationBox } from "../components/shared";
 import { SITE_TITLE } from "../lib/constants";

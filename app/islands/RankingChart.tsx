@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import type { Brand } from "@/types";
+import type { Brand } from "../types";
 import { BRAND_COLORS, BRAND_NAMES, ALL_BRANDS } from "../lib/constants";
 
 interface CooccurrenceStats {

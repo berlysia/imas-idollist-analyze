@@ -4,7 +4,7 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import type { IdolDetail } from "../../../lib/compute";
 import { BRAND_NAMES, SITE_TITLE } from "../../../lib/constants";
-import type { Brand } from "@/types";
+import type { Brand } from "../../../types";
 import { BrandDot, NavigationTabs, PageFooter, PageHeader } from "../../../components/shared";
 import SimilarIdolsFilter from "../../../islands/SimilarIdolsFilter";
 import { ScoreBadge } from "../../../components/shared";

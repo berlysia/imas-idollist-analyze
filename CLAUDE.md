@@ -89,10 +89,6 @@ Website → Playwright → idols.json → JSDOM → details.json → normalize �
 - `IdolDetail`: Idol + accompanying idols
 - `ScrapeResult<T>`: Wrapper with metadata
 
-## Path Aliases
-
-- `@/types` → `./app/types`
-
 ## Data Location
 
 Scraped/transformed data stored in `data/` directory. The visualizer serves this as public directory.

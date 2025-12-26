@@ -18,11 +18,7 @@
     "exactOptionalPropertyTypes": true,
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
-    "skipLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/types": ["./app/types"]
-    }
+    "skipLibCheck": true
   },
   "include": ["scripts", "app", "vite.config.ts", "vitest.config.ts"]
 }

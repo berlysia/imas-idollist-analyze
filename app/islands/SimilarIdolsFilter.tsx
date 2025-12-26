@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import type { Brand } from "@/types";
+import type { Brand } from "../types";
 import { BrandDot } from "../components/shared";
 
 interface CommonAccompaniment {

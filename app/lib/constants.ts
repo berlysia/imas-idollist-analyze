@@ -1,4 +1,4 @@
-import type { Brand } from "@/types";
+import type { Brand } from "../types";
 
 export const SITE_TITLE = "アイドルマスター アイドル名鑑 関係可視化";
 
