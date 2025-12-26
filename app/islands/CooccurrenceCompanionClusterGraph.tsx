@@ -1,8 +1,13 @@
-import { useEffect, useRef } from "react";
-import * as d3 from "d3";
+import { useRef } from "react";
 import type { Brand } from "@/types";
 import { BRAND_COLORS } from "../lib/constants";
-import { GraphSvgContainer, GraphLegend, LegendLine } from "../components/shared";
+import { GraphLegend, LegendLine } from "../components/shared";
+import {
+  useForceSimulation,
+  type SimulationNode,
+  type SimulationEdge,
+} from "../hooks/useForceSimulation";
+import { useGraphInteraction } from "../hooks/useGraphInteraction";
 
 interface IdolInfo {
   id: string;
@@ -39,18 +44,20 @@ interface Props {
   hiddenIds?: Set<string>;
 }
 
-interface GraphNode extends d3.SimulationNodeDatum {
-  id: string;
+interface GraphNode extends SimulationNode {
   name: string;
   brand: Brand[];
   coreness: number;
   role: "core" | "peripheral";
 }
 
-interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
+interface GraphEdge extends SimulationEdge {
   cooccurrenceSourceCount: number;
   pmi: number;
 }
+
+// PMI ≥ 3.0 を高PMIとする（期待の8倍以上の頻度で共起 = 強い関連性）
+const HIGH_PMI_THRESHOLD = 3.0;
 
 export default function CooccurrenceCompanionClusterGraph({
   cluster,
@@ -60,184 +67,221 @@ export default function CooccurrenceCompanionClusterGraph({
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
 
-  useEffect(() => {
-    if (!svgRef.current) return;
+  // フィルタリングされたメンバーとエッジ
+  const visibleMembers = cluster.memberRoles.filter((m) => !hiddenIds.has(m.id));
+  const visibleMemberIds = new Set(visibleMembers.map((m) => m.id));
 
-    const svg = d3.select(svgRef.current);
-    svg.selectAll("*").remove();
+  // 表示するノードがない場合は空を返す
+  if (visibleMembers.length === 0) {
+    return (
+      <div style={{ position: "relative" }}>
+        <svg
+          width={width}
+          height={height}
+          style={{
+            background: "#fafafa",
+            borderRadius: "8px",
+            border: "1px solid #eee",
+          }}
+        />
+      </div>
+    );
+  }
 
-    // memberRolesからメンバー情報を取得（コア度とロール情報を含む）
-    const visibleMembers = cluster.memberRoles.filter((m) => !hiddenIds.has(m.id));
+  const nodes: GraphNode[] = visibleMembers.map((m) => ({
+    id: m.id,
+    name: m.name,
+    brand: m.brand,
+    coreness: m.coreness,
+    role: m.role,
+    x: 0,
+    y: 0,
+    vx: 0,
+    vy: 0,
+    fx: null,
+    fy: null,
+  }));
 
-    // 表示するノードがない場合は何もしない
-    if (visibleMembers.length === 0) return;
-
-    const nodes: GraphNode[] = visibleMembers.map((m, i) => ({
-      id: m.id,
-      name: m.name,
-      brand: m.brand,
-      coreness: m.coreness,
-      role: m.role,
-      // 初期座標を設定（D3シミュレーション開始時のNaN防止）
-      x: width / 2 + Math.cos((2 * Math.PI * i) / visibleMembers.length) * 100,
-      y: height / 2 + Math.sin((2 * Math.PI * i) / visibleMembers.length) * 100,
+  const edges: GraphEdge[] = cluster.edges
+    .filter((e) => visibleMemberIds.has(e.idolA.id) && visibleMemberIds.has(e.idolB.id))
+    .map((e) => ({
+      source: e.idolA.id,
+      target: e.idolB.id,
+      cooccurrenceSourceCount: e.cooccurrenceSourceCount,
+      pmi: e.pmi,
+      // PMIとcooccurrenceSourceCountを組み合わせたエッジ強度
+      strength: 0.2 + (e.pmi >= HIGH_PMI_THRESHOLD ? 0.3 : 0.1),
     }));
 
-    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+  const maxCooccurrenceSourceCount = Math.max(...edges.map((l) => l.cooccurrenceSourceCount), 1);
+  const maxPmi = Math.max(...edges.map((l) => l.pmi), 1);
 
-    const links: GraphLink[] = cluster.edges
-      .filter(
-        (e) =>
-          nodeMap.has(e.idolA.id) &&
-          nodeMap.has(e.idolB.id) &&
-          !hiddenIds.has(e.idolA.id) &&
-          !hiddenIds.has(e.idolB.id)
-      )
-      .map((e) => ({
-        source: nodeMap.get(e.idolA.id)!,
-        target: nodeMap.get(e.idolB.id)!,
-        cooccurrenceSourceCount: e.cooccurrenceSourceCount,
-        pmi: e.pmi,
-      }));
+  // 正規化した共起元数とPMIを組み合わせた重み
+  const getWeight = (l: GraphEdge) => {
+    const normSource = l.cooccurrenceSourceCount / maxCooccurrenceSourceCount;
+    const normPmi = l.pmi / maxPmi;
+    return normSource * 0.6 + normPmi * 0.4;
+  };
 
-    const maxCooccurrenceSourceCount = Math.max(...links.map((l) => l.cooccurrenceSourceCount), 1);
-    const maxPmi = Math.max(...links.map((l) => l.pmi), 1);
+  const isHighPmi = (l: GraphEdge) => l.pmi >= HIGH_PMI_THRESHOLD;
 
-    // PMI ≥ 3.0 を高PMIとする（期待の8倍以上の頻度で共起 = 強い関連性）
-    const HIGH_PMI_THRESHOLD = 3.0;
+  // フォースシミュレーション
+  const { renderNodes, simNodesRef, alphaRef, updateRenderNodes } = useForceSimulation<GraphNode>({
+    nodes,
+    edges,
+    width,
+    height,
+    config: {
+      edgeStrength: 0.2,
+    },
+  });
 
-    // 正規化した共起元数とPMIを組み合わせた重み
-    const getWeight = (l: GraphLink) => {
-      const normSource = l.cooccurrenceSourceCount / maxCooccurrenceSourceCount;
-      const normPmi = l.pmi / maxPmi;
-      return normSource * 0.6 + normPmi * 0.4;
-    };
+  // インタラクション（ドラッグ、パン、ズーム、ピン留め）
+  const {
+    transform,
+    handleNodeMouseDown,
+    handleBackgroundMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    handleDoubleClick,
+    cursorStyle,
+  } = useGraphInteraction({
+    svgRef,
+    simNodesRef,
+    alphaRef,
+    updateRenderNodes,
+  });
 
-    const isHighPmi = (l: GraphLink) => l.pmi >= HIGH_PMI_THRESHOLD;
-
-    const simulation = d3
-      .forceSimulation(nodes)
-      .force(
-        "link",
-        d3
-          .forceLink<GraphNode, GraphLink>(links)
-          .id((d) => d.id)
-          .distance((d) => 150 - getWeight(d) * 50)
-          .strength((d) => 0.2 + getWeight(d) * 0.3)
-      )
-      .force("charge", d3.forceManyBody().strength(-400))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius(50));
-
-    const g = svg.append("g");
-
-    const link = g
-      .append("g")
-      .selectAll("line")
-      .data(links)
-      .join("line")
-      .attr("stroke", (d) => (isHighPmi(d) ? "#d4a017" : "#8e44ad"))
-      .attr("stroke-opacity", (d) => (isHighPmi(d) ? 0.9 : 0.6))
-      .attr("stroke-width", (d) => (isHighPmi(d) ? 3 + getWeight(d) * 5 : 1 + getWeight(d) * 5));
-
-    const linkLabels = g
-      .append("g")
-      .selectAll("text")
-      .data(links)
-      .join("text")
-      .attr("font-size", (d) => (isHighPmi(d) ? "10px" : "9px"))
-      .attr("fill", (d) => (isHighPmi(d) ? "#b8860b" : "#666"))
-      .attr("font-weight", (d) => (isHighPmi(d) ? "bold" : "normal"))
-      .attr("text-anchor", "middle")
-      .attr("dy", -3)
-      .text(
-        (d) => `${isHighPmi(d) ? "★ " : ""}${d.cooccurrenceSourceCount}人 / PMI:${d.pmi.toFixed(1)}`
-      );
-
-    const dragBehavior = d3
-      .drag<SVGGElement, GraphNode>()
-      .on("start", (event, d) => {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        d.fx = d.x;
-        d.fy = d.y;
-      })
-      .on("drag", (event, d) => {
-        d.fx = event.x;
-        d.fy = event.y;
-      })
-      .on("end", (event, d) => {
-        if (!event.active) simulation.alphaTarget(0);
-        d.fx = null;
-        d.fy = null;
-      });
-
-    const node = g
-      .append("g")
-      .selectAll<SVGGElement, GraphNode>("g")
-      .data(nodes)
-      .join("g")
-      .call(dragBehavior);
-
-    // コアメンバーは大きく、オレンジの縁取りで表示
-    node
-      .append("circle")
-      .attr("r", (d) => (d.role === "core" ? 18 : 12))
-      .attr("fill", (d) => BRAND_COLORS[d.brand[0] ?? "imas"])
-      .attr("stroke", (d) => (d.role === "core" ? "#ff9800" : "#fff"))
-      .attr("stroke-width", (d) => (d.role === "core" ? 4 : 2));
-
-    // コアメンバーには★マークを追加
-    node
-      .filter((d) => d.role === "core")
-      .append("text")
-      .text("★")
-      .attr("font-size", "10px")
-      .attr("text-anchor", "middle")
-      .attr("dy", -24)
-      .attr("fill", "#ff9800");
-
-    node
-      .append("text")
-      .text((d) => d.name.split(" ").pop() ?? d.name)
-      .attr("font-size", (d) => (d.role === "core" ? "11px" : "10px"))
-      .attr("font-weight", (d) => (d.role === "core" ? "bold" : "normal"))
-      .attr("text-anchor", "middle")
-      .attr("dy", (d) => (d.role === "core" ? 32 : 24))
-      .attr("fill", "#333");
-
-    const zoom = d3
-      .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.5, 3])
-      .on("zoom", (event) => {
-        g.attr("transform", event.transform);
-      });
-
-    svg.call(zoom);
-
-    simulation.on("tick", () => {
-      link
-        .attr("x1", (d) => (d.source as GraphNode).x ?? 0)
-        .attr("y1", (d) => (d.source as GraphNode).y ?? 0)
-        .attr("x2", (d) => (d.target as GraphNode).x ?? 0)
-        .attr("y2", (d) => (d.target as GraphNode).y ?? 0);
-
-      linkLabels
-        .attr("x", (d) => (((d.source as GraphNode).x ?? 0) + ((d.target as GraphNode).x ?? 0)) / 2)
-        .attr(
-          "y",
-          (d) => (((d.source as GraphNode).y ?? 0) + ((d.target as GraphNode).y ?? 0)) / 2
-        );
-
-      node.attr("transform", (d) => `translate(${d.x ?? 0},${d.y ?? 0})`);
-    });
-
-    return () => {
-      simulation.stop();
-    };
-  }, [cluster, width, height, hiddenIds]);
+  const nodeMap = new Map(renderNodes.map((n) => [n.id, n]));
 
   return (
-    <GraphSvgContainer svgRef={svgRef} width={width} height={height}>
+    <div style={{ position: "relative" }}>
+      <svg
+        ref={svgRef}
+        width={width}
+        height={height}
+        onMouseDown={handleBackgroundMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        style={{
+          cursor: cursorStyle,
+          background: "#fafafa",
+          borderRadius: "8px",
+          border: "1px solid #eee",
+        }}
+      >
+        <g transform={`translate(${transform.x},${transform.y}) scale(${transform.scale})`}>
+          {/* エッジ */}
+          {edges.map((edge, idx) => {
+            const source = nodeMap.get(edge.source);
+            const target = nodeMap.get(edge.target);
+            if (!source || !target) return null;
+
+            const highPmi = isHighPmi(edge);
+            const strokeColor = highPmi ? "#d4a017" : "#8e44ad";
+            const strokeWidth = highPmi ? 3 + getWeight(edge) * 5 : 1 + getWeight(edge) * 5;
+
+            return (
+              <line
+                key={`${edge.source}-${edge.target}-${idx}`}
+                x1={source.x}
+                y1={source.y}
+                x2={target.x}
+                y2={target.y}
+                stroke={strokeColor}
+                strokeOpacity={highPmi ? 0.9 : 0.6}
+                strokeWidth={strokeWidth}
+              />
+            );
+          })}
+
+          {/* エッジラベル */}
+          {edges.map((edge, idx) => {
+            const source = nodeMap.get(edge.source);
+            const target = nodeMap.get(edge.target);
+            if (!source || !target) return null;
+
+            const midX = (source.x + target.x) / 2;
+            const midY = (source.y + target.y) / 2;
+            const highPmi = isHighPmi(edge);
+
+            return (
+              <text
+                key={`label-${edge.source}-${edge.target}-${idx}`}
+                x={midX}
+                y={midY}
+                fontSize={highPmi ? "10px" : "9px"}
+                fill={highPmi ? "#b8860b" : "#666"}
+                fontWeight={highPmi ? "bold" : "normal"}
+                textAnchor="middle"
+                dy={-3}
+              >
+                {highPmi ? "★ " : ""}
+                {edge.cooccurrenceSourceCount}人 / PMI:{edge.pmi.toFixed(1)}
+              </text>
+            );
+          })}
+
+          {/* ノード */}
+          {renderNodes.map((node) => {
+            const isCore = node.role === "core";
+            const isPinned = node.fx !== null && node.fy !== null;
+            const nodeRadius = isCore ? 18 : 12;
+            const displayName = node.name.split(" ").pop() ?? node.name;
+
+            return (
+              <g
+                key={node.id}
+                transform={`translate(${node.x},${node.y})`}
+                style={{ cursor: "pointer" }}
+                onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                onDoubleClick={(e) => handleDoubleClick(e, node.id)}
+              >
+                {/* ピン留めインジケータ */}
+                {isPinned && (
+                  <circle r={nodeRadius + 3} fill="none" stroke="#4caf50" strokeWidth={2} />
+                )}
+                {/* メインサークル */}
+                <circle
+                  r={nodeRadius}
+                  fill={BRAND_COLORS[node.brand[0] ?? "imas"]}
+                  stroke={isCore ? "#ff9800" : "#fff"}
+                  strokeWidth={isCore ? 4 : 2}
+                />
+                {/* コアメンバーの★マーク */}
+                {isCore && (
+                  <text fontSize="10px" textAnchor="middle" dy={-24} fill="#ff9800">
+                    ★
+                  </text>
+                )}
+                {/* ピンアイコン */}
+                {isPinned && (
+                  <circle
+                    r={4}
+                    cx={nodeRadius - 2}
+                    cy={-nodeRadius + 2}
+                    fill="#4caf50"
+                    stroke="#fff"
+                    strokeWidth={1}
+                  />
+                )}
+                {/* 名前ラベル */}
+                <text
+                  fontSize={isCore ? "11px" : "10px"}
+                  fontWeight={isCore ? "bold" : "normal"}
+                  textAnchor="middle"
+                  dy={isCore ? 32 : 24}
+                  fill="#333"
+                >
+                  {displayName}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+
       <GraphLegend>
         <LegendLine color="#d4a017" width={4} label="PMI≥3.0（強い関連性）" bold icon="★" />
         <LegendLine color="#8e44ad" width={3} label="共起随伴ペア（太いほど多くの共起元）" />
@@ -254,7 +298,20 @@ export default function CooccurrenceCompanionClusterGraph({
           />
           <span>コアメンバー（多くのメンバーと強く接続）</span>
         </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
+          <span
+            style={{
+              display: "inline-block",
+              width: "12px",
+              height: "12px",
+              borderRadius: "50%",
+              border: "2px solid #4caf50",
+              background: "#f5f5f5",
+            }}
+          />
+          <span>ピン留め（ダブルクリックで切替）</span>
+        </div>
       </GraphLegend>
-    </GraphSvgContainer>
+    </div>
   );
 }

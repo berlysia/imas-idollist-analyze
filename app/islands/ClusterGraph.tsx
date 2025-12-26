@@ -1,8 +1,13 @@
-import { useEffect, useRef } from "react";
-import * as d3 from "d3";
+import { useRef } from "react";
 import type { Brand } from "@/types";
 import { BRAND_COLORS } from "../lib/constants";
-import { GraphSvgContainer, GraphLegend, LegendNode } from "../components/shared";
+import { GraphLegend, LegendNode } from "../components/shared";
+import {
+  useForceSimulation,
+  type SimulationNode,
+  type SimulationEdge,
+} from "../hooks/useForceSimulation";
+import { useGraphInteraction } from "../hooks/useGraphInteraction";
 
 interface ClusterMember {
   id: string;
@@ -34,15 +39,14 @@ interface Props {
   hiddenIds?: Set<string>;
 }
 
-interface GraphNode extends d3.SimulationNodeDatum {
-  id: string;
+interface GraphNode extends SimulationNode {
   name: string;
   brand: Brand[];
   coreness: number;
   role: "core" | "peripheral";
 }
 
-interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
+interface GraphEdge extends SimulationEdge {
   weight: number;
   directionality: number;
 }
@@ -56,210 +60,229 @@ export default function ClusterGraph({
   const svgRef = useRef<SVGSVGElement>(null);
   const coreSet = new Set(cluster.coreMembers);
 
-  useEffect(() => {
-    if (!svgRef.current) return;
+  // フィルタリングされたメンバーとエッジ
+  const visibleMembers = cluster.memberRoles.filter((m) => !hiddenIds.has(m.id));
+  const visibleMemberIds = new Set(visibleMembers.map((m) => m.id));
 
-    const svg = d3.select(svgRef.current);
-    svg.selectAll("*").remove();
+  const nodes: GraphNode[] = visibleMembers.map((m) => ({
+    id: m.id,
+    name: m.name,
+    brand: m.brand,
+    coreness: m.coreness,
+    role: m.role,
+    x: 0,
+    y: 0,
+    vx: 0,
+    vy: 0,
+    fx: null,
+    fy: null,
+  }));
 
-    // Filter out hidden nodes
-    const visibleMembers = cluster.memberRoles.filter((m) => !hiddenIds.has(m.id));
-
-    const nodes: GraphNode[] = visibleMembers.map((m) => ({
-      id: m.id,
-      name: m.name,
-      brand: m.brand,
-      coreness: m.coreness,
-      role: m.role,
+  const edges: GraphEdge[] = cluster.edges
+    .filter((e) => visibleMemberIds.has(e.source) && visibleMemberIds.has(e.target))
+    .map((e) => ({
+      source: e.source,
+      target: e.target,
+      weight: e.weight,
+      directionality: e.directionality,
+      strength: 0.3 + (e.weight / Math.max(...cluster.edges.map((x) => x.weight), 1)) * 0.4,
     }));
 
-    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+  const maxWeight = Math.max(...edges.map((l) => l.weight), 1);
 
-    // Filter edges where both source and target are visible
-    const links: GraphLink[] = cluster.edges
-      .filter(
-        (e) =>
-          nodeMap.has(e.source) &&
-          nodeMap.has(e.target) &&
-          !hiddenIds.has(e.source) &&
-          !hiddenIds.has(e.target)
-      )
-      .map((e) => ({
-        source: nodeMap.get(e.source)!,
-        target: nodeMap.get(e.target)!,
-        weight: e.weight,
-        directionality: e.directionality,
-      }));
+  // フォースシミュレーション
+  const { renderNodes, simNodesRef, alphaRef, updateRenderNodes } = useForceSimulation<GraphNode>({
+    nodes,
+    edges,
+    width,
+    height,
+    config: {
+      edgeStrength: 0.3,
+    },
+  });
 
-    const maxWeight = Math.max(...links.map((l) => l.weight), 1);
+  // インタラクション（ドラッグ、パン、ズーム、ピン留め）
+  const {
+    transform,
+    handleNodeMouseDown,
+    handleBackgroundMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    handleDoubleClick,
+    cursorStyle,
+  } = useGraphInteraction({
+    svgRef,
+    simNodesRef,
+    alphaRef,
+    updateRenderNodes,
+  });
 
-    const simulation = d3
-      .forceSimulation(nodes)
-      .force(
-        "link",
-        d3
-          .forceLink<GraphNode, GraphLink>(links)
-          .id((d) => d.id)
-          .distance((d) => 120 - (d.weight / maxWeight) * 30)
-          .strength((d) => 0.3 + (d.weight / maxWeight) * 0.4)
-      )
-      .force("charge", d3.forceManyBody().strength(-300))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius(45));
-
-    const g = svg.append("g");
-
-    // Define arrow markers
-    const defs = svg.append("defs");
-
-    // Arrow for unidirectional edges (gray)
-    defs
-      .append("marker")
-      .attr("id", "arrow-uni")
-      .attr("viewBox", "0 -5 10 10")
-      .attr("refX", 20)
-      .attr("refY", 0)
-      .attr("markerWidth", 6)
-      .attr("markerHeight", 6)
-      .attr("orient", "auto")
-      .append("path")
-      .attr("d", "M0,-5L10,0L0,5")
-      .attr("fill", "#999");
-
-    // Arrow for bidirectional edges (blue) - end
-    defs
-      .append("marker")
-      .attr("id", "arrow-bi-end")
-      .attr("viewBox", "0 -5 10 10")
-      .attr("refX", 20)
-      .attr("refY", 0)
-      .attr("markerWidth", 6)
-      .attr("markerHeight", 6)
-      .attr("orient", "auto")
-      .append("path")
-      .attr("d", "M0,-5L10,0L0,5")
-      .attr("fill", "#1976d2");
-
-    // Arrow for bidirectional edges (blue) - start
-    defs
-      .append("marker")
-      .attr("id", "arrow-bi-start")
-      .attr("viewBox", "0 -5 10 10")
-      .attr("refX", -10)
-      .attr("refY", 0)
-      .attr("markerWidth", 6)
-      .attr("markerHeight", 6)
-      .attr("orient", "auto")
-      .append("path")
-      .attr("d", "M10,-5L0,0L10,5")
-      .attr("fill", "#1976d2");
-
-    const link = g
-      .append("g")
-      .selectAll("line")
-      .data(links)
-      .join("line")
-      .attr("stroke", (d) => (d.directionality === 2 ? "#1976d2" : "#999"))
-      .attr("stroke-opacity", 0.6)
-      .attr("stroke-width", (d) => 1 + (d.weight / maxWeight) * 4)
-      .attr("marker-end", (d) =>
-        d.directionality === 2 ? "url(#arrow-bi-end)" : "url(#arrow-uni)"
-      )
-      .attr("marker-start", (d) => (d.directionality === 2 ? "url(#arrow-bi-start)" : "none"));
-
-    // Edge weight labels
-    const linkLabels = g
-      .append("g")
-      .selectAll("text")
-      .data(links)
-      .join("text")
-      .attr("font-size", "9px")
-      .attr("fill", "#666")
-      .attr("text-anchor", "middle")
-      .attr("dy", -3)
-      .text((d) => d.weight.toFixed(1));
-
-    const dragBehavior = d3
-      .drag<SVGGElement, GraphNode>()
-      .on("start", (event, d) => {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        d.fx = d.x;
-        d.fy = d.y;
-      })
-      .on("drag", (event, d) => {
-        d.fx = event.x;
-        d.fy = event.y;
-      })
-      .on("end", (event, d) => {
-        if (!event.active) simulation.alphaTarget(0);
-        d.fx = null;
-        d.fy = null;
-      });
-
-    const node = g
-      .append("g")
-      .selectAll<SVGGElement, GraphNode>("g")
-      .data(nodes)
-      .join("g")
-      .call(dragBehavior);
-
-    node
-      .append("circle")
-      .attr("r", (d) => 8 + d.coreness * 12)
-      .attr("fill", (d) => BRAND_COLORS[d.brand[0] ?? "imas"])
-      .attr("stroke", (d) => (coreSet.has(d.id) ? "#1976d2" : "#fff"))
-      .attr("stroke-width", (d) => (coreSet.has(d.id) ? 3 : 1.5));
-
-    node
-      .filter((d) => coreSet.has(d.id))
-      .append("circle")
-      .attr("r", (d) => 8 + d.coreness * 12 + 5)
-      .attr("fill", "none")
-      .attr("stroke", "#1976d2")
-      .attr("stroke-width", 1)
-      .attr("stroke-dasharray", "3,2");
-
-    node
-      .append("text")
-      .text((d) => d.name.split(" ").pop() ?? d.name)
-      .attr("font-size", "10px")
-      .attr("text-anchor", "middle")
-      .attr("dy", (d) => 8 + d.coreness * 12 + 12)
-      .attr("fill", "#333");
-
-    const zoom = d3
-      .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.5, 3])
-      .on("zoom", (event) => {
-        g.attr("transform", event.transform);
-      });
-
-    svg.call(zoom);
-
-    simulation.on("tick", () => {
-      link
-        .attr("x1", (d) => (d.source as GraphNode).x ?? 0)
-        .attr("y1", (d) => (d.source as GraphNode).y ?? 0)
-        .attr("x2", (d) => (d.target as GraphNode).x ?? 0)
-        .attr("y2", (d) => (d.target as GraphNode).y ?? 0);
-
-      linkLabels
-        .attr("x", (d) => (((d.source as GraphNode).x ?? 0) + ((d.target as GraphNode).x ?? 0)) / 2)
-        .attr(
-          "y",
-          (d) => (((d.source as GraphNode).y ?? 0) + ((d.target as GraphNode).y ?? 0)) / 2
-        );
-
-      node.attr("transform", (d) => `translate(${d.x ?? 0},${d.y ?? 0})`);
-    });
-
-    return () => {
-      simulation.stop();
-    };
-  }, [cluster, width, height, coreSet, hiddenIds]);
+  const nodeMap = new Map(renderNodes.map((n) => [n.id, n]));
 
   return (
-    <GraphSvgContainer svgRef={svgRef} width={width} height={height}>
+    <div style={{ position: "relative" }}>
+      <svg
+        ref={svgRef}
+        width={width}
+        height={height}
+        onMouseDown={handleBackgroundMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        style={{
+          cursor: cursorStyle,
+          background: "#fafafa",
+          borderRadius: "8px",
+          border: "1px solid #eee",
+        }}
+      >
+        <defs>
+          {/* 片方向矢印（グレー） */}
+          <marker
+            id="arrow-uni"
+            viewBox="0 -5 10 10"
+            refX={20}
+            refY={0}
+            markerWidth={6}
+            markerHeight={6}
+            orient="auto"
+          >
+            <path d="M0,-5L10,0L0,5" fill="#999" />
+          </marker>
+          {/* 双方向矢印（青）- 終点 */}
+          <marker
+            id="arrow-bi-end"
+            viewBox="0 -5 10 10"
+            refX={20}
+            refY={0}
+            markerWidth={6}
+            markerHeight={6}
+            orient="auto"
+          >
+            <path d="M0,-5L10,0L0,5" fill="#1976d2" />
+          </marker>
+          {/* 双方向矢印（青）- 始点 */}
+          <marker
+            id="arrow-bi-start"
+            viewBox="0 -5 10 10"
+            refX={-10}
+            refY={0}
+            markerWidth={6}
+            markerHeight={6}
+            orient="auto"
+          >
+            <path d="M10,-5L0,0L10,5" fill="#1976d2" />
+          </marker>
+        </defs>
+
+        <g transform={`translate(${transform.x},${transform.y}) scale(${transform.scale})`}>
+          {/* エッジ */}
+          {edges.map((edge, idx) => {
+            const source = nodeMap.get(edge.source);
+            const target = nodeMap.get(edge.target);
+            if (!source || !target) return null;
+
+            const isBidirectional = edge.directionality === 2;
+            const strokeColor = isBidirectional ? "#1976d2" : "#999";
+            const strokeWidth = 1 + (edge.weight / maxWeight) * 4;
+
+            return (
+              <line
+                key={`${edge.source}-${edge.target}-${idx}`}
+                x1={source.x}
+                y1={source.y}
+                x2={target.x}
+                y2={target.y}
+                stroke={strokeColor}
+                strokeOpacity={0.6}
+                strokeWidth={strokeWidth}
+                markerEnd={isBidirectional ? "url(#arrow-bi-end)" : "url(#arrow-uni)"}
+                markerStart={isBidirectional ? "url(#arrow-bi-start)" : undefined}
+              />
+            );
+          })}
+
+          {/* エッジラベル */}
+          {edges.map((edge, idx) => {
+            const source = nodeMap.get(edge.source);
+            const target = nodeMap.get(edge.target);
+            if (!source || !target) return null;
+
+            const midX = (source.x + target.x) / 2;
+            const midY = (source.y + target.y) / 2;
+
+            return (
+              <text
+                key={`label-${edge.source}-${edge.target}-${idx}`}
+                x={midX}
+                y={midY}
+                fontSize="9px"
+                fill="#666"
+                textAnchor="middle"
+                dy={-3}
+              >
+                {edge.weight.toFixed(1)}
+              </text>
+            );
+          })}
+
+          {/* ノード */}
+          {renderNodes.map((node) => {
+            const isCore = coreSet.has(node.id);
+            const isPinned = node.fx !== null && node.fy !== null;
+            const nodeRadius = 8 + node.coreness * 12;
+            const displayName = node.name.split(" ").pop() ?? node.name;
+
+            return (
+              <g
+                key={node.id}
+                transform={`translate(${node.x},${node.y})`}
+                style={{ cursor: "pointer" }}
+                onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                onDoubleClick={(e) => handleDoubleClick(e, node.id)}
+              >
+                {/* コアメンバーの外輪 */}
+                {isCore && (
+                  <circle
+                    r={nodeRadius + 5}
+                    fill="none"
+                    stroke="#1976d2"
+                    strokeWidth={1}
+                    strokeDasharray="3,2"
+                  />
+                )}
+                {/* ピン留めインジケータ */}
+                {isPinned && (
+                  <circle r={nodeRadius + 3} fill="none" stroke="#4caf50" strokeWidth={2} />
+                )}
+                {/* メインサークル */}
+                <circle
+                  r={nodeRadius}
+                  fill={BRAND_COLORS[node.brand[0] ?? "imas"]}
+                  stroke={isCore ? "#1976d2" : "#fff"}
+                  strokeWidth={isCore ? 3 : 1.5}
+                />
+                {/* ピンアイコン */}
+                {isPinned && (
+                  <circle
+                    r={4}
+                    cx={nodeRadius - 2}
+                    cy={-nodeRadius + 2}
+                    fill="#4caf50"
+                    stroke="#fff"
+                    strokeWidth={1}
+                  />
+                )}
+                {/* 名前ラベル */}
+                <text fontSize="10px" textAnchor="middle" dy={nodeRadius + 12} fill="#333">
+                  {displayName}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+
       <GraphLegend>
         <div style={{ marginBottom: "2px" }}>
           <svg width="24" height="12" style={{ verticalAlign: "middle", marginRight: "4px" }}>
@@ -328,7 +351,20 @@ export default function ClusterGraph({
           片方向（一方のみ選択）
         </div>
         <LegendNode color="#1976d2" label="コア" />
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
+          <span
+            style={{
+              display: "inline-block",
+              width: "12px",
+              height: "12px",
+              borderRadius: "50%",
+              border: "2px solid #4caf50",
+              background: "#f5f5f5",
+            }}
+          />
+          <span>ピン留め（ダブルクリックで切替）</span>
+        </div>
       </GraphLegend>
-    </GraphSvgContainer>
+    </div>
   );
 }
