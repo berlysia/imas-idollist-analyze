@@ -143,7 +143,6 @@ export default function PMIFilter({ pairs, pairToCluster, crossBrandPairToCluste
             <th>アイドルA</th>
             <th className="arrow">↔</th>
             <th>アイドルB</th>
-            <th className="count">掲載数</th>
             <th className="pmi-value">PMI</th>
             <th className="cross-brand-indicator">横断</th>
             {hasClusterData && <th className="cluster-link">クラスタ</th>}
@@ -200,7 +199,6 @@ export default function PMIFilter({ pairs, pairToCluster, crossBrandPairToCluste
                     {pair.idolB.name}
                   </a>
                 </td>
-                <td className="count">{pair.count}</td>
                 <td className="pmi-value">{pair.pmi.toFixed(2)}</td>
                 <td className="cross-brand-indicator">{pair.crossBrand ? "✓" : ""}</td>
                 {hasClusterData && (
