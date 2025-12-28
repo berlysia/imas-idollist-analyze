@@ -22,6 +22,8 @@ interface UseGraphInteractionOptions<T extends SimulationNode> {
   maxScale?: number;
   /** ピン留め/解除後のシミュレーション再開alpha（デフォルト: 0.3） */
   pinRestartAlpha?: number;
+  /** ノードクリック/タップ時のコールバック */
+  onNodeClick?: (nodeId: string) => void;
 }
 
 interface UseGraphInteractionResult {
@@ -53,6 +55,10 @@ interface UseGraphInteractionResult {
   handleTouchMove: (e: React.TouchEvent) => void;
   /** タッチ終了ハンドラ */
   handleTouchEnd: (e: React.TouchEvent) => void;
+  /** ノードのタッチ終了ハンドラ（タップ選択込み） */
+  handleNodeTouchEnd: (e: React.TouchEvent, nodeId: string) => void;
+  /** ノードのクリックハンドラ */
+  handleNodeClick: (e: React.MouseEvent, nodeId: string) => void;
 }
 
 /**
@@ -68,6 +74,7 @@ export function useGraphInteraction<T extends SimulationNode>({
   minScale = 0.3,
   maxScale = 3,
   pinRestartAlpha = 0.3,
+  onNodeClick,
 }: UseGraphInteractionOptions<T>): UseGraphInteractionResult {
   const [transform, setTransform] = useState<Transform>({ x: 0, y: 0, scale: 1 });
   const [isDragging, setIsDragging] = useState(false);
@@ -392,6 +399,42 @@ export function useGraphInteraction<T extends SimulationNode>({
 
   const cursorStyle = isDragging ? "grabbing" : isPanning ? "grabbing" : "grab";
 
+  // ノードクリック（ドラッグでなければコールバック呼び出し）
+  const handleNodeClick = useCallback(
+    (e: React.MouseEvent, nodeId: string) => {
+      e.stopPropagation();
+      if (!isDragging && onNodeClick) {
+        onNodeClick(nodeId);
+      }
+    },
+    [isDragging, onNodeClick]
+  );
+
+  // ノードのタッチ終了（タップ選択込み）
+  const handleNodeTouchEnd = useCallback(
+    (e: React.TouchEvent, nodeId: string) => {
+      // タップ検出：移動が少なければクリックとして扱う
+      if (touchStartPosRef.current && onNodeClick) {
+        const touch = e.changedTouches[0];
+        if (touch) {
+          const dx = touch.clientX - touchStartPosRef.current.x;
+          const dy = touch.clientY - touchStartPosRef.current.y;
+          const moved = Math.sqrt(dx * dx + dy * dy);
+          if (moved < 10) {
+            onNodeClick(nodeId);
+          }
+        }
+      }
+      // 通常のタッチ終了処理
+      setIsDragging(false);
+      setDragNodeId(null);
+      setIsPanning(false);
+      setIsPinching(false);
+      touchStartPosRef.current = null;
+    },
+    [onNodeClick]
+  );
+
   return {
     transform,
     isDragging,
@@ -407,5 +450,7 @@ export function useGraphInteraction<T extends SimulationNode>({
     handleBackgroundTouchStart,
     handleTouchMove,
     handleTouchEnd,
+    handleNodeTouchEnd,
+    handleNodeClick,
   };
 }
