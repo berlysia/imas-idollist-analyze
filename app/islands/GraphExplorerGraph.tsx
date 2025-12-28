@@ -3,6 +3,7 @@ import type { Brand } from "../types";
 import { BRAND_COLORS } from "../lib/constants";
 import { withBasePath } from "../lib/url";
 import type { ExplorerNode, ExplorerEdge } from "./graphExplorerTypes";
+import { useGraphInteraction } from "../hooks/useGraphInteraction";
 
 interface GraphNode {
   id: string;
@@ -53,18 +54,35 @@ export default function GraphExplorerGraph({
   const [renderNodes, setRenderNodes] = useState<GraphNode[]>([]);
   const edgesRef = useRef(edges);
   const alphaRef = useRef(1);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragNodeId, setDragNodeId] = useState<string | null>(null);
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
-  const [isPanning, setIsPanning] = useState(false);
-  const panStartRef = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
-  // タッチ操作用の状態
-  const [isPinching, setIsPinching] = useState(false);
-  const pinchStartRef = useRef({ distance: 0, scale: 1, centerX: 0, centerY: 0 });
-  const lastTapRef = useRef<{ time: number; nodeId: string | null }>({ time: 0, nodeId: null });
-  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  // renderNodes更新関数
+  const updateRenderNodes = useCallback(() => {
+    setRenderNodes(simNodesRef.current.map((n) => ({ ...n })));
+  }, []);
+
+  // useGraphInteractionを使用
+  const {
+    transform,
+    handleNodeMouseDown,
+    handleBackgroundMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    handleDoubleClick,
+    cursorStyle,
+    handleNodeTouchStart,
+    handleBackgroundTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
+    handleNodeTouchEnd,
+    handleNodeClick,
+  } = useGraphInteraction({
+    svgRef,
+    simNodesRef,
+    alphaRef,
+    updateRenderNodes,
+    onNodeClick,
+  });
 
   // Keep edges ref in sync
   edgesRef.current = edges;
@@ -303,285 +321,6 @@ export default function GraphExplorerGraph({
     return () => clearTimeout(timeout);
   }, [renderNodes, setNodes]);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
-    e.stopPropagation();
-    setIsDragging(true);
-    setDragNodeId(nodeId);
-  }, []);
-
-  // 背景クリックでパン開始
-  const handleBackgroundMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      // ノードドラッグ中はパンしない
-      if (isDragging) return;
-
-      setIsPanning(true);
-      panStartRef.current = {
-        x: e.clientX,
-        y: e.clientY,
-        tx: transform.x,
-        ty: transform.y,
-      };
-    },
-    [isDragging, transform]
-  );
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      // ノードドラッグ
-      if (isDragging && dragNodeId && svgRef.current) {
-        const svg = svgRef.current;
-        const rect = svg.getBoundingClientRect();
-        const x = (e.clientX - rect.left - transform.x) / transform.scale;
-        const y = (e.clientY - rect.top - transform.y) / transform.scale;
-
-        const node = simNodesRef.current.find((n) => n.id === dragNodeId);
-        if (node) {
-          node.x = x;
-          node.y = y;
-          node.fx = x;
-          node.fy = y;
-          setRenderNodes(simNodesRef.current.map((n) => ({ ...n })));
-        }
-        return;
-      }
-
-      // 背景パン
-      if (isPanning) {
-        const dx = e.clientX - panStartRef.current.x;
-        const dy = e.clientY - panStartRef.current.y;
-        setTransform((prev) => ({
-          ...prev,
-          x: panStartRef.current.tx + dx,
-          y: panStartRef.current.ty + dy,
-        }));
-      }
-    },
-    [isDragging, dragNodeId, transform, isPanning]
-  );
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    setDragNodeId(null);
-    setIsPanning(false);
-  }, []);
-
-  const handleDoubleClick = useCallback((e: React.MouseEvent, nodeId: string) => {
-    e.stopPropagation();
-    // Toggle fixed position
-    const node = simNodesRef.current.find((n) => n.id === nodeId);
-    if (node) {
-      if (node.fx !== null && node.fy !== null) {
-        // Unpin: clear fixed position
-        node.fx = null;
-        node.fy = null;
-      } else {
-        // Pin: set fixed position to current position
-        node.fx = node.x;
-        node.fy = node.y;
-      }
-      setRenderNodes(simNodesRef.current.map((n) => ({ ...n })));
-      // Restart simulation slightly to let other nodes adjust
-      alphaRef.current = Math.max(alphaRef.current, 0.3);
-    }
-  }, []);
-
-  // ピン留め切り替えの共通ロジック
-  const togglePin = useCallback((nodeId: string) => {
-    const node = simNodesRef.current.find((n) => n.id === nodeId);
-    if (node) {
-      if (node.fx !== null && node.fy !== null) {
-        node.fx = null;
-        node.fy = null;
-      } else {
-        node.fx = node.x;
-        node.fy = node.y;
-      }
-      setRenderNodes(simNodesRef.current.map((n) => ({ ...n })));
-      alphaRef.current = Math.max(alphaRef.current, 0.3);
-    }
-  }, []);
-
-  // 2点間の距離を計算
-  const getTouchDistance = (touches: React.TouchList): number => {
-    if (touches.length < 2) return 0;
-    const t1 = touches[0];
-    const t2 = touches[1];
-    if (!t1 || !t2) return 0;
-    const dx = t2.clientX - t1.clientX;
-    const dy = t2.clientY - t1.clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  };
-
-  // 2点の中心を計算
-  const getTouchCenter = (touches: React.TouchList): { x: number; y: number } => {
-    if (touches.length < 2) {
-      const t = touches[0];
-      return t ? { x: t.clientX, y: t.clientY } : { x: 0, y: 0 };
-    }
-    const t1 = touches[0];
-    const t2 = touches[1];
-    if (!t1 || !t2) return { x: 0, y: 0 };
-    return {
-      x: (t1.clientX + t2.clientX) / 2,
-      y: (t1.clientY + t2.clientY) / 2,
-    };
-  };
-
-  // ノードのタッチ開始
-  const handleNodeTouchStart = useCallback(
-    (e: React.TouchEvent, nodeId: string) => {
-      e.stopPropagation();
-
-      // ダブルタップ検出（ピン留め切り替え）
-      const now = Date.now();
-      if (lastTapRef.current.nodeId === nodeId && now - lastTapRef.current.time < 300) {
-        togglePin(nodeId);
-        lastTapRef.current = { time: 0, nodeId: null };
-        return;
-      }
-      lastTapRef.current = { time: now, nodeId };
-
-      // 1本指の場合はドラッグ開始
-      if (e.touches.length === 1) {
-        const touch = e.touches[0];
-        if (touch) {
-          touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
-        }
-        setIsDragging(true);
-        setDragNodeId(nodeId);
-      }
-    },
-    [togglePin]
-  );
-
-  // 背景のタッチ開始
-  const handleBackgroundTouchStart = useCallback(
-    (e: React.TouchEvent) => {
-      if (isDragging) return;
-
-      // 2本指の場合はピンチズーム開始
-      if (e.touches.length >= 2) {
-        setIsPinching(true);
-        setIsPanning(false);
-        const distance = getTouchDistance(e.touches);
-        const center = getTouchCenter(e.touches);
-        const svg = svgRef.current;
-        const rect = svg?.getBoundingClientRect();
-        pinchStartRef.current = {
-          distance,
-          scale: transform.scale,
-          centerX: rect ? center.x - rect.left : center.x,
-          centerY: rect ? center.y - rect.top : center.y,
-        };
-        return;
-      }
-
-      // 1本指の場合はパン開始
-      if (e.touches.length === 1) {
-        const touch = e.touches[0];
-        if (touch) {
-          setIsPanning(true);
-          panStartRef.current = {
-            x: touch.clientX,
-            y: touch.clientY,
-            tx: transform.x,
-            ty: transform.y,
-          };
-        }
-      }
-    },
-    [isDragging, transform]
-  );
-
-  // タッチ移動
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent) => {
-      // ピンチズーム中
-      if (isPinching && e.touches.length >= 2) {
-        e.preventDefault();
-        const distance = getTouchDistance(e.touches);
-        const scaleFactor = distance / pinchStartRef.current.distance;
-        const newScale = Math.max(0.3, Math.min(3, pinchStartRef.current.scale * scaleFactor));
-        const actualFactor = newScale / transform.scale;
-        const { centerX, centerY } = pinchStartRef.current;
-        const newX = centerX - (centerX - transform.x) * actualFactor;
-        const newY = centerY - (centerY - transform.y) * actualFactor;
-        setTransform({ x: newX, y: newY, scale: newScale });
-        return;
-      }
-
-      // ノードドラッグ
-      if (isDragging && dragNodeId && svgRef.current && e.touches.length === 1) {
-        const touch = e.touches[0];
-        if (!touch) return;
-        const svg = svgRef.current;
-        const rect = svg.getBoundingClientRect();
-        const x = (touch.clientX - rect.left - transform.x) / transform.scale;
-        const y = (touch.clientY - rect.top - transform.y) / transform.scale;
-
-        const node = simNodesRef.current.find((n) => n.id === dragNodeId);
-        if (node) {
-          node.x = x;
-          node.y = y;
-          node.fx = x;
-          node.fy = y;
-          setRenderNodes(simNodesRef.current.map((n) => ({ ...n })));
-        }
-        return;
-      }
-
-      // 背景パン
-      if (isPanning && e.touches.length === 1) {
-        const touch = e.touches[0];
-        if (!touch) return;
-        const dx = touch.clientX - panStartRef.current.x;
-        const dy = touch.clientY - panStartRef.current.y;
-        setTransform((prev) => ({
-          ...prev,
-          x: panStartRef.current.tx + dx,
-          y: panStartRef.current.ty + dy,
-        }));
-      }
-    },
-    [isPinching, isDragging, dragNodeId, isPanning, transform]
-  );
-
-  // タッチ終了
-  const handleTouchEnd = useCallback(() => {
-    setIsDragging(false);
-    setDragNodeId(null);
-    setIsPanning(false);
-    setIsPinching(false);
-    touchStartPosRef.current = null;
-  }, []);
-
-  // Wheel zoom - must use non-passive listener for preventDefault to work
-  useEffect(() => {
-    const svg = svgRef.current;
-    if (!svg) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const rect = svg.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      const scaleFactor = e.deltaY > 0 ? 0.9 : 1.1;
-
-      setTransform((prev) => {
-        const newScale = Math.max(0.3, Math.min(3, prev.scale * scaleFactor));
-        const actualFactor = newScale / prev.scale;
-        // マウス位置を中心にズーム
-        const newX = mouseX - (mouseX - prev.x) * actualFactor;
-        const newY = mouseY - (mouseY - prev.y) * actualFactor;
-        return { x: newX, y: newY, scale: newScale };
-      });
-    };
-
-    svg.addEventListener("wheel", handleWheel, { passive: false });
-    return () => svg.removeEventListener("wheel", handleWheel);
-  }, []);
-
   const nodeMap = new Map(renderNodes.map((n) => [n.id, n]));
 
   return (
@@ -600,7 +339,7 @@ export default function GraphExplorerGraph({
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
         style={{
-          cursor: isDragging ? "grabbing" : isPanning ? "grabbing" : "grab",
+          cursor: cursorStyle,
           background: "#fafafa",
           borderRadius: "8px",
           border: "1px solid #eee",
@@ -755,30 +494,11 @@ export default function GraphExplorerGraph({
                 key={node.id}
                 transform={`translate(${node.x},${node.y})`}
                 style={{ cursor: "pointer" }}
-                onMouseDown={(e) => handleMouseDown(e, node.id)}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (!isDragging) {
-                    onNodeClick(node.id);
-                  }
-                }}
+                onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                onClick={(e) => handleNodeClick(e, node.id)}
                 onDoubleClick={(e) => handleDoubleClick(e, node.id)}
                 onTouchStart={(e) => handleNodeTouchStart(e, node.id)}
-                onTouchEnd={(e) => {
-                  // タップでの選択
-                  if (touchStartPosRef.current) {
-                    const touch = e.changedTouches[0];
-                    if (touch) {
-                      const dx = touch.clientX - touchStartPosRef.current.x;
-                      const dy = touch.clientY - touchStartPosRef.current.y;
-                      const moved = Math.sqrt(dx * dx + dy * dy);
-                      if (moved < 10) {
-                        onNodeClick(node.id);
-                      }
-                    }
-                  }
-                  handleTouchEnd();
-                }}
+                onTouchEnd={(e) => handleNodeTouchEnd(e, node.id)}
               >
                 {isSelected && (
                   <circle
