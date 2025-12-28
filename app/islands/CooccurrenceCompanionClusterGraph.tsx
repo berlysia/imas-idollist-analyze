@@ -145,6 +145,10 @@ export default function CooccurrenceCompanionClusterGraph({
     handleMouseUp,
     handleDoubleClick,
     cursorStyle,
+    handleNodeTouchStart,
+    handleBackgroundTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
   } = useGraphInteraction({
     svgRef,
     simNodesRef,
@@ -164,11 +168,16 @@ export default function CooccurrenceCompanionClusterGraph({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onTouchStart={handleBackgroundTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
         style={{
           cursor: cursorStyle,
           background: "#fafafa",
           borderRadius: "8px",
           border: "1px solid #eee",
+          touchAction: "none",
         }}
       >
         <g transform={`translate(${transform.x},${transform.y}) scale(${transform.scale})`}>
@@ -237,6 +246,8 @@ export default function CooccurrenceCompanionClusterGraph({
                 style={{ cursor: "pointer" }}
                 onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
                 onDoubleClick={(e) => handleDoubleClick(e, node.id)}
+                onTouchStart={(e) => handleNodeTouchStart(e, node.id)}
+                onTouchEnd={handleTouchEnd}
               >
                 {/* ピン留めインジケータ */}
                 {isPinned && (
